@@ -143,12 +143,82 @@
 </head>
 <body>
 
+
+<style>
+#loginScreen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+#loginScreen.hidden { display: none; }
+.login-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 40px; width: 360px;
+  text-align: center;
+}
+.login-logo { font-size: 48px; margin-bottom: 12px; }
+.login-title { font-size: 22px; font-weight: 700; margin-bottom: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.login-sub { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
+.login-input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); border-radius: 10px; padding: 12px 16px;
+  font-family: 'Cairo', sans-serif; font-size: 14px;
+  outline: none; margin-bottom: 12px; transition: border-color 0.2s;
+}
+.login-input:focus { border-color: var(--accent); }
+.login-btn {
+  width: 100%; border: none; border-radius: 10px; padding: 13px;
+  font-family: 'Cairo', sans-serif; font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; margin-bottom: 10px;
+}
+.login-btn-admin {
+  background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white;
+}
+.login-btn-admin:hover { opacity: 0.9; transform: translateY(-1px); }
+.login-btn-guest {
+  background: var(--bg3); color: var(--text2);
+  border: 1px solid var(--border) !important;
+}
+.login-btn-guest:hover { border-color: var(--accent) !important; color: var(--text); }
+.login-error { color: #f87171; font-size: 13px; margin-bottom: 10px; display: none; }
+</style>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">📺</div>
+    <div class="login-title">Hydra IPTV Manager</div>
+    <div class="login-sub">Ahmed EL-Attar</div>
+    <div class="login-sub" style="margin-top:-16px">سجّل دخولك للمتابعة</div>
+    <input type="text" id="loginUser" class="login-input" placeholder="اليوزرنيم" autocomplete="off">
+    <div style="position:relative">
+    <input type="password" id="loginPass" class="login-input" placeholder="الباسورد" style="margin-bottom:0;padding-left:44px">
+    <label style="position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text2);font-size:13px">
+      <input type="checkbox" onchange="document.getElementById('loginPass').type=this.checked?'text':'password'" style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)">
+    </label>
+  </div>
+  <div style="height:12px"></div>
+    <div class="login-error" id="loginError">❌ يوزرنيم أو باسورد غلط</div>
+    <button class="login-btn login-btn-admin" onclick="doLogin()">🔐 دخول Admin</button>
+    <button class="login-btn login-btn-guest" onclick="doGuest()">👁️ دخول كضيف</button>
+  </div>
+</div>
+
 <header>
   <div class="logo">
     <div class="logo-icon">📺</div>
-    <span class="logo-text">Hydra IPTV Manager</span>
+    <div>
+      <span class="logo-text">Hydra IPTV Manager</span>
+      <div style="font-size:12px;color:var(--text2);margin-top:1px">Ahmed EL-Attar</div>
+    </div>
   </div>
-  <div class="stats-bar" id="statsBar"></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="stats-bar" id="statsBar"></div>
+    <button onclick="logout()" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:10px;padding:8px 14px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">
+      🚪 خروج
+    </button>
+  </div>
 </header>
 
 <div class="toolbar">
@@ -167,7 +237,7 @@
     <option value="paid">مدفوع</option>
     <option value="unpaid">غير مدفوع</option>
   </select>
-  <button class="btn btn-primary" onclick="openAddModal()">+ إضافة حساب</button>
+  <button class="btn btn-primary" id="addBtn" onclick="openAddModal()">+ إضافة حساب</button>
 </div>
 
 <main>
@@ -234,6 +304,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
+let currentRole = null;
 const STORAGE_KEY = 'hydra_iptv_accounts_v2';
 
 const DEFAULT_DATA = [
@@ -407,6 +478,8 @@ function renderAll() {
 
   if (allFiltered.length === 0) html += `<div style="text-align:center;padding:60px;color:var(--text2)">🔍 لا توجد نتائج</div>`;
   container.innerHTML = html;
+  const addBtn = document.getElementById('addBtn');
+  if (addBtn) addBtn.style.display = currentRole === 'admin' ? 'flex' : 'none';
 }
 
 function setFilter(status) {
@@ -454,23 +527,24 @@ function buildTable(rows) {
         <td>
           <span class="mono">${a.username}</span>
           <button class="copy-btn" onclick="copyText('${a.username}',this)">📋</button><br>
-          <span class="mono" style="margin-top:4px;display:inline-block">${a.password}</span>
-          <button class="copy-btn" onclick="copyText('${a.password}',this)">📋</button>
+          ${currentRole === 'admin' ? `<span class="mono" style="margin-top:4px;display:inline-block">${a.password}</span>
+          <button class="copy-btn" onclick="copyText('${a.password}',this)">📋</button>` : '<span style="font-size:12px;color:var(--text2)">••••••••</span>'}
         </td>
-        <td style="font-size:13px;color:var(--text);direction:ltr;text-align:right">${a.phone || '—'}</td>
+        <td style="font-size:13px;color:var(--text);direction:ltr;text-align:right">${currentRole === 'admin' ? (a.phone || '—') : '••••••••'}</td>
         <td>
           <div>${formatDate(a.expDate)}</div>
           ${d !== null ? `<div class="days-left">${d < 0 ? `منذ ${Math.abs(d)} يوم` : `متبقي ${d} يوم`}</div>` : ''}
         </td>
         <td>${statusBadge(a)}</td>
         <td style="position:relative">
-          <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0">${paidBadge(a.paid)}</button>
+          ${currentRole === 'admin' ? `<button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0">${paidBadge(a.paid)}</button>` : paidBadge(a.paid)}
         </td>
         <td style="font-size:12px;color:var(--text2)">${a.notes || '—'}</td>
         <td>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${currentRole === 'admin' ? `
             <button class="btn btn-primary" style="padding:6px 10px;font-size:12px" onclick="editAccount(${a.id})">✏️</button>
-            <button class="btn btn-danger" style="padding:6px 10px;font-size:12px" onclick="deleteAccount(${a.id})">🗑️</button>
+            <button class="btn btn-danger" style="padding:6px 10px;font-size:12px" onclick="deleteAccount(${a.id})">🗑️</button>` : ''}
             <button onclick="showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;white-space:nowrap">📨 تأكيد</button>
             <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;white-space:nowrap">🔔 تذكير</button>
           </div>
@@ -670,6 +744,37 @@ function copyMsg() {
   const t = document.getElementById('msgText');
   navigator.clipboard.writeText(t.value).then(() => showToast('📋 تم نسخ الرسالة'));
 }
+
+function logout() {
+  currentRole = null;
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  if (u === 'elattar89' && p === 'Rio@2211') {
+    currentRole = 'admin';
+    document.getElementById('loginScreen').classList.add('hidden');
+    renderAll();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function doGuest() {
+  currentRole = 'guest';
+  document.getElementById('loginScreen').classList.add('hidden');
+  renderAll();
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && currentRole === null) doLogin();
+});
+
 </script>
 
 <div class="modal-bg" id="msgModalBg">
