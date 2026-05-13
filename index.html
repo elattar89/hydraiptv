@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hydra IPTV Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f1117;
+    --bg2: #1a1d27;
+    --bg3: #22263a;
+    --accent: #4f8ef7;
+    --accent2: #7c5cfc;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e8eaf0;
+    --text2: #9aa0b8;
+    --border: #2e3347;
+    --card: #1e2235;
+  }
+  body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #1a1d27 0%, #22263a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo-text { font-size: 20px; font-weight: 700; background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  .stats-bar { display: flex; gap: 8px; }
+  .stat-pill { background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-green { background: var(--green); }
+  .dot-red { background: var(--red); }
+  .dot-yellow { background: var(--yellow); }
+
+  .toolbar {
+    padding: 16px 24px;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+  }
+  .search-box { flex: 1; min-width: 200px; position: relative; }
+  .search-box input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px; padding: 10px 16px 10px 40px;
+    font-family: 'Cairo', sans-serif; font-size: 14px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .search-box input:focus { border-color: var(--accent); }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text2); font-size: 16px; }
+  select {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 10px 14px; font-family: 'Cairo', sans-serif;
+    font-size: 14px; outline: none; cursor: pointer;
+  }
+  .btn {
+    border: none; border-radius: 10px; padding: 10px 18px; cursor: pointer;
+    font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 600;
+    transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+  main { padding: 20px 24px; }
+
+  .section-title {
+    font-size: 16px; font-weight: 700; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin: 20px 0 12px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-badge { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px; font-size: 12px; color: var(--text2); }
+
+  table { width: 100%; border-collapse: collapse; }
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 24px; }
+  th {
+    background: var(--bg3); padding: 12px 16px; text-align: right;
+    font-size: 13px; font-weight: 600; color: var(--text2);
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(79,142,247,0.04); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; white-space: nowrap;
+  }
+  .badge-green { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+  .badge-red { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+  .badge-yellow { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+  .badge-blue { background: rgba(79,142,247,0.15); color: #60a5fa; border: 1px solid rgba(79,142,247,0.3); }
+  .badge-purple { background: rgba(124,92,252,0.15); color: #a78bfa; border: 1px solid rgba(124,92,252,0.3); }
+
+  .mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--accent); background: rgba(79,142,247,0.08); padding: 2px 8px; border-radius: 6px; }
+
+  .copy-btn { background: none; border: 1px solid var(--border); color: var(--text2); border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 11px; transition: all 0.2s; }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .days-left { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; }
+  .modal-bg.active { display: flex; }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 18px; padding: 28px; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 18px; margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+  .form-group input, .form-group select {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px; padding: 10px 14px;
+    font-family: 'Cairo', sans-serif; font-size: 14px; outline: none;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); border-radius: 10px; padding: 10px 18px; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 14px; }
+  .btn-outline:hover { border-color: var(--text); color: var(--text); }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--green); color: var(--green); padding: 10px 20px; border-radius: 10px; font-size: 14px; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 768px) {
+    header { flex-direction: column; gap: 10px; }
+    .stats-bar { flex-wrap: wrap; }
+    main { padding: 12px; }
+    .form-row { grid-template-columns: 1fr; }
+    th, td { padding: 8px 10px; font-size: 12px; }
+    .mono { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📺</div>
+    <span class="logo-text">Hydra IPTV Manager</span>
+  </div>
+  <div class="stats-bar" id="statsBar"></div>
+</header>
+
+<div class="toolbar">
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="بحث باسم الحساب أو اليوزرنيم..." oninput="renderAll()">
+  </div>
+  <select id="filterStatus" onchange="renderAll()">
+    <option value="all">كل الحسابات</option>
+    <option value="active">نشط</option>
+    <option value="expiring">قريب الانتهاء</option>
+    <option value="expired">منتهي</option>
+  </select>
+  <select id="filterPaid" onchange="renderAll()">
+    <option value="all">كل الحالات</option>
+    <option value="paid">مدفوع</option>
+    <option value="unpaid">غير مدفوع</option>
+  </select>
+  <button class="btn btn-primary" onclick="openAddModal()">+ إضافة حساب</button>
+</div>
+
+<main>
+  <div id="tablesContainer"></div>
+</main>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2 id="modalTitle">إضافة حساب جديد</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>اسم الحساب</label>
+        <input type="text" id="fName" placeholder="مثال: أحمد علي">
+      </div>
+      <div class="form-group">
+        <label>رقم الهاتف</label>
+        <input type="text" id="fPhone" placeholder="اختياري">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>اليوزرنيم</label>
+        <input type="text" id="fUser" placeholder="username">
+      </div>
+      <div class="form-group">
+        <label>الباسورد</label>
+        <input type="text" id="fPass" placeholder="password">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>الهوست / URL</label>
+      <input type="text" id="fHost" placeholder="http://tvhydra.com">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>تاريخ الاشتراك</label>
+        <input type="date" id="fDate">
+      </div>
+      <div class="form-group">
+        <label>تاريخ الانتهاء</label>
+        <input type="date" id="fExp">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>حالة الدفع</label>
+        <select id="fPaid">
+          <option value="paid">مدفوع ✅</option>
+          <option value="unpaid">غير مدفوع ❌</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ملاحظات</label>
+        <input type="text" id="fNotes" placeholder="اختياري">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveAccount()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'hydra_iptv_accounts_v2';
+
+const DEFAULT_DATA = [
+  { id:1, name:'Me (Mido)', phone:'', username:'Mido', password:'MiDo1005', host:'http://hydra.st:80', startDate:'', expDate:'2026-08-27', paid:'paid', notes:'تجديد' },
+  { id:2, name:'Magic', phone:'', username:'Magic', password:'MrMaGic2022', host:'http://hydra.st:80', startDate:'', expDate:'2026-07-29', paid:'paid', notes:'تجديد' },
+  { id:3, name:'Ayman Wafaa', phone:'', username:'Aymankhateeb', password:'AyM17052023', host:'http://hydra.st:80', startDate:'2024-08-17', expDate:'2025-11-17', paid:'paid', notes:'تجديد' },
+  { id:4, name:'Mrharby', phone:'', username:'MrMharby', password:'MiDo22052023', host:'http://hydra.st:80', startDate:'2023-05-22', expDate:'2024-08-22', paid:'paid', notes:'منتهي' },
+  { id:5, name:'Assem (صاحب Ayman)', phone:'55550125', username:'Assem', password:'As31082024', host:'http://hydratv.cc:80', startDate:'2024-08-31', expDate:'2027-03-01', paid:'paid', notes:'' },
+  { id:6, name:'Amani (20 clinic)', phone:'', username:'Amani', password:'KuAmA05082023', host:'http://hydra.st:80', startDate:'2023-08-05', expDate:'2025-11-05', paid:'paid', notes:'' },
+  { id:7, name:'Shouk', phone:'', username:'Shouk', password:'ShKu26092023', host:'http://hydra.st:80', startDate:'', expDate:'2024-12-26', paid:'paid', notes:'منتهي' },
+  { id:8, name:'Khazal', phone:'', username:'Khazal', password:'KuQa21122023', host:'http://hydra.st:80', startDate:'2023-12-21', expDate:'2025-03-21', paid:'paid', notes:'' },
+  { id:9, name:'Iman Adry', phone:'', username:'Iman', password:'Qadry12032024', host:'http://hydratv.cc:80', startDate:'2024-03-12', expDate:'2025-06-12', paid:'paid', notes:'' },
+  { id:10, name:'Tharwat William', phone:'New', username:'Tharwat', password:'KuAh17082024', host:'http://hydratv.cc:80', startDate:'2024-08-18', expDate:'2025-11-18', paid:'paid', notes:'' },
+  { id:11, name:'Eslam Adry 1', phone:'', username:'Essra', password:'Ku29082024', host:'http://hydratv.cc:80', startDate:'2024-08-29', expDate:'2025-11-29', paid:'paid', notes:'' },
+  { id:12, name:'Eslam Adry 2', phone:'', username:'Adry', password:'Ku29082024', host:'http://hydratv.cc:80', startDate:'2024-08-29', expDate:'2027-02-29', paid:'unpaid', notes:'غير مدفوع' },
+  { id:13, name:'Eslam Adry 3', phone:'', username:'Amohammed', password:'Am01092024', host:'http://hydratv.cc:80', startDate:'2024-09-01', expDate:'2027-03-23', paid:'unpaid', notes:'غير مدفوع' },
+  { id:14, name:'Eslam Adry 4', phone:'', username:'MrEhab', password:'Ku07092024', host:'http://hydratv.cc:80', startDate:'2024-09-07', expDate:'2025-12-07', paid:'paid', notes:'' },
+  { id:15, name:'Fawaz Alzayad', phone:'', username:'YAlzayed', password:'Ku11092024', host:'http://hydratv.cc:80', startDate:'2024-09-11', expDate:'2027-08-11', paid:'unpaid', notes:'غير مدفوع' },
+  { id:16, name:'Hazem Maha', phone:'', username:'Zoom', password:'MrZ13062023', host:'http://hydra.st:80', startDate:'2024-09-24', expDate:'2027-04-04', paid:'unpaid', notes:'غير مدفوع' },
+  { id:17, name:'Aboleef', phone:'', username:'Aboleef', password:'AbO07072023', host:'http://hydra.st:80', startDate:'2024-09-29', expDate:'2027-03-29', paid:'unpaid', notes:'غير مدفوع' },
+  { id:18, name:'Amani Clinic (Dark)', phone:'', username:'Dark', password:'Ku01122024', host:'http://hydra.st:80', startDate:'2024-12-01', expDate:'2026-03-01', paid:'paid', notes:'' },
+  { id:19, name:'Nashaat', phone:'', username:'MrNashat', password:'Kna23112025', host:'http://familyplus.me:8080', startDate:'2024-11-20', expDate:'2027-02-23', paid:'paid', notes:'تجديد' },
+  { id:20, name:'Haitham Nova', phone:'', username:'MRhaitham', password:'Ku27122024', host:'http://hydra.st:80', startDate:'2024-12-25', expDate:'2026-03-25', paid:'paid', notes:'' },
+  { id:21, name:'Mr Fawaz', phone:'', username:'MrFawaz', password:'Fz10022025', host:'http://tvhydra.com', startDate:'2025-02-10', expDate:'2027-08-10', paid:'unpaid', notes:'غير مدفوع' },
+  { id:22, name:'Hawari', phone:'', username:'Hawari', password:'Hw02032025', host:'http://tvhydra.com', startDate:'2025-03-02', expDate:'2026-06-02', paid:'paid', notes:'' },
+  { id:23, name:'OmarQ8', phone:'', username:'OmarQ8', password:'Omar172025', host:'http://tvhydra.com', startDate:'', expDate:'2026-09-17', paid:'paid', notes:'' },
+  { id:24, name:'Dr M7md', phone:'', username:'Drm7md', password:'DR08092025', host:'http://tvhydra.com', startDate:'2025-09-08', expDate:'2026-12-08', paid:'paid', notes:'' },
+  { id:25, name:'AmjadQ8', phone:'', username:'Amjadq8', password:'Amj15102025', host:'http://tvhydra.com', startDate:'2025-10-15', expDate:'2027-01-15', paid:'paid', notes:'' },
+  { id:26, name:'Asmaa', phone:'', username:'Asmaa01', password:'Md26122025', host:'http://hydratv.cc:80', startDate:'2025-12-26', expDate:'2027-03-26', paid:'unpaid', notes:'غير مدفوع' },
+  { id:27, name:'Abdrahman Q8', phone:'', username:'Abdrahmanq8', password:'Abd12012026', host:'http://hydra.st:80', startDate:'2026-01-12', expDate:'2027-04-12', paid:'unpaid', notes:'غير مدفوع' },
+  { id:28, name:'Ayman Q8', phone:'', username:'Aymanq8', password:'Aym12012026', host:'http://hydra.st:80', startDate:'2026-01-12', expDate:'2027-04-12', paid:'unpaid', notes:'غير مدفوع' },
+  { id:29, name:'Osama Alzayed', phone:'', username:'osamaalzayed', password:'Kuw29012026', host:'', startDate:'2026-01-29', expDate:'2027-04-29', paid:'unpaid', notes:'غير مدفوع' },
+  { id:30, name:'Acil', phone:'', username:'Acil', password:'Kuw03022026', host:'', startDate:'2026-02-03', expDate:'2027-05-03', paid:'unpaid', notes:'غير مدفوع' },
+  { id:31, name:'MostafaQ8', phone:'', username:'MostafaQ8', password:'Kuw18032026', host:'', startDate:'2026-03-18', expDate:'2027-06-19', paid:'unpaid', notes:'غير مدفوع' },
+];
+
+let accounts = [];
+let editingId = null;
+
+function load() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) { try { accounts = JSON.parse(saved); } catch(e) { accounts = [...DEFAULT_DATA]; } }
+  else { accounts = [...DEFAULT_DATA]; save(); }
+}
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts)); }
+
+function daysLeft(expDate) {
+  if (!expDate) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = new Date(expDate); exp.setHours(0,0,0,0);
+  return Math.round((exp - today) / 86400000);
+}
+
+function statusOf(acc) {
+  const d = daysLeft(acc.expDate);
+  if (d === null) return 'unknown';
+  if (d < 0) return 'expired';
+  if (d <= 30) return 'expiring';
+  return 'active';
+}
+
+function statusBadge(acc) {
+  const d = daysLeft(acc.expDate);
+  const s = statusOf(acc);
+  if (s === 'expired') return `<span class="badge badge-red">⛔ منتهي</span>`;
+  if (s === 'expiring') return `<span class="badge badge-yellow">⚠️ ${d} يوم</span>`;
+  if (s === 'active') return `<span class="badge badge-green">✅ ${d} يوم</span>`;
+  return `<span class="badge badge-blue">—</span>`;
+}
+
+function paidBadge(paid) {
+  return paid === 'paid'
+    ? `<span class="badge badge-green">مدفوع</span>`
+    : `<span class="badge badge-red">غير مدفوع</span>`;
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  const parts = d.split('-');
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓';
+    setTimeout(() => btn.textContent = '📋', 1000);
+  });
+}
+
+function renderStats() {
+  const total = accounts.length;
+  const active = accounts.filter(a => statusOf(a) === 'active').length;
+  const expiring = accounts.filter(a => statusOf(a) === 'expiring').length;
+  const expired = accounts.filter(a => statusOf(a) === 'expired').length;
+  const unpaid = accounts.filter(a => a.paid === 'unpaid').length;
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-pill"><span class="dot dot-green"></span>${active} نشط</div>
+    <div class="stat-pill"><span class="dot dot-yellow"></span>${expiring} ينتهي قريباً</div>
+    <div class="stat-pill"><span class="dot dot-red"></span>${expired} منتهي</div>
+    <div class="stat-pill">💰 ${unpaid} غير مدفوع</div>
+    <div class="stat-pill">👥 ${total} إجمالي</div>
+  `;
+}
+
+function filtered() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const fs = document.getElementById('filterStatus').value;
+  const fp = document.getElementById('filterPaid').value;
+  return accounts.filter(a => {
+    const matchQ = !q || a.name.toLowerCase().includes(q) || a.username.toLowerCase().includes(q) || (a.phone||'').includes(q);
+    const matchS = fs === 'all' || statusOf(a) === fs;
+    const matchP = fp === 'all' || a.paid === fp;
+    return matchQ && matchS && matchP;
+  });
+}
+
+function renderAll() {
+  renderStats();
+  const data = filtered();
+  const container = document.getElementById('tablesContainer');
+
+  const groups = {
+    expiring: { label: '⚠️ تنتهي خلال 30 يوم', items: [] },
+    expired:  { label: '⛔ منتهية', items: [] },
+    active:   { label: '✅ نشطة', items: [] },
+    unpaid:   { label: '💸 غير مدفوعة', items: [] },
+  };
+
+  data.forEach(a => {
+    const s = statusOf(a);
+    if (s === 'expiring') groups.expiring.items.push(a);
+    else if (s === 'expired') groups.expired.items.push(a);
+    else if (a.paid === 'unpaid') groups.unpaid.items.push(a);
+    else groups.active.items.push(a);
+  });
+
+  const allFiltered = filtered();
+  const counts = {
+    expiring: allFiltered.filter(a => statusOf(a) === 'expiring').length,
+    active:   allFiltered.filter(a => statusOf(a) === 'active').length,
+    unpaid:   allFiltered.filter(a => a.paid === 'unpaid' && statusOf(a) !== 'expiring' && statusOf(a) !== 'expired').length,
+    expired:  allFiltered.filter(a => statusOf(a) === 'expired').length,
+  };
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px">
+    <div onclick="setFilter('expiring')" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:14px;padding:16px;text-align:center;cursor:pointer;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+      <div style="font-size:32px;font-weight:700;color:#fbbf24">${counts.expiring}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px">⚠️ تنتهي قريباً</div>
+    </div>
+    <div onclick="setFilter('active')" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:14px;padding:16px;text-align:center;cursor:pointer;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+      <div style="font-size:32px;font-weight:700;color:#4ade80">${counts.active}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px">✅ نشطة</div>
+    </div>
+    <div onclick="setFilter('unpaid')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:14px;padding:16px;text-align:center;cursor:pointer;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+      <div style="font-size:32px;font-weight:700;color:#f87171">${counts.unpaid}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px">💸 غير مدفوعة</div>
+    </div>
+    <div onclick="setFilter('expired')" style="background:rgba(100,100,100,0.1);border:1px solid rgba(100,100,100,0.3);border-radius:14px;padding:16px;text-align:center;cursor:pointer;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+      <div style="font-size:32px;font-weight:700;color:var(--text2)">${counts.expired}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px">⛔ منتهية</div>
+    </div>
+  </div>`;
+
+  ['expiring','active','unpaid','expired'].forEach(key => {
+    const g = groups[key];
+    if (!g.items.length) return;
+    html += `<div class="section-title">${g.label} <span class="section-badge">${g.items.length}</span></div>`;
+    html += buildTable(g.items);
+  });
+
+  if (allFiltered.length === 0) html += `<div style="text-align:center;padding:60px;color:var(--text2)">🔍 لا توجد نتائج</div>`;
+  container.innerHTML = html;
+}
+
+function setFilter(status) {
+  document.getElementById('filterStatus').value = status === 'unpaid' ? 'all' : status;
+  document.getElementById('filterPaid').value = status === 'unpaid' ? 'unpaid' : 'all';
+  renderAll();
+  window.scrollTo({ top: 200, behavior: 'smooth' });
+}
+
+function buildTable(rows) {
+  // Group by name
+  const grouped = {};
+  const order = [];
+  rows.forEach(a => {
+    const key = a.name;
+    if (!grouped[key]) { grouped[key] = []; order.push(key); }
+    grouped[key].push(a);
+  });
+
+  let t = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>الاسم</th><th>يوزرنيم / باسورد</th>
+      <th>رقم التليفون</th><th>انتهاء الاشتراك</th>
+      <th>الحالة</th><th>الدفع</th><th>ملاحظات</th><th>إجراء</th>
+    </tr></thead><tbody>`;
+
+  order.forEach(name => {
+    const accs = grouped[name];
+    const first = accs[0];
+    const rowspan = accs.length;
+
+    accs.forEach((a, i) => {
+      const d = daysLeft(a.expDate);
+      t += `<tr style="${i > 0 ? 'border-top:1px dashed var(--border)' : ''}">`;
+
+      // Name cell — only on first row, rowspan
+      if (i === 0) {
+        t += `<td rowspan="${rowspan}" style="vertical-align:top;padding-top:14px;border-left:3px solid ${rowspan > 1 ? 'var(--accent)' : 'transparent'}">
+          <div style="font-weight:600;font-size:14px">${name}</div>
+          ${rowspan > 1 ? `<div style="font-size:11px;color:var(--accent);margin-top:6px;background:rgba(79,142,247,0.1);padding:2px 8px;border-radius:10px;display:inline-block">${rowspan} أكونتات</div>` : ''}
+        </td>`;
+      }
+
+      t += `
+        <td>
+          <span class="mono">${a.username}</span>
+          <button class="copy-btn" onclick="copyText('${a.username}',this)">📋</button><br>
+          <span class="mono" style="margin-top:4px;display:inline-block">${a.password}</span>
+          <button class="copy-btn" onclick="copyText('${a.password}',this)">📋</button>
+        </td>
+        <td style="font-size:13px;color:var(--text);direction:ltr;text-align:right">${a.phone || '—'}</td>
+        <td>
+          <div>${formatDate(a.expDate)}</div>
+          ${d !== null ? `<div class="days-left">${d < 0 ? `منذ ${Math.abs(d)} يوم` : `متبقي ${d} يوم`}</div>` : ''}
+        </td>
+        <td>${statusBadge(a)}</td>
+        <td style="position:relative">
+          <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0">${paidBadge(a.paid)}</button>
+        </td>
+        <td style="font-size:12px;color:var(--text2)">${a.notes || '—'}</td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-primary" style="padding:6px 10px;font-size:12px" onclick="editAccount(${a.id})">✏️</button>
+            <button class="btn btn-danger" style="padding:6px 10px;font-size:12px" onclick="deleteAccount(${a.id})">🗑️</button>
+            <button onclick="showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;white-space:nowrap">📨 تأكيد</button>
+            <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;white-space:nowrap">🔔 تذكير</button>
+          </div>
+        </td>
+      </tr>`;
+    });
+
+    // Separator between different people
+    t += `<tr style="height:4px;background:var(--bg3)"><td colspan="8"></td></tr>`;
+  });
+
+  t += `</tbody></table></div>`;
+  return t;
+}
+
+function showPaidMenu(e, id) {
+  e.stopPropagation();
+  document.querySelectorAll('.paid-menu').forEach(m => m.remove());
+  const menu = document.createElement('div');
+  menu.className = 'paid-menu';
+  menu.style.cssText = `position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:500;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,0.4)`;
+  const rect = e.currentTarget.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 6) + 'px';
+  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  menu.innerHTML = `
+    <div onclick="setPaid(${id},'paid')" style="padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;color:#4ade80" onmouseover="this.style.background='rgba(34,197,94,0.1)'" onmouseout="this.style.background='none'">
+      ✅ مدفوع
+    </div>
+    <div onclick="setPaid(${id},'unpaid')" style="padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;color:#f87171" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='none'">
+      ❌ غير مدفوع
+    </div>`;
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
+}
+
+function setPaid(id, value) {
+  const acc = accounts.find(x => x.id === id);
+  if (!acc) return;
+  acc.paid = value;
+  save(); renderAll();
+  showToast(value === 'paid' ? '✅ تم التحويل لمدفوع' : '❌ تم التحويل لغير مدفوع');
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = '➕ إضافة حساب جديد';
+  ['fName','fPhone','fUser','fPass','fHost','fDate','fExp','fNotes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fPaid').value = 'paid';
+  document.getElementById('modalBg').classList.add('active');
+}
+
+function editAccount(id) {
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = '✏️ تعديل الحساب';
+  document.getElementById('fName').value = a.name || '';
+  document.getElementById('fPhone').value = a.phone || '';
+  document.getElementById('fUser').value = a.username || '';
+  document.getElementById('fPass').value = a.password || '';
+  document.getElementById('fHost').value = a.host || '';
+  document.getElementById('fDate').value = a.startDate || '';
+  document.getElementById('fExp').value = a.expDate || '';
+  document.getElementById('fPaid').value = a.paid || 'paid';
+  document.getElementById('fNotes').value = a.notes || '';
+  document.getElementById('modalBg').classList.add('active');
+}
+
+function saveAccount() {
+  const a = {
+    name: document.getElementById('fName').value.trim(),
+    phone: document.getElementById('fPhone').value.trim(),
+    username: document.getElementById('fUser').value.trim(),
+    password: document.getElementById('fPass').value.trim(),
+    host: document.getElementById('fHost').value.trim(),
+    startDate: document.getElementById('fDate').value,
+    expDate: document.getElementById('fExp').value,
+    paid: document.getElementById('fPaid').value,
+    notes: document.getElementById('fNotes').value.trim(),
+  };
+  if (!a.name || !a.username) { showToast('❌ الاسم واليوزرنيم مطلوبان', true); return; }
+  if (editingId) {
+    const idx = accounts.findIndex(x => x.id === editingId);
+    if (idx !== -1) {
+      const old = accounts[idx];
+      const wasExpired = statusOf(old) === 'expired';
+      const dateChanged = a.expDate && a.expDate !== old.expDate;
+      if (wasExpired && dateChanged && !a.notes) a.notes = 'تجديد';
+      accounts[idx] = { ...old, ...a };
+    }
+  } else {
+    const maxId = accounts.reduce((m, x) => Math.max(m, x.id), 0);
+    accounts.push({ id: maxId + 1, ...a });
+  }
+  const wasEditing = !!editingId;
+  save(); closeModal();
+  document.getElementById('filterStatus').value = 'all';
+  document.getElementById('filterPaid').value = 'all';
+  document.getElementById('searchInput').value = '';
+  renderAll();
+  showToast(wasEditing ? '✅ تم التعديل — انتقل لقسمه الجديد' : '✅ تمت الإضافة');
+}
+
+function deleteAccount(id) {
+  if (!confirm('هل أنت متأكد من الحذف؟')) return;
+  accounts = accounts.filter(x => x.id !== id);
+  save(); renderAll();
+  showToast('🗑️ تم الحذف');
+}
+
+function closeModal() { document.getElementById('modalBg').classList.remove('active'); }
+
+function showToast(msg, err) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = err ? 'var(--red)' : 'var(--green)';
+  t.style.color = err ? 'var(--red)' : 'var(--green)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+document.getElementById('modalBg').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+load();
+renderAll();
+
+function showMsg(id, type) {
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  let text = '';
+  if (type === 'confirm') {
+    text = `Welcome to hydra server Enjoy our world ( Live Tv channels , Movies , Series)
+Username : ${a.username}
+Password: ${a.password}
+
+Host 1: http://tvhydra.com
+Or
+Host 2: http://hydraa.st:80
+Or
+Host 3 : http://hydratv.cc:80
+
+For mobile applications :
+Iphone : https://apps.apple.com/us/app/hydra-tv/id6443712530
+Android: http://www.iptvsmarters.com/smarters4-0.apk
+
+For TV : visit the website from the device by any browser: https://hydratv.store/
+
+Hydra for Android TV from downloader :
+157493
+
+Iptv smarter pro for Android TV from downloader:
+6468112
+
+Apps:
+https://apps.apple.com/us/app/hydra-tv/id6443712530
+http://www.iptvsmarters.com/smarters4-0.apk
+https://hydratv.app/`;
+    document.getElementById('msgModalTitle').textContent = '📨 رسالة التأكيد — ' + a.name;
+  } else {
+    const exp = a.expDate ? formatDate(a.expDate) : '—';
+    const d = daysLeft(a.expDate);
+    const dText = d !== null ? (d < 0 ? `(منتهي منذ ${Math.abs(d)} يوم)` : `(متبقي ${d} يوم)`) : '';
+    text = `تذكير تجديد اشتراك Hydra IPTV 📺
+
+عزيزي ${a.name}،
+اشتراكك سينتهي بتاريخ ${exp} ${dText}
+
+Username : ${a.username}
+Password: ${a.password}
+
+للتجديد تواصل معنا في أقرب وقت حتى لا تنقطع الخدمة عنك. 🙏`;
+    document.getElementById('msgModalTitle').textContent = '🔔 رسالة التذكير — ' + a.name;
+  }
+  document.getElementById('msgText').value = text;
+
+  const rawPhone = (a.phone || '').replace(/[^0-9+]/g, '');
+  window._currentMsgPhone = '';
+  window._currentMsgText = text;
+  if (rawPhone) {
+    const phone = rawPhone.startsWith('+') ? rawPhone.replace('+','') : rawPhone.startsWith('00') ? rawPhone.slice(2) : rawPhone;
+    window._currentMsgPhone = phone;
+    document.getElementById('waBtn').style.display = 'inline-flex';
+    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
+  } else {
+    document.getElementById('waBtn').style.display = 'none';
+  }
+  document.getElementById('msgModalBg').classList.add('active');
+}
+
+function openWa() {
+  if (!window._currentMsgPhone) return;
+  window.open('https://wa.me/' + window._currentMsgPhone + '?text=' + encodeURIComponent(window._currentMsgText), '_blank');
+}
+
+function copyMsg() {
+  const t = document.getElementById('msgText');
+  navigator.clipboard.writeText(t.value).then(() => showToast('📋 تم نسخ الرسالة'));
+}
+</script>
+
+<div class="modal-bg" id="msgModalBg">
+  <div class="modal" style="max-width:560px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h2 id="msgModalTitle" style="margin:0">📨 رسالة التأكيد</h2>
+      <button onclick="document.getElementById('msgModalBg').classList.remove('active')" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <textarea id="msgText" readonly style="width:100%;height:320px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:14px;font-family:Cairo,sans-serif;font-size:13px;line-height:1.8;resize:none;outline:none;direction:ltr"></textarea>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn-outline" onclick="document.getElementById('msgModalBg').classList.remove('active')">إغلاق</button>
+      <button class="btn btn-primary" onclick="copyMsg()">📋 نسخ الرسالة</button>
+      <button id="waBtn" class="btn btn-primary" style="background:linear-gradient(135deg,#25d366,#128c7e);display:none" onclick="openWa()">💬 فتح واتساب</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
