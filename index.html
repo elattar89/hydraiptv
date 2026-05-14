@@ -219,9 +219,9 @@
         <label>تاريخ الاشتراك</label>
         <input type="date" id="fDate" onchange="autoFillExpDate()">
       </div>
-      <div class="form-group">
-        <label>تاريخ الانتهاء</label>
-        <input type="date" id="fExp">
+      <div class="form-group" id="fExpGroup" style="display:none">
+        <label>تاريخ الانتهاء (محسوب تلقائياً)</label>
+        <input type="date" id="fExp" readonly style="opacity:0.5;cursor:not-allowed">
       </div>
     </div>
     <div class="form-row">
@@ -254,23 +254,23 @@ const DEFAULT_DATA = [
   { id:2, name:'Magic', phone:'', username:'Magic', password:'MrMaGic2022', host:'http://hydra.st:80', startDate:'', expDate:'2026-07-29', paid:'paid', notes:'تجديد' },
   { id:3, name:'Ayman Wafaa', phone:'', username:'Aymankhateeb', password:'AyM17052023', host:'http://hydra.st:80', startDate:'2024-08-17', expDate:'2025-11-17', paid:'paid', notes:'تجديد' },
   { id:4, name:'Mrharby', phone:'', username:'MrMharby', password:'MiDo22052023', host:'http://hydra.st:80', startDate:'2023-05-22', expDate:'2024-08-22', paid:'paid', notes:'منتهي' },
-  { id:5, name:'Assem (صاحب Ayman)', phone:'55550125', username:'Assem', password:'As31082024', host:'http://hydratv.cc:80', startDate:'2024-08-31', expDate:'2027-03-01', paid:'paid', notes:'' },
-  { id:6, name:'Amani (20 clinic)', phone:'', username:'Amani', password:'KuAmA05082023', host:'http://hydra.st:80', startDate:'2023-08-05', expDate:'2025-11-05', paid:'paid', notes:'' },
+  { id:5, name:'Assem (صاحب Ayman)', phone:'55550125', username:'Assem', password:'As31082024', host:'http://hydratv.cc:80', startDate:'2024-08-31', expDate:'2025-11-30', paid:'paid', notes:'' },
+  { id:6, name:'Amani (20 clinic)', phone:'', username:'Amani', password:'KuAmA05082023', host:'http://hydra.st:80', startDate:'2023-08-05', expDate:'2024-11-05', paid:'paid', notes:'' },
   { id:7, name:'Shouk', phone:'', username:'Shouk', password:'ShKu26092023', host:'http://hydra.st:80', startDate:'', expDate:'2024-12-26', paid:'paid', notes:'منتهي' },
   { id:8, name:'Khazal', phone:'', username:'Khazal', password:'KuQa21122023', host:'http://hydra.st:80', startDate:'2023-12-21', expDate:'2025-03-21', paid:'paid', notes:'' },
   { id:9, name:'Iman Adry', phone:'', username:'Iman', password:'Qadry12032024', host:'http://hydratv.cc:80', startDate:'2024-03-12', expDate:'2025-06-12', paid:'paid', notes:'' },
   { id:10, name:'Tharwat William', phone:'New', username:'Tharwat', password:'KuAh17082024', host:'http://hydratv.cc:80', startDate:'2024-08-18', expDate:'2025-11-18', paid:'paid', notes:'' },
   { id:11, name:'Eslam Adry 1', phone:'', username:'Essra', password:'Ku29082024', host:'http://hydratv.cc:80', startDate:'2024-08-29', expDate:'2025-11-29', paid:'paid', notes:'' },
-  { id:12, name:'Eslam Adry 2', phone:'', username:'Adry', password:'Ku29082024', host:'http://hydratv.cc:80', startDate:'2024-08-29', expDate:'2027-02-29', paid:'unpaid', notes:'غير مدفوع' },
-  { id:13, name:'Eslam Adry 3', phone:'', username:'Amohammed', password:'Am01092024', host:'http://hydratv.cc:80', startDate:'2024-09-01', expDate:'2027-03-23', paid:'unpaid', notes:'غير مدفوع' },
+  { id:12, name:'Eslam Adry 2', phone:'', username:'Adry', password:'Ku29082024', host:'http://hydratv.cc:80', startDate:'2024-08-29', expDate:'2025-11-29', paid:'unpaid', notes:'غير مدفوع' },
+  { id:13, name:'Eslam Adry 3', phone:'', username:'Amohammed', password:'Am01092024', host:'http://hydratv.cc:80', startDate:'2024-09-01', expDate:'2025-12-01', paid:'unpaid', notes:'غير مدفوع' },
   { id:14, name:'Eslam Adry 4', phone:'', username:'MrEhab', password:'Ku07092024', host:'http://hydratv.cc:80', startDate:'2024-09-07', expDate:'2025-12-07', paid:'paid', notes:'' },
-  { id:15, name:'Fawaz Alzayad', phone:'', username:'YAlzayed', password:'Ku11092024', host:'http://hydratv.cc:80', startDate:'2024-09-11', expDate:'2027-08-11', paid:'unpaid', notes:'غير مدفوع' },
-  { id:16, name:'Hazem Maha', phone:'', username:'Zoom', password:'MrZ13062023', host:'http://hydra.st:80', startDate:'2024-09-24', expDate:'2027-04-04', paid:'unpaid', notes:'غير مدفوع' },
-  { id:17, name:'Aboleef', phone:'', username:'Aboleef', password:'AbO07072023', host:'http://hydra.st:80', startDate:'2024-09-29', expDate:'2027-03-29', paid:'unpaid', notes:'غير مدفوع' },
+  { id:15, name:'Fawaz Alzayad', phone:'', username:'YAlzayed', password:'Ku11092024', host:'http://hydratv.cc:80', startDate:'2024-09-11', expDate:'2025-12-11', paid:'unpaid', notes:'غير مدفوع' },
+  { id:16, name:'Hazem Maha', phone:'', username:'Zoom', password:'MrZ13062023', host:'http://hydra.st:80', startDate:'2024-09-24', expDate:'2025-12-24', paid:'unpaid', notes:'غير مدفوع' },
+  { id:17, name:'Aboleef', phone:'', username:'Aboleef', password:'AbO07072023', host:'http://hydra.st:80', startDate:'2024-09-29', expDate:'2025-12-29', paid:'unpaid', notes:'غير مدفوع' },
   { id:18, name:'Amani Clinic (Dark)', phone:'', username:'Dark', password:'Ku01122024', host:'http://hydra.st:80', startDate:'2024-12-01', expDate:'2026-03-01', paid:'paid', notes:'' },
-  { id:19, name:'Nashaat', phone:'', username:'MrNashat', password:'Kna23112025', host:'http://familyplus.me:8080', startDate:'2024-11-20', expDate:'2027-02-23', paid:'paid', notes:'تجديد' },
+  { id:19, name:'Nashaat', phone:'', username:'MrNashat', password:'Kna23112025', host:'http://familyplus.me:8080', startDate:'2024-11-20', expDate:'2026-02-20', paid:'paid', notes:'تجديد' },
   { id:20, name:'Haitham Nova', phone:'', username:'MRhaitham', password:'Ku27122024', host:'http://hydra.st:80', startDate:'2024-12-25', expDate:'2026-03-25', paid:'paid', notes:'' },
-  { id:21, name:'Mr Fawaz', phone:'', username:'MrFawaz', password:'Fz10022025', host:'http://tvhydra.com', startDate:'2025-02-10', expDate:'2027-08-10', paid:'unpaid', notes:'غير مدفوع' },
+  { id:21, name:'Mr Fawaz', phone:'', username:'MrFawaz', password:'Fz10022025', host:'http://tvhydra.com', startDate:'2025-02-10', expDate:'2026-05-10', paid:'unpaid', notes:'غير مدفوع' },
   { id:22, name:'Hawari', phone:'', username:'Hawari', password:'Hw02032025', host:'http://tvhydra.com', startDate:'2025-03-02', expDate:'2026-06-02', paid:'paid', notes:'' },
   { id:23, name:'OmarQ8', phone:'', username:'OmarQ8', password:'Omar172025', host:'http://tvhydra.com', startDate:'', expDate:'2026-09-17', paid:'paid', notes:'' },
   { id:24, name:'Dr M7md', phone:'', username:'Drm7md', password:'DR08092025', host:'http://tvhydra.com', startDate:'2025-09-08', expDate:'2026-12-08', paid:'paid', notes:'' },
@@ -280,7 +280,7 @@ const DEFAULT_DATA = [
   { id:28, name:'Ayman Q8', phone:'', username:'Aymanq8', password:'Aym12012026', host:'http://hydra.st:80', startDate:'2026-01-12', expDate:'2027-04-12', paid:'unpaid', notes:'غير مدفوع' },
   { id:29, name:'Osama Alzayed', phone:'', username:'osamaalzayed', password:'Kuw29012026', host:'', startDate:'2026-01-29', expDate:'2027-04-29', paid:'unpaid', notes:'غير مدفوع' },
   { id:30, name:'Acil', phone:'', username:'Acil', password:'Kuw03022026', host:'', startDate:'2026-02-03', expDate:'2027-05-03', paid:'unpaid', notes:'غير مدفوع' },
-  { id:31, name:'MostafaQ8', phone:'', username:'MostafaQ8', password:'Kuw18032026', host:'', startDate:'2026-03-18', expDate:'2027-06-19', paid:'unpaid', notes:'غير مدفوع' },
+  { id:31, name:'MostafaQ8', phone:'', username:'MostafaQ8', password:'Kuw18032026', host:'', startDate:'2026-03-18', expDate:'2027-06-18', paid:'unpaid', notes:'غير مدفوع' }
 ];
 
 let accounts = [];
@@ -529,15 +529,15 @@ function setPaid(id, value) {
 
 function autoFillExpDate() {
   const startVal = document.getElementById('fDate').value;
-  if (!startVal) return;
+  if (!startVal) { document.getElementById('fExp').value = ''; return; }
   const start = new Date(startVal);
-  // إضافة 15 شهر بالظبط
   const exp = new Date(start);
   exp.setMonth(exp.getMonth() + 15);
-  // تحويل للفورمات yyyy-mm-dd
   const yyyy = exp.getFullYear();
   const mm = String(exp.getMonth() + 1).padStart(2, '0');
-  const dd = String(exp.getDate()).padStart(2, '0');
+  // نحافظ على نفس اليوم أو آخر يوم في الشهر
+  const lastDay = new Date(yyyy, exp.getMonth() + 1, 0).getDate();
+  const dd = String(Math.min(start.getDate(), lastDay)).padStart(2, '0');
   document.getElementById('fExp').value = `${yyyy}-${mm}-${dd}`;
 }
 
@@ -621,7 +621,19 @@ function editAccount(id) {
   document.getElementById('fPass').value = a.password || '';
   document.getElementById('fHost').value = a.host || '';
   document.getElementById('fDate').value = a.startDate || '';
-  document.getElementById('fExp').value = a.expDate || '';
+  // حساب تاريخ الانتهاء تلقائياً من تاريخ الاشتراك
+  if (a.startDate) {
+    const s = new Date(a.startDate);
+    const exp = new Date(s);
+    exp.setMonth(exp.getMonth() + 15);
+    const yyyy = exp.getFullYear();
+    const mm = String(exp.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(yyyy, exp.getMonth() + 1, 0).getDate();
+    const dd = String(Math.min(s.getDate(), lastDay)).padStart(2, '0');
+    document.getElementById('fExp').value = `${yyyy}-${mm}-${dd}`;
+  } else {
+    document.getElementById('fExp').value = a.expDate || '';
+  }
   document.getElementById('fPaid').value = a.paid || 'paid';
   document.getElementById('fNotes').value = a.notes || '';
   document.getElementById('modalBg').classList.add('active');
@@ -648,7 +660,17 @@ function showDupModal(title, desc, accountData) {
 }
 
 function doSaveAccount(a, skipDupCheck) {
-  // نسخة من saveAccount بدون فحص التكرار
+  // إعادة حساب تاريخ الانتهاء من تاريخ الاشتراك دايماً
+  if (a.startDate) {
+    const s = new Date(a.startDate);
+    const exp = new Date(s);
+    exp.setMonth(exp.getMonth() + 15);
+    const yyyy = exp.getFullYear();
+    const mm = String(exp.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(yyyy, exp.getMonth() + 1, 0).getDate();
+    const dd = String(Math.min(s.getDate(), lastDay)).padStart(2, '0');
+    a.expDate = `${yyyy}-${mm}-${dd}`;
+  }
   if (editingId) {
     const idx = accounts.findIndex(x => x.id === editingId);
     if (idx !== -1) {
@@ -680,7 +702,7 @@ function saveAccount() {
     password: document.getElementById('fPass').value.trim(),
     host: document.getElementById('fHost').value.trim(),
     startDate: document.getElementById('fDate').value,
-    expDate: document.getElementById('fExp').value,
+    expDate: document.getElementById('fExp').value, // محسوب تلقائياً
     paid: document.getElementById('fPaid').value,
     notes: document.getElementById('fNotes').value.trim(),
   };
