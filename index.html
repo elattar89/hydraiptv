@@ -131,6 +131,51 @@
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--green); color: var(--green); padding: 10px 20px; border-radius: 10px; font-size: 14px; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
   .toast.show { opacity: 1; }
 
+  footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .btn-excel-export {
+    background: linear-gradient(135deg, #1d7a40, #22c55e);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 10px rgba(34,197,94,0.3);
+  }
+  .btn-excel-export:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-excel-import {
+    background: linear-gradient(135deg, #1a4fa3, #1a6cf0);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 10px rgba(26,108,240,0.3);
+  }
+  .btn-excel-import:hover { opacity: 0.88; transform: translateY(-1px); }
+
 
   .name-suggestion {
     padding: 10px 16px; cursor: pointer; font-size: 14px;
@@ -246,11 +291,23 @@
     <option value="unpaid">غير مدفوع</option>
   </select>
   <button class="btn btn-primary" onclick="openAddModal()">+ إضافة حساب</button>
+  <button id="refreshBtn" onclick="manualRefresh()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:10px 14px;font-size:18px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;" title="تحديث البيانات">🔄</button>
 </div>
 
 <main>
   <div id="tablesContainer"></div>
 </main>
+
+<footer>
+  <span style="color:var(--text2);font-size:13px;margin-left:auto">📊 تصدير / استيراد البيانات</span>
+  <button class="btn-excel-export" onclick="exportToExcel()" id="exportBtn">
+    ⬇️ تصدير Excel
+  </button>
+  <label class="btn-excel-import" style="cursor:pointer">
+    ⬆️ استرجاع Excel
+    <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(this)" id="importFileInput">
+  </label>
+</footer>
 
 <div class="modal-bg" id="modalBg">
   <div class="modal">
@@ -947,6 +1004,30 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
 load();
 renderAll();
 
+// ====== تحديث يدوي ======
+function manualRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  btn.style.transform = 'rotate(360deg)';
+  btn.style.transition = 'transform 0.6s ease';
+  setTimeout(() => { btn.style.transform = ''; btn.style.transition = 'all 0.3s'; }, 700);
+
+  // لو Firebase متاح → أعد جلب البيانات
+  if (window._firebaseReady) {
+    showToast('🔄 جاري تحديث البيانات...');
+    // Firebase onSnapshot بيشتغل تلقائي، بس لو عايز force reload للصفحة
+    // نعمل hard reload يتجاوز الكاش
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.update());
+      });
+    }
+    // reload الصفحة بالكامل متجاوزاً الكاش
+    setTimeout(() => window.location.reload(true), 400);
+  } else {
+    window.location.reload(true);
+  }
+}
+
 function showMsg(id, type) {
   const a = accounts.find(x => x.id === id);
   if (!a) return;
@@ -1021,6 +1102,131 @@ function copyMsg() {
 }
 </script>
 
+<!-- SheetJS for Excel export/import -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ====== تصدير إلى Excel ======
+function exportToExcel() {
+  if (!accounts || accounts.length === 0) {
+    showToast('❌ لا توجد بيانات للتصدير', true);
+    return;
+  }
+
+  const statusLabel = { active: 'نشط', expiring: 'ينتهي قريباً', expired: 'منتهي' };
+  const paidLabel   = { paid: 'مدفوع', unpaid: 'غير مدفوع', debt: 'دين للتاجر' };
+  const durLabel    = { '6': '6 أشهر', '12': 'سنة', '15': '15 شهر' };
+
+  const rows = accounts.map(a => ({
+    'الاسم':            a.name        || '',
+    'رقم الهاتف':       a.phone       || '',
+    'اليوزرنيم':        a.username    || '',
+    'الباسورد':         a.password    || '',
+    'الهوست':           a.host        || '',
+    'تاريخ الاشتراك':   a.startDate   || '',
+    'تاريخ الانتهاء':   a.expDate     || '',
+    'المدة':            durLabel[a.duration] || a.duration || '',
+    'الحالة':           statusLabel[statusOf(a)] || statusOf(a),
+    'الدفع':            paidLabel[a.paid] || a.paid || '',
+    'القيمة (KD)':      a.amount      || '',
+    'ملاحظات':          a.notes       || '',
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows, { header: [
+    'الاسم','رقم الهاتف','اليوزرنيم','الباسورد','الهوست',
+    'تاريخ الاشتراك','تاريخ الانتهاء','المدة','الحالة','الدفع','القيمة (KD)','ملاحظات'
+  ]});
+
+  // عرض الأعمدة
+  ws['!cols'] = [
+    {wch:18},{wch:16},{wch:18},{wch:16},{wch:28},
+    {wch:16},{wch:16},{wch:12},{wch:16},{wch:16},{wch:12},{wch:22}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'الحسابات');
+
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `Hydra_IPTV_${dateStr}.xlsx`);
+  showToast('✅ تم تصدير ' + accounts.length + ' حساب إلى Excel');
+}
+
+// ====== استرجاع من Excel ======
+function importFromExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const paidMap   = { 'مدفوع':'paid', 'غير مدفوع':'unpaid', 'دين للتاجر':'debt', 'paid':'paid', 'unpaid':'unpaid', 'debt':'debt' };
+  const durMap    = { '6 أشهر':'6', 'سنة':'12', '15 شهر':'15', '6':'6', '12':'12', '15':'15' };
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb   = XLSX.read(data, { type: 'array', cellDates: true });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      if (!rows.length) { showToast('❌ الملف فارغ أو تنسيق غير صحيح', true); input.value=''; return; }
+
+      const confirm = window.confirm(
+        'سيتم استبدال جميع البيانات الحالية (' + accounts.length + ' حساب) بـ ' + rows.length + ' حساب من الملف.\n\nهل أنت متأكد؟'
+      );
+      if (!confirm) { input.value = ''; return; }
+
+      const imported = rows.map((r, idx) => {
+        // تحويل التاريخ إذا كان Date object أو رقم serial
+        const parseDate = v => {
+          if (!v) return '';
+          if (v instanceof Date) {
+            const y = v.getFullYear(), m = String(v.getMonth()+1).padStart(2,'0'), d = String(v.getDate()).padStart(2,'0');
+            return `${y}-${m}-${d}`;
+          }
+          // لو رقم serial من Excel
+          if (typeof v === 'number') {
+            const d = XLSX.SSF.parse_date_code(v);
+            if (d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+          }
+          return String(v);
+        };
+
+        const name      = String(r['الاسم']          || r['name']      || '').trim();
+        const phone     = String(r['رقم الهاتف']     || r['phone']     || '').trim();
+        const username  = String(r['اليوزرنيم']      || r['username']  || '').trim();
+        const password  = String(r['الباسورد']       || r['password']  || '').trim();
+        const host      = String(r['الهوست']         || r['host']      || '').trim();
+        const startDate = parseDate(r['تاريخ الاشتراك'] || r['startDate'] || '');
+        const expDate   = parseDate(r['تاريخ الانتهاء']  || r['expDate']   || '');
+        const durRaw    = String(r['المدة']           || r['duration'] || '15').trim();
+        const duration  = durMap[durRaw] || '15';
+        const paidRaw   = String(r['الدفع']           || r['paid']     || 'paid').trim();
+        const paid      = paidMap[paidRaw] || 'paid';
+        const amount    = String(r['القيمة (KD)']    || r['amount']   || '').trim();
+        const notes     = String(r['ملاحظات']        || r['notes']    || '').trim();
+
+        return { id: idx + 1, name, phone, username, password, host, startDate, expDate, duration, paid, amount, notes };
+      }).filter(a => a.name && a.username);
+
+      if (!imported.length) {
+        showToast('❌ لم يتم العثور على بيانات صالحة. تأكد من وجود عمود "الاسم" و"اليوزرنيم"', true);
+        input.value = '';
+        return;
+      }
+
+      accounts = imported;
+      save();
+      renderAll();
+      showToast('✅ تم استيراد ' + imported.length + ' حساب بنجاح');
+    } catch(err) {
+      console.error(err);
+      showToast('❌ خطأ في قراءة الملف: ' + err.message, true);
+    }
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+</script>
+
 <div class="modal-bg" id="msgModalBg">
   <div class="modal" style="max-width:560px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -1053,8 +1259,32 @@ function copyMsg() {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-          .then(() => console.log('SW registered'))
+          .then(reg => {
+            // تحقق من وجود تحديث فور الفتح
+            reg.update();
+            // لو في service worker جديد جاهز → reload تلقائي
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              if (!newWorker) return;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // في تحديث متاح — أعد تحميل الصفحة
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                }
+              });
+            });
+            console.log('SW registered');
+          })
           .catch(e => console.log('SW error:', e));
+
+        // لو SW تغيّر → reload الصفحة
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
       });
     }
   </script>
