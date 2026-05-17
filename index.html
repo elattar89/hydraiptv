@@ -241,6 +241,11 @@
         remote.forEach(a => {
           if (!a.duration) { a.duration = '15'; needsSave = true; }
           if (a.paid === 'unpaid') { a.paid = 'debt'; needsSave = true; }
+          // تصحيح تواريخ الاشتراك من 2026 لـ 2025
+          if (a.startDate && a.startDate.startsWith('2026-')) {
+            a.startDate = a.startDate.replace('2026-', '2025-');
+            needsSave = true;
+          }
           // تصحيح تاريخ الانتهاء من تاريخ الاشتراك دائماً
           if (a.startDate) {
             const s = new Date(a.startDate);
