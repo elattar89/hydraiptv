@@ -319,9 +319,10 @@
   </select>
   <select id="filterPaid" onchange="renderAll()">
     <option value="all">كل الحالات</option>
-    <option value="paid">مدفوع</option>
-    <option value="debt">دين للتاجر 🟡</option>
-    <option value="unpaid">غير مدفوع</option>
+    <option value="client_paid">العميل دفع ✅</option>
+    <option value="client_unpaid">العميل لم يدفع ❌</option>
+    <option value="merchant_paid">سددت للتاجر ✅</option>
+    <option value="merchant_unpaid">لم أسدد للتاجر ❌</option>
   </select>
   <button id="activeListBtn" onclick="showActiveListModal()" style="display:none;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#4ade80;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'">📋 كشف النشطاء</button>
   <button id="debtListBtn" onclick="showDebtListModal()" style="display:none;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#c084fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(168,85,247,0.25)'" onmouseout="this.style.background='rgba(168,85,247,0.15)'">📋 كشف الديون</button>
@@ -401,11 +402,22 @@
     <div class="form-row">
       <div class="form-group">
         <label>حالة الدفع</label>
-        <select id="fPaid">
-          <option value="paid">مدفوع ✅</option>
-          <option value="debt">دفع - دين للتاجر 🟡</option>
-          <option value="unpaid">غير مدفوع ❌</option>
-        </select>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">العميل</div>
+            <select id="fClientPaid" style="width:100%">
+              <option value="paid">✅ دفع</option>
+              <option value="unpaid">❌ لم يدفع</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">التاجر</div>
+            <select id="fMerchantPaid" style="width:100%">
+              <option value="paid">✅ سددت</option>
+              <option value="unpaid">❌ لم أسدد</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="form-group">
         <label>قيمة الاشتراك</label>
@@ -508,10 +520,16 @@ function statusBadge(acc) {
   return `<span class="badge badge-blue">—</span>`;
 }
 
-function paidBadge(paid) {
-  if (paid === 'paid') return `<span class="badge badge-green">مدفوع ✅</span>`;
-  if (paid === 'debt') return `<span class="badge badge-yellow">دين للتاجر 🟡</span>`;
-  return `<span class="badge badge-red">غير مدفوع ❌</span>`;
+function paidBadge(a) {
+  const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
+  const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+  const clientBadge = client === 'paid'
+    ? `<span class="badge badge-green" style="font-size:11px">عميل ✅</span>`
+    : `<span class="badge badge-red" style="font-size:11px">عميل ❌</span>`;
+  const merchantBadge = merchant === 'paid'
+    ? `<span class="badge badge-green" style="font-size:11px">تاجر ✅</span>`
+    : `<span class="badge badge-yellow" style="font-size:11px">تاجر ❌</span>`;
+  return clientBadge + '<br>' + merchantBadge;
 }
 
 function formatDate(d) {
@@ -546,7 +564,7 @@ function renderStats() {
   const expiring = accounts.filter(a => statusOf(a) === 'expiring').length;
   const expired = accounts.filter(a => statusOf(a) === 'expired').length;
   const unpaid = accounts.filter(a => a.paid === 'unpaid').length;
-  const debtAccounts = accounts.filter(a => a.paid === 'debt');
+  const debtAccounts = accounts.filter(a => (a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : 'paid')) === 'unpaid');
   const debtTotal = debtAccounts.length * 10;
   const cur = document.getElementById('filterStatus').value;
   const curP = document.getElementById('filterPaid').value;
@@ -578,7 +596,7 @@ function renderStats() {
       <div style="font-size:22px;font-weight:700;color:#60a5fa">${total}</div>
       <span style="font-size:10px;color:rgba(255,255,255,0.4)">كل الحسابات</span>
     </div>
-    <div onclick="setFilter('debt')" style="${base} ${curP==='debt'?'rgba(168,85,247,0.8);background:rgba(168,85,247,0.25)':'rgba(168,85,247,0.3);background:rgba(168,85,247,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+    <div onclick="setFilter('debt')" style="${base} ${curP==='merchant_unpaid'?'rgba(168,85,247,0.8);background:rgba(168,85,247,0.25)':'rgba(168,85,247,0.3);background:rgba(168,85,247,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
       <span style="font-size:11px;color:rgba(255,255,255,0.6)">مستحق للتاجر 🔥</span>
       <div style="font-size:22px;font-weight:700;color:#c084fc">${debtTotal}$</div>
       <span style="font-size:10px;color:rgba(255,255,255,0.4)">${debtAccounts.length} أكونت × 10$</span>
@@ -618,7 +636,7 @@ async function shareActivePDF() {
 }
 
 function showDebtListModal() {
-  const debts = accounts.filter(a => a.paid === 'debt' || a.paid === 'unpaid')
+  const debts = accounts.filter(a => a.paid === 'debt')
     .sort((a,b) => new Date(b.startDate||0) - new Date(a.startDate||0));
   const total = debts.length * 10;
   document.getElementById('debtModalCount').textContent = 'إجمالي: ' + debts.length + ' حساب | ' + total + '$';
@@ -649,7 +667,7 @@ function showDebtListModal() {
 }
 
 async function shareDebtList() {
-  const debts = accounts.filter(a => a.paid === 'debt' || a.paid === 'unpaid')
+  const debts = accounts.filter(a => a.paid === 'debt')
     .sort((a,b) => new Date(b.startDate||0) - new Date(a.startDate||0));
   const date = new Date().toLocaleDateString('ar-EG');
   const total = debts.length * 10;
@@ -702,7 +720,7 @@ function setFilter(val) {
     document.getElementById('filterPaid').value = 'unpaid';
   } else if (val === 'debt') {
     document.getElementById('filterStatus').value = 'all';
-    document.getElementById('filterPaid').value = 'debt';
+    document.getElementById('filterPaid').value = 'merchant_unpaid';
     setTimeout(() => { document.getElementById('tablesContainer').scrollIntoView({ behavior: 'smooth' }); }, 100);
   } else {
     document.getElementById('filterPaid').value = 'all';
@@ -713,7 +731,7 @@ function setFilter(val) {
   if (activeBtn) activeBtn.style.display = (val === 'active') ? 'inline-block' : 'none';
   const debtBtn = document.getElementById('debtListBtn');
   const curPaid = document.getElementById('filterPaid').value;
-  if (debtBtn) debtBtn.style.display = (val === 'debt' || curPaid === 'debt') ? 'inline-block' : 'none';
+  if (debtBtn) debtBtn.style.display = (val === 'debt' || curPaid === 'merchant_unpaid') ? 'inline-block' : 'none';
   renderAll();
   window.scrollTo({ top: 200, behavior: 'smooth' });
 }
@@ -741,7 +759,13 @@ function filtered() {
   return accounts.filter(a => {
     const matchQ = !q || fuzzyMatch(a.name, q) || fuzzyMatch(a.username, q) || (a.phone||'').replace(/\s+/g,'').includes(q.replace(/\s+/g,''));
     const matchS = fs === 'all' || statusOf(a) === fs;
-    const matchP = fp === 'all' || a.paid === fp || (fp === 'debt' && a.paid === 'unpaid');
+    const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
+    const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+    const matchP = fp === 'all'
+      || (fp === 'client_paid' && client === 'paid')
+      || (fp === 'client_unpaid' && client === 'unpaid')
+      || (fp === 'merchant_paid' && merchant === 'paid')
+      || (fp === 'merchant_unpaid' && merchant === 'unpaid');
     return matchQ && matchS && matchP;
   }).sort((a, b) => {
     const statusA = statusOf(a);
@@ -856,7 +880,7 @@ function buildTable(rows) {
         </td>
         <td>${statusBadge(a)}</td>
         <td style="position:relative">
-          <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0">${paidBadge(a.paid)}</button>
+          <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0">${paidBadge(a)}</button>
           ${a.amount ? `<div style="font-size:12px;font-weight:700;margin-top:4px;padding:2px 8px;border-radius:8px;display:inline-block;${a.paid === 'paid' ? 'color:#22c55e;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3)' : 'color:#ef4444;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3)'}">${a.amount} KD</div>` : ''}
         </td>
         <td style="font-size:12px;color:var(--text2)">${a.notes || '—'}</td>
@@ -884,25 +908,37 @@ function buildTable(rows) {
 function showPaidMenu(e, id) {
   e.stopPropagation();
   document.querySelectorAll('.paid-menu').forEach(m => m.remove());
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
+  const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
   const menu = document.createElement('div');
   menu.className = 'paid-menu';
-  menu.style.cssText = `position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:6px;z-index:500;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,0.4)`;
-  const rect = e.currentTarget.getBoundingClientRect();
-  menu.style.top = (rect.bottom + 6) + 'px';
-  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  menu.style.cssText = 'position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px;z-index:200;box-shadow:0 8px 30px rgba(0,0,0,0.5);min-width:220px;direction:rtl';
   menu.innerHTML = `
-    <div onclick="setPaid(${id},'paid')" style="padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;color:#4ade80" onmouseover="this.style.background='rgba(34,197,94,0.1)'" onmouseout="this.style.background='none'">
-      ✅ مدفوع
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600">حالة العميل:</div>
+    <div onclick="setClientPaid(${id},'paid')" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;color:#4ade80;${client==='paid'?'background:rgba(34,197,94,0.1)':''}" onmouseover="this.style.background='rgba(34,197,94,0.1)'" onmouseout="this.style.background='${client==='paid'?'rgba(34,197,94,0.1)':''}'">
+      <span>✅</span><span>دفع العميل</span>${client==='paid'?'<span style="margin-right:auto">●</span>':''}
     </div>
-    <div onclick="setPaid(${id},'debt')" style="padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;color:#fbbf24" onmouseover="this.style.background='rgba(245,158,11,0.1)'" onmouseout="this.style.background='none'">
-      <span>🟡</span><span>دفع - دين للتاجر</span>
+    <div onclick="setClientPaid(${id},'unpaid')" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;color:#f87171;${client==='unpaid'?'background:rgba(239,68,68,0.1)':''}" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='${client==='unpaid'?'rgba(239,68,68,0.1)':''}'">
+      <span>❌</span><span>لم يدفع العميل</span>${client==='unpaid'?'<span style="margin-right:auto">●</span>':''}
     </div>
-    <div onclick="setPaid(${id},'unpaid')" style="padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;color:#f87171" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='none'">
-      ❌ غير مدفوع
-    </div>`;
+    <div style="height:1px;background:var(--border);margin:8px 0"></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600">حالة التاجر:</div>
+    <div onclick="setMerchantPaid(${id},'paid')" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;color:#4ade80;${merchant==='paid'?'background:rgba(34,197,94,0.1)':''}" onmouseover="this.style.background='rgba(34,197,94,0.1)'" onmouseout="this.style.background='${merchant==='paid'?'rgba(34,197,94,0.1)':''}'">
+      <span>✅</span><span>سددت للتاجر</span>${merchant==='paid'?'<span style="margin-right:auto">●</span>':''}
+    </div>
+    <div onclick="setMerchantPaid(${id},'unpaid')" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;color:#fbbf24;${merchant==='unpaid'?'background:rgba(245,158,11,0.1)':''}" onmouseover="this.style.background='rgba(245,158,11,0.1)'" onmouseout="this.style.background='${merchant==='unpaid'?'rgba(245,158,11,0.1)':''}'">
+      <span>🟡</span><span>لم أسدد للتاجر</span>${merchant==='unpaid'?'<span style="margin-right:auto">●</span>':''}
+    </div>
+  `;
+  const rect = e.target.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.right = (window.innerWidth - rect.right) + 'px';
   document.body.appendChild(menu);
-  setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
+  setTimeout(() => document.addEventListener('click', () => menu.remove(), {once:true}), 10);
 }
+
 
 function setPaid(id, value) {
   const acc = accounts.find(x => x.id === id);
@@ -975,7 +1011,8 @@ function openAddModal() {
   document.getElementById('modalTitle').textContent = 'إضافة حساب جديد';
   ['fName','fPhone','fUser','fPass','fDate','fExp','fNotes','fAmount'].forEach(id => document.getElementById(id).value = ''); document.getElementById('fHost').value = '';
   const durEl = document.getElementById('fDuration'); if (durEl) durEl.value = '15';
-  document.getElementById('fPaid').value = 'paid';
+  document.getElementById('fClientPaid').value = 'paid';
+  document.getElementById('fMerchantPaid').value = 'paid';
   document.getElementById('modalBg').classList.add('active');
   const fNameEl = document.getElementById('fName');
   fNameEl.oninput = function() {
@@ -1028,7 +1065,8 @@ function editAccount(id) {
   } else {
     document.getElementById('fExp').value = a.expDate || '';
   }
-  document.getElementById('fPaid').value = a.paid || 'paid';
+  document.getElementById('fClientPaid').value = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
+  document.getElementById('fMerchantPaid').value = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
   document.getElementById('fNotes').value = a.notes || '';
   document.getElementById('fAmount').value = a.amount || '';
   const durEl2 = document.getElementById('fDuration'); if (durEl2) durEl2.value = a.duration || '15';
@@ -1100,7 +1138,9 @@ function saveAccount() {
     host: document.getElementById('fHost').value.trim(),
     startDate: document.getElementById('fDate').value,
     expDate: document.getElementById('fExp').value, // محسوب تلقائياً
-    paid: document.getElementById('fPaid').value,
+    clientPaid: document.getElementById('fClientPaid').value,
+    merchantPaid: document.getElementById('fMerchantPaid').value,
+    paid: document.getElementById('fClientPaid').value === 'paid' && document.getElementById('fMerchantPaid').value === 'paid' ? 'paid' : document.getElementById('fMerchantPaid').value === 'unpaid' && document.getElementById('fClientPaid').value === 'paid' ? 'debt' : 'unpaid',
     amount: document.getElementById('fAmount').value,
     duration: document.getElementById('fDuration') ? document.getElementById('fDuration').value : '15',
     notes: document.getElementById('fNotes').value.trim(),
