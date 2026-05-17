@@ -331,6 +331,7 @@
     <option value="merchant_paid">سددت للتاجر ✅</option>
     <option value="merchant_unpaid">لم أسدد للتاجر ❌</option>
   </select>
+  <button id="expiringListBtn" onclick="showExpiringListModal()" style="display:none;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(245,158,11,0.25)'" onmouseout="this.style.background='rgba(245,158,11,0.15)'">📋 كشف المنتهية قريباً</button>
   <button id="activeListBtn" onclick="showActiveListModal()" style="display:none;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#4ade80;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'">📋 كشف النشطاء</button>
   <button id="debtListBtn" onclick="showDebtListModal()" style="display:none;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#c084fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(168,85,247,0.25)'" onmouseout="this.style.background='rgba(168,85,247,0.15)'">📋 كشف الديون</button>
   <button class="btn btn-primary" onclick="openAddModal()">+ إضافة حساب</button>
@@ -688,6 +689,55 @@ async function shareDebtList() {
   navigator.clipboard.writeText(text).then(() => showToast('✅ تم النسخ'));
 }
 
+function showExpiringListModal() {
+  const expiring = accounts.filter(a => statusOf(a) === 'expiring')
+    .sort((a,b) => new Date(a.expDate) - new Date(b.expDate));
+
+  document.getElementById('expiringModalCount').textContent = 'إجمالي: ' + expiring.length + ' حساب';
+  document.getElementById('expiringModalDate').textContent = 'تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-EG');
+
+  const rows = expiring.map((a, i) => {
+    const d = Math.ceil((new Date(a.expDate) - new Date()) / 86400000);
+    const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
+    const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
+    const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+    const paidText = `عميل: ${client==='paid'?'✅':'❌'} | تاجر: ${merchant==='paid'?'✅':'❌'}`;
+    const rowBg = i % 2 === 0 ? '#fffbeb' : '#fff';
+    return `<tr style="background:${rowBg}">
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#666">${i+1}</td>
+      <td style="padding:8px 6px;font-weight:700;border:1px solid #ddd;white-space:nowrap">${a.name}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;direction:ltr">${window.isGuest ? '—' : (a.phone||'—')}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#92400e">${a.username}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#555">${window.isGuest ? '••••••' : a.password}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-size:10px;color:#777">${(a.host||'—').replace('http://','')}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${a.startDate||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#d97706;font-weight:600">${a.expDate||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:700;color:#dc2626">${d} يوم</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${dur}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-size:11px">${paidText}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:700">${a.amount ? a.amount+' KD' : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('expiringModalBody').innerHTML = rows;
+  document.getElementById('expiringModal').style.display = 'block';
+}
+
+async function shareExpiringList() {
+  const expiring = accounts.filter(a => statusOf(a) === 'expiring')
+    .sort((a,b) => new Date(a.expDate) - new Date(b.expDate));
+  const date = new Date().toLocaleDateString('ar-EG');
+  let text = `⚠️ كشف الحسابات المنتهية قريباً\nHydra IPTV - Ahmed EL-Attar\n📅 ${date}\n👥 الإجمالي: ${expiring.length} حساب\n${'─'.repeat(25)}\n\n`;
+  expiring.forEach((a, i) => {
+    const d = Math.ceil((new Date(a.expDate) - new Date()) / 86400000);
+    text += `${i+1}. ${a.name}\n📞 ${a.phone||'—'}\n👤 ${a.username} | 🔑 ${a.password}\n📅 ينتهي: ${a.expDate||'—'} (${d} يوم)\n${'─'.repeat(20)}\n`;
+  });
+  if (navigator.share) {
+    try { await navigator.share({ title: 'كشف المنتهية قريباً - Hydra IPTV', text }); return; } catch(e) {}
+  }
+  navigator.clipboard.writeText(text).then(() => showToast('✅ تم النسخ'));
+}
+
 function showActiveListModal() {
   const actives = accounts.filter(a => statusOf(a) === 'active')
     .sort((a,b) => new Date(b.startDate||0) - new Date(a.startDate||0));
@@ -736,6 +786,8 @@ function setFilter(val) {
   // إظهار/إخفاء أزرار الكشوف
   const activeBtn = document.getElementById('activeListBtn');
   if (activeBtn) activeBtn.style.display = (val === 'active') ? 'inline-block' : 'none';
+  const expiringBtn = document.getElementById('expiringListBtn');
+  if (expiringBtn) expiringBtn.style.display = (val === 'expiring') ? 'inline-block' : 'none';
   const debtBtn = document.getElementById('debtListBtn');
   const curPaid = document.getElementById('filterPaid').value;
   if (debtBtn) debtBtn.style.display = (val === 'debt' || curPaid === 'merchant_unpaid') ? 'inline-block' : 'none';
@@ -1759,5 +1811,48 @@ if (_auth === 'admin') {
 }
 </style>
 
+
+<!-- كشف المنتهية قريباً -->
+<div id="expiringModal" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;overflow-y:auto;font-family:Cairo,sans-serif;color:#111;direction:rtl">
+  <div id="expiringModalControls" style="position:fixed;top:0;right:0;left:0;background:#92400e;padding:10px 20px;display:flex;align-items:center;gap:10px;z-index:10000;box-shadow:0 2px 10px rgba(0,0,0,0.3)">
+    <button onclick="window.print()" style="background:#fff;color:#92400e;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🖨️ طباعة / PDF</button>
+    <button onclick="shareExpiringList()" style="background:#25d366;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">📤 مشاركة</button>
+    <button onclick="document.getElementById('expiringModal').style.display='none'" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif">✕ إغلاق</button>
+    <div id="expiringModalCount" style="color:rgba(255,255,255,0.8);font-size:13px;margin-right:auto"></div>
+  </div>
+  <div style="padding:70px 20px 30px">
+    <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #f59e0b">
+      <div style="font-size:22px;font-weight:700;color:#92400e">⚠️ كشف الحسابات المنتهية قريباً</div>
+      <div style="font-size:13px;color:#666;margin-top:4px">Hydra IPTV - Ahmed EL-Attar</div>
+      <div id="expiringModalDate" style="font-size:12px;color:#999;margin-top:2px"></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#92400e;color:#fff">
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">#</th>
+          <th style="padding:10px 8px;text-align:right;border:1px solid #a16207">الاسم</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">رقم الهاتف</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">اليوزرنيم</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">الباسورد</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">الهوست</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">تاريخ الاشتراك</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">تاريخ الانتهاء</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">أيام متبقية</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">المدة</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">الدفع</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #a16207">القيمة</th>
+        </tr>
+      </thead>
+      <tbody id="expiringModalBody"></tbody>
+    </table>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#999;border-top:1px solid #ddd;padding-top:10px">Hydra IPTV Manager — Ahmed EL-Attar</div>
+  </div>
+</div>
+
+<style>
+@media print {
+  #expiringModalControls { display: none !important; }
+}
+</style>
 </body>
 </html>
