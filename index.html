@@ -274,7 +274,12 @@
     </div>
     <div class="form-group">
       <label>الهوست / URL</label>
-      <input type="text" id="fHost" placeholder="http://tvhydra.com">
+      <select id="fHost">
+        <option value="">— اختر الهوست —</option>
+        <option value="http://tvhydra.com">Host 1 — http://tvhydra.com</option>
+        <option value="http://hydraa.st:80">Host 2 — http://hydraa.st:80</option>
+        <option value="http://hydratv.cc:80">Host 3 — http://hydratv.cc:80</option>
+      </select>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -719,7 +724,7 @@ function autoFillPhoneByName() {
 function openAddModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'إضافة حساب جديد';
-  ['fName','fPhone','fUser','fPass','fHost','fDate','fExp','fNotes','fAmount'].forEach(id => document.getElementById(id).value = '');
+  ['fName','fPhone','fUser','fPass','fDate','fExp','fNotes','fAmount'].forEach(id => document.getElementById(id).value = ''); document.getElementById('fHost').value = '';
   const durEl = document.getElementById('fDuration'); if (durEl) durEl.value = '15';
   document.getElementById('fPaid').value = 'paid';
   document.getElementById('modalBg').classList.add('active');
@@ -752,7 +757,14 @@ function editAccount(id) {
   document.getElementById('fPhone').value = phoneVal;
   document.getElementById('fUser').value = a.username || '';
   document.getElementById('fPass').value = a.password || '';
-  document.getElementById('fHost').value = a.host || '';
+  // تعبئة الهوست - يختار المطابق من القائمة أو يضيف custom
+  const hostEl = document.getElementById('fHost');
+  const knownHosts = ['http://tvhydra.com','http://hydraa.st:80','http://hydratv.cc:80'];
+  if (knownHosts.includes(a.host)) {
+    hostEl.value = a.host;
+  } else {
+    hostEl.value = a.host || '';
+  }
   document.getElementById('fDate').value = a.startDate || '';
   // حساب تاريخ الانتهاء تلقائياً من تاريخ الاشتراك
   if (a.startDate) {
@@ -844,7 +856,22 @@ function saveAccount() {
     duration: document.getElementById('fDuration') ? document.getElementById('fDuration').value : '15',
     notes: document.getElementById('fNotes').value.trim(),
   };
-  if (!a.name || !a.username) { showToast('❌ الاسم واليوزرنيم مطلوبان', true); return; }
+  // التحقق من كل الحقول الإلزامية ماعدا الملاحظات
+  const required = [
+    { val: a.name,      label: 'اسم الحساب' },
+    { val: a.username,  label: 'اليوزرنيم' },
+    { val: a.password,  label: 'الباسورد' },
+    { val: a.host,      label: 'الهوست' },
+    { val: a.startDate, label: 'تاريخ الاشتراك' },
+    { val: a.paid,      label: 'حالة الدفع' },
+    { val: a.amount,    label: 'قيمة الاشتراك' },
+    { val: a.duration,  label: 'مدة الاشتراك' },
+  ];
+  const missing = required.filter(r => !r.val);
+  if (missing.length > 0) {
+    showToast('❌ الحقول التالية مطلوبة: ' + missing.map(r => r.label).join('، '), true);
+    return;
+  }
 
   // فحص التكرار فقط عند الإضافة وليس التعديل
   if (!editingId) {
