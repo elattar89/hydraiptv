@@ -588,12 +588,28 @@ function setFilter(val) {
   window.scrollTo({ top: 200, behavior: 'smooth' });
 }
 
+function fuzzyMatch(str, query) {
+  // إزالة المسافات وتحويل للحروف الصغيرة
+  const s = str.toLowerCase().replace(/\s+/g, '');
+  const q = query.toLowerCase().replace(/\s+/g, '');
+  if (!q) return true;
+  // بحث عادي أولاً
+  if (s.includes(q)) return true;
+  // بحث fuzzy - كل حرف في الـ query موجود بالترتيب
+  let si = 0, qi = 0;
+  while (si < s.length && qi < q.length) {
+    if (s[si] === q[qi]) qi++;
+    si++;
+  }
+  return qi === q.length;
+}
+
 function filtered() {
-  const q = document.getElementById('searchInput').value.toLowerCase();
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
   const fs = document.getElementById('filterStatus').value;
   const fp = document.getElementById('filterPaid').value;
   return accounts.filter(a => {
-    const matchQ = !q || a.name.toLowerCase().includes(q) || a.username.toLowerCase().includes(q) || (a.phone||'').includes(q);
+    const matchQ = !q || fuzzyMatch(a.name, q) || fuzzyMatch(a.username, q) || (a.phone||'').replace(/\s+/g,'').includes(q.replace(/\s+/g,''));
     const matchS = fs === 'all' || statusOf(a) === fs;
     const matchP = fp === 'all' || a.paid === fp || (fp === 'debt' && a.paid === 'unpaid');
     return matchQ && matchS && matchP;
