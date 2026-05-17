@@ -149,6 +149,54 @@
     .mono { font-size: 11px; }
   }
 </style>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBxpwm4K9KTVFHV22PD_yxKhvSn5ThJ4sA",
+      authDomain: "iptv-database-8e795.firebaseapp.com",
+      projectId: "iptv-database-8e795",
+      storageBucket: "iptv-database-8e795.firebasestorage.app",
+      messagingSenderId: "865423484494",
+      appId: "1:865423484494:web:434c3357606e7b1e69051f",
+      measurementId: "G-FB8559F1ZZ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const DATA_DOC = doc(db, "iptv", "accounts");
+
+    // استبدال دالة save لترفع على Firebase
+    window.saveToFirebase = async function(data) {
+      try {
+        await setDoc(DATA_DOC, { list: JSON.stringify(data) });
+      } catch(e) {
+        console.error("Firebase save error:", e);
+        showToast("❌ خطأ في الحفظ على Firebase", true);
+      }
+    };
+
+    // مراقبة التغييرات في real-time
+    onSnapshot(DATA_DOC, (snapshot) => {
+      if (snapshot.exists()) {
+        const raw = snapshot.data().list;
+        const remote = JSON.parse(raw);
+        // تحديث الداتا المحلية وإعادة الرسم
+        if (JSON.stringify(accounts) !== JSON.stringify(remote)) {
+          accounts = remote;
+          localStorage.setItem(STORAGE_KEY, raw);
+          renderAll();
+        }
+      } else {
+        // أول مرة — ارفع الداتا الحالية على Firebase
+        window.saveToFirebase(accounts);
+      }
+    });
+
+    window._firebaseReady = true;
+  </script>
 </head>
 <body>
 
@@ -287,12 +335,17 @@ let accounts = [];
 let editingId = null;
 
 function load() {
+  // Firebase هو المصدر الأساسي — localStorage كـ fallback
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) { try { accounts = JSON.parse(saved); } catch(e) { accounts = [...DEFAULT_DATA]; } }
   else { accounts = [...DEFAULT_DATA]; save(); }
 }
 
-function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts)); }
+function save() {
+  const data = JSON.stringify(accounts);
+  localStorage.setItem(STORAGE_KEY, data);
+  if (window.saveToFirebase) window.saveToFirebase(accounts);
+}
 
 function daysLeft(expDate) {
   if (!expDate) return null;
