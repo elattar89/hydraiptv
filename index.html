@@ -571,6 +571,37 @@ function renderStats() {
   `;
 }
 
+async function shareActivePDF() {
+  const actives = accounts.filter(a => statusOf(a) === 'active')
+    .sort((a,b) => new Date(b.startDate||0) - new Date(a.startDate||0));
+
+  const date = new Date().toLocaleDateString('ar-EG');
+  let text = `📋 كشف الحسابات النشطة\nHydra IPTV - Ahmed EL-Attar\n📅 ${date}\n👥 الإجمالي: ${actives.length} حساب\n${'─'.repeat(25)}\n\n`;
+
+  actives.forEach((a, i) => {
+    const daysLeft = Math.ceil((new Date(a.expDate) - new Date()) / 86400000);
+    const paidText = a.paid === 'paid' ? '✅ مدفوع' : a.paid === 'debt' ? '🟡 دين للتاجر' : '❌ غير مدفوع';
+    text += `${i+1}. ${a.name}\n`;
+    text += `📞 ${a.phone || '—'}\n`;
+    text += `👤 ${a.username} | 🔑 ${a.password}\n`;
+    text += `🖥️ ${(a.host||'—').replace('http://','')}\n`;
+    text += `📅 ينتهي: ${a.expDate||'—'} (${daysLeft} يوم)\n`;
+    text += `💰 ${paidText}${a.amount ? ' | '+a.amount+' KD' : ''}\n`;
+    text += `${'─'.repeat(20)}\n`;
+  });
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'كشف النشطاء - Hydra IPTV', text });
+    } catch(e) { console.log('Share cancelled'); }
+  } else {
+    // fallback - نسخ للكليبورد
+    navigator.clipboard.writeText(text).then(() => {
+      alert('✅ تم نسخ الكشف — الصقه في أي تطبيق');
+    });
+  }
+}
+
 function showActiveListModal() {
   const actives = accounts.filter(a => statusOf(a) === 'active')
     .sort((a,b) => new Date(b.startDate||0) - new Date(a.startDate||0));
@@ -1497,6 +1528,7 @@ if (_auth === 'admin') {
   <!-- أزرار التحكم -->
   <div id="activeModalControls" style="position:fixed;top:0;right:0;left:0;background:#1a3a6e;padding:10px 20px;display:flex;align-items:center;gap:10px;z-index:10000;box-shadow:0 2px 10px rgba(0,0,0,0.3)">
     <button onclick="window.print()" style="background:#fff;color:#1a3a6e;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:6px">🖨️ طباعة / PDF</button>
+    <button onclick="shareActivePDF()" style="background:#25d366;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">📤 مشاركة PDF</button>
     <button onclick="document.getElementById('activeModal').style.display='none'" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif">✕ إغلاق</button>
     <div id="activeModalCount" style="color:rgba(255,255,255,0.8);font-size:13px;margin-right:auto"></div>
   </div>
@@ -1538,12 +1570,22 @@ if (_auth === 'admin') {
 
 <style>
 @media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { background: #fff !important; color: #111 !important; margin: 0 !important; }
   body > *:not(#activeModal) { display: none !important; }
-  #activeModal { position: static !important; overflow: visible !important; }
+  #activeModal {
+    position: static !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #111 !important;
+    display: block !important;
+  }
   #activeModalControls { display: none !important; }
-  #activeModalContent { padding: 0 !important; }
-  #activeModalTable { font-size: 10px !important; }
-  #activeModalTable th, #activeModalTable td { padding: 6px 4px !important; }
+  #activeModalContent { padding: 10px !important; background: #fff !important; }
+  #activeModalTable { font-size: 9px !important; width: 100% !important; }
+  #activeModalTable th { background: #1a3a6e !important; color: #fff !important; }
+  #activeModalTable th, #activeModalTable td { padding: 5px 4px !important; border: 1px solid #ccc !important; }
+  #activeModalTable tr:nth-child(even) td { background: #f5f8ff !important; }
 }
 </style>
 
