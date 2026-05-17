@@ -28,7 +28,7 @@
     border-bottom: 1px solid rgba(255,255,255,0.1);
     padding: 20px 24px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    position: sticky; top: 0; z-index: 100;
+  
   }
   .logo { display: flex; flex-direction: column; align-items: center; gap: 8px; }
   .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
@@ -226,7 +226,7 @@
     <div style="font-size:22px;font-weight:700;color:#f87171" id="debtAmount">0$</div>
     <span style="font-size:11px;color:rgba(255,255,255,0.4)" id="debtDetail">عدد الأكونتات × 10$</span>
   </div>
-  <div id="statsBar" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px;"></div>
+  <div id="statsBar" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:10px;"></div>
   <button onclick="doLogout()" style="position:absolute;left:16px;top:16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.8);border-radius:10px;padding:8px 14px;font-size:13px;font-family:Cairo,sans-serif;cursor:pointer;">
     🚪 خروج
   </button>
@@ -469,19 +469,42 @@ function updateDebt() {
 
 function renderStats() {
   const total = accounts.length;
-  const active = accounts.filter(a => statusOf(a) === 'active').length;
+  // نشط = الحالة active + مدفوع (مش debt ومش unpaid)
+  const active = accounts.filter(a => statusOf(a) === 'active' && a.paid !== 'debt' && a.paid !== 'unpaid').length;
   const expiring = accounts.filter(a => statusOf(a) === 'expiring').length;
   const expired = accounts.filter(a => statusOf(a) === 'expired').length;
   const unpaid = accounts.filter(a => a.paid === 'unpaid').length;
   const debt = accounts.filter(a => a.paid === 'debt').length;
   const cur = document.getElementById('filterStatus').value;
   updateDebt();
+  const cardStyle = `background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:8px 20px;text-align:center;cursor:pointer;transition:all 0.2s;min-width:90px`;
+
   document.getElementById('statsBar').innerHTML = `
-    <div class="stat-pill${cur==='active'?' pill-active':''}" style="cursor:pointer" onclick="setFilter('active')"><span class="dot dot-green"></span>${active} نشط</div>
-    <div class="stat-pill${cur==='expiring'?' pill-active':''}" style="cursor:pointer" onclick="setFilter('expiring')"><span class="dot dot-yellow"></span>${expiring} ينتهي قريباً</div>
-    <div class="stat-pill${cur==='expired'?' pill-active':''}" style="cursor:pointer" onclick="setFilter('expired')"><span class="dot dot-red"></span>${expired} منتهي</div>
-    <div class="stat-pill${cur==='unpaid'?' pill-active':''}" style="cursor:pointer" onclick="setFilter('unpaid')">💰 ${unpaid} غير مدفوع</div>
-    <div class="stat-pill${cur==='all'?' pill-active':''}" style="cursor:pointer" onclick="setFilter('all')">👥 ${total} إجمالي</div>
+    <div onclick="setFilter('active')" style="${cardStyle}${cur==='active'?';border-color:rgba(34,197,94,0.6);background:rgba(34,197,94,0.12)':''}" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:11px;color:rgba(255,255,255,0.5)">نشط ✅</span>
+      <div style="font-size:20px;font-weight:700;color:#4ade80">${active}</div>
+      <span style="font-size:10px;color:rgba(255,255,255,0.35)">حساب نشط</span>
+    </div>
+    <div onclick="setFilter('expiring')" style="${cardStyle}${cur==='expiring'?';border-color:rgba(245,158,11,0.6);background:rgba(245,158,11,0.12)':''}" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:11px;color:rgba(255,255,255,0.5)">ينتهي قريباً ⚠️</span>
+      <div style="font-size:20px;font-weight:700;color:#fbbf24">${expiring}</div>
+      <span style="font-size:10px;color:rgba(255,255,255,0.35)">خلال 30 يوم</span>
+    </div>
+    <div onclick="setFilter('expired')" style="${cardStyle}${cur==='expired'?';border-color:rgba(239,68,68,0.6);background:rgba(239,68,68,0.12)':''}" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:11px;color:rgba(255,255,255,0.5)">منتهي ⛔</span>
+      <div style="font-size:20px;font-weight:700;color:#f87171">${expired}</div>
+      <span style="font-size:10px;color:rgba(255,255,255,0.35)">حساب منتهي</span>
+    </div>
+    <div onclick="setFilter('unpaid')" style="${cardStyle}${cur==='unpaid'?';border-color:rgba(168,85,247,0.6);background:rgba(168,85,247,0.12)':''}" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:11px;color:rgba(255,255,255,0.5)">غير مدفوع 💰</span>
+      <div style="font-size:20px;font-weight:700;color:#c084fc">${unpaid}</div>
+      <span style="font-size:10px;color:rgba(255,255,255,0.35)">بانتظار الدفع</span>
+    </div>
+    <div onclick="setFilter('all')" style="${cardStyle}${cur==='all'?';border-color:rgba(79,142,247,0.6);background:rgba(79,142,247,0.12)':''}" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:11px;color:rgba(255,255,255,0.5)">الإجمالي 👥</span>
+      <div style="font-size:20px;font-weight:700;color:#60a5fa">${total}</div>
+      <span style="font-size:10px;color:rgba(255,255,255,0.35)">كل الحسابات</span>
+    </div>
   `;
 }
 
@@ -492,13 +515,13 @@ function setFilter(val) {
   } else if (val === 'debt') {
     document.getElementById('filterStatus').value = 'all';
     document.getElementById('filterPaid').value = 'debt';
-    // scroll للجدول
     setTimeout(() => { document.getElementById('tablesContainer').scrollIntoView({ behavior: 'smooth' }); }, 100);
   } else {
     document.getElementById('filterPaid').value = 'all';
     document.getElementById('filterStatus').value = val;
   }
   renderAll();
+  window.scrollTo({ top: 200, behavior: 'smooth' });
 }
 
 function filtered() {
@@ -536,31 +559,20 @@ function renderAll() {
 
   const groups = {
     expiring: { label: '⚠️ تنتهي خلال 30 يوم', items: [] },
-    expired:  { label: '⛔ منتهية', items: [] },
     active:   { label: '✅ نشطة', items: [] },
-    debt:     { label: '🟡 دفع - دين للتاجر', items: [] },
-    unpaid:   { label: '💸 غير مدفوعة', items: [] },
+    expired:  { label: '⛔ منتهية', items: [] },
   };
 
   data.forEach(a => {
     const s = statusOf(a);
     if (s === 'expiring') groups.expiring.items.push(a);
     else if (s === 'expired') groups.expired.items.push(a);
-    else if (a.paid === 'debt') groups.debt.items.push(a);
-    else if (a.paid === 'unpaid') groups.unpaid.items.push(a);
     else groups.active.items.push(a);
   });
 
-  const counts = {
-    expiring: accounts.filter(a => statusOf(a) === 'expiring').length,
-    active:   accounts.filter(a => statusOf(a) === 'active').length,
-    unpaid:   accounts.filter(a => a.paid === 'unpaid' && statusOf(a) !== 'expiring' && statusOf(a) !== 'expired').length,
-    expired:  accounts.filter(a => statusOf(a) === 'expired').length,
-  };
-
   let html = ``;
 
-  ['expiring','active','unpaid','expired'].forEach(key => {
+  ['expiring','active','expired'].forEach(key => {
     const g = groups[key];
     if (!g.items.length) return;
     html += `<div class="section-title">${g.label} <span class="section-badge">${g.items.length}</span></div>`;
@@ -571,12 +583,7 @@ function renderAll() {
   container.innerHTML = html;
 }
 
-function setFilter(status) {
-  document.getElementById('filterStatus').value = status === 'unpaid' ? 'all' : status;
-  document.getElementById('filterPaid').value = status === 'unpaid' ? 'unpaid' : 'all';
-  renderAll();
-  window.scrollTo({ top: 200, behavior: 'smooth' });
-}
+
 
 function buildTable(rows) {
   // Group by name
