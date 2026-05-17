@@ -255,13 +255,15 @@
             if (a.expDate !== correctExp) { a.expDate = correctExp; needsSave = true; }
           }
         });
+        // تحديث الداتا المحلية
+        accounts = remote;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
+        renderAll();
         // حفظ التصحيحات على Firebase لو في تغيير
-        if (needsSave) window.saveToFirebase && window.saveToFirebase(remote);
-        // تحديث الداتا المحلية وإعادة الرسم
-        if (JSON.stringify(accounts) !== JSON.stringify(remote)) {
-          accounts = remote;
-          localStorage.setItem(STORAGE_KEY, raw);
-          renderAll();
+        if (needsSave) {
+          setTimeout(() => {
+            window.saveToFirebase && window.saveToFirebase(remote);
+          }, 500);
         }
       } else {
         // أول مرة — ارفع الداتا الحالية على Firebase
@@ -829,11 +831,17 @@ function buildTable(rows) {
     grouped[key].push(a);
   });
 
-  let t = `<div class="table-wrap"><table>
+  let t = `<div class="table-wrap"><table style="min-width:900px">
     <thead><tr>
-      <th>الاسم</th><th>يوزرنيم / باسورد</th>
-      <th>رقم التليفون</th><th>المدة</th><th>انتهاء الاشتراك</th>
-      <th>الحالة</th><th>الدفع</th><th>ملاحظات</th><th>إجراء</th>
+      <th style="min-width:140px">الاسم</th>
+      <th style="min-width:200px">يوزرنيم / باسورد</th>
+      <th style="min-width:130px">رقم التليفون</th>
+      <th style="min-width:80px">المدة</th>
+      <th style="min-width:130px">انتهاء الاشتراك</th>
+      <th style="min-width:90px">الحالة</th>
+      <th style="min-width:130px">الدفع</th>
+      <th style="min-width:80px">ملاحظات</th>
+      <th style="min-width:160px">إجراء</th>
     </tr></thead><tbody>`;
 
   order.forEach(name => {
@@ -851,16 +859,22 @@ function buildTable(rows) {
       // Name cell — only on first row, rowspan
       if (i === 0) {
         t += `<td rowspan="${rowspan}" style="vertical-align:top;padding-top:14px;border-left:3px solid ${rowspan > 1 ? 'var(--accent)' : 'transparent'}">
-          <div style="font-weight:600;font-size:14px">${name}</div>
+          <div style="font-weight:700;font-size:15px;color:var(--text)">${name}</div>
           ${rowspan > 1 ? `<div style="font-size:11px;color:var(--accent);margin-top:6px;background:rgba(79,142,247,0.1);padding:2px 8px;border-radius:10px;display:inline-block">${rowspan} أكونتات</div>` : ''}
         </td>`;
       }
 
       t += `
-        <td>
-          <span style="font-size:12px;font-weight:700;color:#1a6cf0">U:</span> <span class="mono">${a.username}</span><br>
-          <span style="font-size:12px;font-weight:700;color:#1a6cf0">P:</span> <span class="mono" style="margin-top:4px;display:inline-block">${window.isGuest ? '••••••••' : a.password}</span>
-          ${window.isGuest ? '' : `<button class="copy-btn" style="margin-top:6px;display:block;width:100%" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ الكل</button>`}
+        <td style="padding:10px 12px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+            <span style="font-size:11px;font-weight:700;color:#1a6cf0;min-width:16px">U:</span>
+            <span class="mono" style="font-size:13px;color:var(--text);word-break:break-all">${a.username}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="font-size:11px;font-weight:700;color:#1a6cf0;min-width:16px">P:</span>
+            <span class="mono" style="font-size:13px;color:var(--text2);word-break:break-all">${window.isGuest ? '••••••••' : a.password}</span>
+          </div>
+          ${window.isGuest ? '' : `<button class="copy-btn" style="width:100%;font-size:11px;padding:4px 8px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ</button>`}
         </td>
         <td style="font-size:13px;color:var(--text);direction:ltr;text-align:center">
           ${window.isGuest ? '🔒 مخفي' : (a.phone ? `
