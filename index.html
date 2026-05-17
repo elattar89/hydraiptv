@@ -241,13 +241,14 @@
         remote.forEach(a => {
           if (!a.duration) { a.duration = '15'; needsSave = true; }
           if (a.paid === 'unpaid') { a.paid = 'debt'; needsSave = true; }
-          // تصحيح تواريخ الاشتراك من 2026 لـ 2025
-          if (a.startDate && a.startDate.startsWith('2026-')) {
+          // تصحيح تواريخ الاشتراك من 2026 لـ 2025 (مرة واحدة فقط)
+          if (a.startDate && a.startDate.startsWith('2026-') && !a._datFixed) {
             a.startDate = a.startDate.replace('2026-', '2025-');
+            a._datFixed = true;
             needsSave = true;
           }
-          // تصحيح تاريخ الانتهاء من تاريخ الاشتراك دائماً
-          if (a.startDate) {
+          // تصحيح تاريخ الانتهاء من تاريخ الاشتراك (مرة واحدة فقط)
+          if (a.startDate && !a._expFixed) {
             const s = new Date(a.startDate);
             const months = parseInt(a.duration) || 15;
             const exp = new Date(s);
@@ -257,14 +258,14 @@
             const lastDay = new Date(yyyy, exp.getMonth() + 1, 0).getDate();
             const dd = String(Math.min(s.getDate(), lastDay)).padStart(2, '0');
             const correctExp = `${yyyy}-${mm}-${dd}`;
-            if (a.expDate !== correctExp) { a.expDate = correctExp; needsSave = true; }
+            if (a.expDate !== correctExp) { a.expDate = correctExp; a._expFixed = true; needsSave = true; }
           }
         });
         // تحديث الداتا المحلية
         accounts = remote;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
         renderAll();
-        // حفظ التصحيحات على Firebase لو في تغيير
+        // حفظ التصحيحات على Firebase مرة واحدة فقط
         if (needsSave) {
           setTimeout(() => {
             window.saveToFirebase && window.saveToFirebase(remote);
@@ -1198,6 +1199,8 @@ function doSaveAccount(a, skipDupCheck) {
     const lastDay = new Date(yyyy, exp.getMonth() + 1, 0).getDate();
     const dd = String(Math.min(s.getDate(), lastDay)).padStart(2, '0');
     a.expDate = `${yyyy}-${mm}-${dd}`;
+    a._expFixed = true;
+    a._datFixed = true;
   }
   if (editingId) {
     const idx = accounts.findIndex(x => x.id === editingId);
