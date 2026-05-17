@@ -1011,6 +1011,28 @@ function showPaidMenu(e, id) {
 }
 
 
+function setClientPaid(id, value) {
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  a.clientPaid = value;
+  const merchant = a.merchantPaid || 'paid';
+  a.paid = (value === 'paid' && merchant === 'paid') ? 'paid' : (value === 'paid' && merchant === 'unpaid') ? 'debt' : 'unpaid';
+  document.querySelectorAll('.paid-menu').forEach(m => m.remove());
+  save(); renderAll();
+  showToast('✅ تم تحديث حالة العميل');
+}
+
+function setMerchantPaid(id, value) {
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  a.merchantPaid = value;
+  const client = a.clientPaid || 'paid';
+  a.paid = (client === 'paid' && value === 'paid') ? 'paid' : (client === 'paid' && value === 'unpaid') ? 'debt' : 'unpaid';
+  document.querySelectorAll('.paid-menu').forEach(m => m.remove());
+  save(); renderAll();
+  showToast('✅ تم تحديث حالة التاجر');
+}
+
 function setPaid(id, value) {
   const acc = accounts.find(x => x.id === id);
   if (!acc) return;
