@@ -987,7 +987,7 @@ function buildTable(rows) {
         <div style="width:40px;height:40px;border-radius:50%;background:${avatarBg};color:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">${initials}</div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <div style="font-size:15px;font-weight:700;color:var(--text)">${name}</div>
+            <div onclick="${!window.isGuest ? `openPersonEdit('${name.replace(/'/g,"\\'")}')`  : ''}" style="font-size:15px;font-weight:700;color:var(--text);cursor:${!window.isGuest ? 'pointer' : 'default'};display:inline-block" ${!window.isGuest ? 'title="اضغط لتعديل بيانات الشخص"' : ''}>${name}${!window.isGuest ? ' <span style="font-size:11px;opacity:0.4">✏️</span>' : ''}</div>
             ${!window.isGuest && first.phone ? `<button onclick="showPhoneMenu(event,'${first.phone}')" style="background:rgba(34,197,94,0.12);color:#4ade80;border-radius:20px;padding:2px 10px;font-size:11px;border:1px solid rgba(34,197,94,0.3);cursor:pointer;font-family:Cairo,sans-serif;direction:ltr">${first.phone}</button>` : ''}
           </div>
           <div style="font-size:11px;color:var(--text2);margin-top:1px">
@@ -1074,6 +1074,38 @@ function buildTable(rows) {
   });
 
   return t;
+}
+
+let _editingPersonName = null;
+
+function openPersonEdit(name) {
+  _editingPersonName = name;
+  const a = accounts.find(x => x.name === name);
+  document.getElementById('personName').value = name;
+  document.getElementById('personPhone').value = a ? (a.phone || '') : '';
+  document.getElementById('personModal').style.display = 'flex';
+}
+
+function closePersonModal() {
+  document.getElementById('personModal').style.display = 'none';
+  _editingPersonName = null;
+}
+
+function savePersonEdit() {
+  const newName = document.getElementById('personName').value.trim();
+  const newPhone = document.getElementById('personPhone').value.trim();
+  if (!newName) { showToast('❌ الاسم مطلوب', true); return; }
+  // تحديث كل الأكونتات بنفس الاسم
+  accounts.forEach(a => {
+    if (a.name === _editingPersonName) {
+      a.name = newName;
+      a.phone = newPhone;
+    }
+  });
+  save();
+  closePersonModal();
+  renderAll();
+  showToast('✅ تم تحديث بيانات الشخص');
 }
 
 function showPhoneMenu(e, phone) {
@@ -2001,5 +2033,24 @@ if (_auth === 'admin') {
   #expiringModalControls { display: none !important; }
 }
 </style>
+
+<!-- بوب آب تعديل الشخص -->
+<div id="personModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;align-items:center;justify-content:center" onclick="if(event.target===this)closePersonModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:28px;width:400px;max-width:92vw">
+    <h3 style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:20px">✏️ تعديل بيانات الشخص</h3>
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">الاسم</label>
+      <input id="personName" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">رقم الموبايل</label>
+      <input id="personPhone" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px;direction:ltr">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="savePersonEdit()" class="btn btn-primary" style="flex:1">💾 حفظ</button>
+      <button onclick="closePersonModal()" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;cursor:pointer;font-family:Cairo,sans-serif">إلغاء</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
