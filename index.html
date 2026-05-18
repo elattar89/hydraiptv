@@ -186,12 +186,15 @@
   footer {
     background: var(--bg2);
     border-top: 1px solid var(--border);
-    padding: 16px 24px;
+    padding: 12px 24px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 14px;
+    justify-content: flex-end;
+    gap: 10px;
     flex-wrap: wrap;
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
   }
   .btn-excel-export {
     background: linear-gradient(135deg, #1d7a40, #22c55e);
@@ -403,11 +406,9 @@
 </main>
 
 <footer>
-  <span style="color:var(--text2);font-size:13px;margin-left:auto">📊 تصدير / استيراد البيانات</span>
-  <button class="btn-excel-export" onclick="exportToExcel()" id="exportBtn">
-    ⬇️ تصدير Excel
-  </button>
-  <label class="btn-excel-import" style="cursor:pointer">
+  <span style="color:var(--text2);font-size:12px">📊 تصدير / استيراد</span>
+  <button class="btn-excel-export" onclick="exportToExcel()" id="exportBtn" style="padding:8px 14px;font-size:12px">⬇️ تصدير Excel</button>
+  <label class="btn-excel-import" style="cursor:pointer;padding:8px 14px;font-size:12px">
     ⬆️ استرجاع Excel
     <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromExcel(this)" id="importFileInput">
   </label>
