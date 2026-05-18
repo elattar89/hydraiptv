@@ -77,6 +77,51 @@
 
   .section-title { margin: 20px 0 12px; }
   .section-badge { display: none; }
+  @keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+  @keyframes pulse-line {
+    0%, 100% { opacity: 0.4; transform: scaleX(1); }
+    50% { opacity: 1; transform: scaleX(1.02); }
+  }
+  @keyframes float3d {
+    0%, 100% { transform: translateY(0px) rotateX(0deg); }
+    50% { transform: translateY(-3px) rotateX(5deg); }
+  }
+  .banner-text-active {
+    background: linear-gradient(90deg, #86efac, #4ade80, #22c55e, #4ade80, #86efac);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(34,197,94,0.5));
+  }
+  .banner-text-expiring {
+    background: linear-gradient(90deg, #fde68a, #fbbf24, #f59e0b, #fbbf24, #fde68a);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(245,158,11,0.5));
+  }
+  .banner-text-expired {
+    background: linear-gradient(90deg, #fca5a5, #f87171, #ef4444, #f87171, #fca5a5);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(239,68,68,0.5));
+  }
+  .banner-wrap {
+    animation: float3d 4s ease-in-out infinite;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+  .banner-line {
+    animation: pulse-line 2s ease-in-out infinite;
+    transform-origin: center;
+  }
 
   table { width: 100%; border-collapse: collapse; }
   .table-wrap { width:100%; }
@@ -197,15 +242,23 @@
   @media (max-width: 768px) {
     header { flex-direction: column; gap: 10px; }
     .stats-bar { flex-wrap: wrap; }
-    main { padding: 12px; }
+    main { padding: 10px; }
     .form-row { grid-template-columns: 1fr; }
     th, td { padding: 8px 10px; font-size: 12px; }
     .mono { font-size: 11px; }
     #statsBar > div { min-width: calc(33% - 8px) !important; max-width: calc(33% - 4px) !important; padding: 6px 8px !important; }
     #statsBar > div span:last-child { display: none; }
+    /* الكروت - عمود واحد على الموبايل */
+    .acct-card { border-radius: 10px !important; }
+    .acct-name { font-size: 14px !important; }
+    .banner-wrap { margin: 16px 0 10px !important; }
+    .banner-wrap .banner-text-active,
+    .banner-wrap .banner-text-expiring,
+    .banner-wrap .banner-text-expired { font-size: 18px !important; }
   }
   @media (max-width: 400px) {
     #statsBar > div { min-width: calc(50% - 6px) !important; max-width: calc(50% - 4px) !important; }
+    main { padding: 8px; }
   }
 </style>
   <!-- Firebase SDK -->
@@ -880,11 +933,21 @@ function renderAll() {
       : {bg:'rgba(239,68,68,0.12)',border:'rgba(239,68,68,0.3)',text:'#f87171',glow:'rgba(239,68,68,0.15)'};
     const bannerIcon = key === 'active' ? '✅' : key === 'expiring' ? '⚠️' : '⛔';
     const bannerLabel = key === 'active' ? 'نشط' : key === 'expiring' ? 'تنتهي خلال 30 يوم' : 'منتهية';
-    html += `<div style="background:${bannerColor.bg};border:1px solid ${bannerColor.border};border-radius:14px;padding:10px 18px;margin:20px 0 12px;display:flex;align-items:center;gap:12px;box-shadow:0 0 20px ${bannerColor.glow}">
-      <span style="font-size:20px">${bannerIcon}</span>
-      <span style="font-size:16px;font-weight:700;color:${bannerColor.text};letter-spacing:0.5px">${bannerLabel}</span>
-      <div style="flex:1;height:1px;background:${bannerColor.border}"></div>
-      <span style="background:${bannerColor.bg};border:1px solid ${bannerColor.border};color:${bannerColor.text};border-radius:20px;padding:3px 12px;font-size:13px;font-weight:700">${g.items.length}</span>
+    const bannerClass = key === 'active' ? 'banner-text-active' : key === 'expiring' ? 'banner-text-expiring' : 'banner-text-expired';
+    const subLabel = key === 'active' ? 'Active Accounts' : key === 'expiring' ? 'Expiring Soon' : 'Expired Accounts';
+    html += `<div class="banner-wrap" style="margin:24px 0 14px;text-align:center;position:relative">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="banner-line" style="flex:1;height:1px;background:linear-gradient(to left,${bannerColor.border},transparent)"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+          <div style="font-size:10px;letter-spacing:4px;color:${bannerColor.text};opacity:0.6;text-transform:uppercase;font-weight:600">${subLabel}</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px">${bannerIcon}</span>
+            <span class="${bannerClass}" style="font-size:22px;font-weight:900;letter-spacing:1px">${bannerLabel}</span>
+            <span style="background:${bannerColor.bg};border:1px solid ${bannerColor.border};color:${bannerColor.text};border-radius:20px;padding:2px 12px;font-size:13px;font-weight:700;box-shadow:0 0 10px ${bannerColor.glow}">${g.items.length}</span>
+          </div>
+        </div>
+        <div class="banner-line" style="flex:1;height:1px;background:linear-gradient(to right,${bannerColor.border},transparent)"></div>
+      </div>
     </div>`;
     html += buildTable(g.items);
   });
