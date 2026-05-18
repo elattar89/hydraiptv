@@ -21,7 +21,7 @@
     --border: #1e2d45;
     --card: #0d1525;
   }
-  body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; direction: rtl; }
 
   header {
     background: linear-gradient(160deg, #0a0f1a 0%, #0d1b3e 50%, #0a0a2e 100%);
@@ -75,17 +75,23 @@
 
   main { padding: 20px 24px; }
 
-  .section-title {
-    font-size: 16px; font-weight: 700; color: var(--text2);
-    text-transform: uppercase; letter-spacing: 1px;
-    margin: 20px 0 12px; padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .section-badge { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px; font-size: 12px; color: var(--text2); }
+  .section-title { margin: 20px 0 12px; }
+  .section-badge { display: none; }
 
   table { width: 100%; border-collapse: collapse; }
-  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 24px; }
+  .table-wrap { width:100%; }
+  .acct-card { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; margin-bottom:10px; direction:rtl; text-align:right; }
+  .acct-card-top { height:5px; width:100%; display:block; }
+  .acct-card-body { padding:14px 16px; }
+  .acct-header { display:flex; flex-direction:row !important; align-items:center; gap:12px; margin-bottom:12px; }
+  .acct-avatar { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; flex-shrink:0; }
+  .acct-name { font-size:16px; font-weight:700; color:var(--text); }
+  .acct-host { font-size:11px; color:var(--text2); margin-top:2px; font-family:monospace; }
+  .acct-days-big { font-size:22px; font-weight:700; }
+  .acct-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px; }
+  .acct-field-label { font-size:11px; color:var(--text2); margin-bottom:3px; }
+  .acct-badges { display:flex; flex-direction:row; gap:6px; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--border); align-items:center; }
+  .acct-badge { font-size:11px; padding:3px 10px; border-radius:20px; display:inline-block; white-space:nowrap; }
   th {
     background: var(--bg3); padding: 12px 16px; text-align: center;
     font-size: 13px; font-weight: 600; color: var(--text2);
@@ -869,7 +875,17 @@ function renderAll() {
   ['expiring','active','expired'].forEach(key => {
     const g = groups[key];
     if (!g.items.length) return;
-    html += `<div class="section-title">${g.label} <span class="section-badge">${g.items.length}</span></div>`;
+    const bannerColor = key === 'active' ? {bg:'rgba(34,197,94,0.12)',border:'rgba(34,197,94,0.3)',text:'#4ade80',glow:'rgba(34,197,94,0.15)'}
+      : key === 'expiring' ? {bg:'rgba(245,158,11,0.12)',border:'rgba(245,158,11,0.3)',text:'#fbbf24',glow:'rgba(245,158,11,0.15)'}
+      : {bg:'rgba(239,68,68,0.12)',border:'rgba(239,68,68,0.3)',text:'#f87171',glow:'rgba(239,68,68,0.15)'};
+    const bannerIcon = key === 'active' ? '✅' : key === 'expiring' ? '⚠️' : '⛔';
+    const bannerLabel = key === 'active' ? 'نشط' : key === 'expiring' ? 'تنتهي خلال 30 يوم' : 'منتهية';
+    html += `<div style="background:${bannerColor.bg};border:1px solid ${bannerColor.border};border-radius:14px;padding:10px 18px;margin:20px 0 12px;display:flex;align-items:center;gap:12px;box-shadow:0 0 20px ${bannerColor.glow}">
+      <span style="font-size:20px">${bannerIcon}</span>
+      <span style="font-size:16px;font-weight:700;color:${bannerColor.text};letter-spacing:0.5px">${bannerLabel}</span>
+      <div style="flex:1;height:1px;background:${bannerColor.border}"></div>
+      <span style="background:${bannerColor.bg};border:1px solid ${bannerColor.border};color:${bannerColor.text};border-radius:20px;padding:3px 12px;font-size:13px;font-weight:700">${g.items.length}</span>
+    </div>`;
     html += buildTable(g.items);
   });
 
@@ -880,7 +896,6 @@ function renderAll() {
 
 
 function buildTable(rows) {
-  // Group by name
   const grouped = {};
   const order = [];
   rows.forEach(a => {
@@ -889,92 +904,136 @@ function buildTable(rows) {
     grouped[key].push(a);
   });
 
-  let t = `<div class="table-wrap"><table style="min-width:900px">
-    <thead><tr>
-      <th style="min-width:140px">الاسم</th>
-      <th style="min-width:200px">يوزرنيم / باسورد</th>
-      <th style="min-width:130px">رقم التليفون</th>
-      <th style="min-width:80px">المدة</th>
-      <th style="min-width:130px">انتهاء الاشتراك</th>
-      <th style="min-width:90px">الحالة</th>
-      <th style="min-width:130px">الدفع</th>
-      <th style="min-width:80px">ملاحظات</th>
-      <th style="min-width:160px">إجراء</th>
-    </tr></thead><tbody>`;
+  let t = ``;
 
   order.forEach(name => {
     const accs = grouped[name];
     const first = accs[0];
-    const rowspan = accs.length;
+    const st = statusOf(first);
+    const borderColor = st === 'active' ? '#22c55e' : st === 'expiring' ? '#f59e0b' : st === 'expired' ? '#ef4444' : '#64748b';
+    const cardBg = st === 'active' ? 'rgba(34,197,94,0.06)' : st === 'expiring' ? 'rgba(245,158,11,0.08)' : st === 'expired' ? 'rgba(239,68,68,0.06)' : 'var(--card)';
+    const avatarBg = st === 'active' ? 'rgba(34,197,94,0.2)' : st === 'expiring' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)';
+    const avatarColor = st === 'active' ? '#4ade80' : st === 'expiring' ? '#fbbf24' : '#f87171';
+    const nameParts = name.trim().split(/\s+/);
+    const initials = nameParts.length >= 2 ? (nameParts[0][0]+nameParts[1][0]).toUpperCase() : name.slice(0,2).toUpperCase();
+    const phoneNum = first.phone ? first.phone.replace(/[^0-9]/g,'') : '';
 
-    accs.forEach((a, i) => {
+    t += `<div style="background:${cardBg};border:1px solid ${borderColor};border-right:4px solid ${borderColor};border-radius:12px;padding:12px 14px;margin-bottom:8px">
+      <!-- Header الشخص -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:${accs.length > 1 ? '10px' : '0'}">
+        <div style="width:40px;height:40px;border-radius:50%;background:${avatarBg};color:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div style="font-size:15px;font-weight:700;color:var(--text)">${name}</div>
+            ${!window.isGuest && first.phone ? `<button onclick="showPhoneMenu(event,'${first.phone}')" style="background:rgba(34,197,94,0.12);color:#4ade80;border-radius:20px;padding:2px 10px;font-size:11px;border:1px solid rgba(34,197,94,0.3);cursor:pointer;font-family:Cairo,sans-serif;direction:ltr">${first.phone}</button>` : ''}
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-top:1px">
+            ${first.host ? `<span style="font-family:monospace">${(first.host||'').replace('http://','').replace(':80','')}</span>` : ''}
+          </div>
+        </div>
+        ${accs.length > 1 ? `<span style="background:rgba(79,142,247,0.15);color:#60a5fa;border:1px solid rgba(79,142,247,0.3);font-size:11px;padding:2px 8px;border-radius:20px;flex-shrink:0">${accs.length} أكونتات</span>` : ''}
+      </div>`;
+
+    // الأكونتات
+    if (accs.length === 1) {
+      const a = accs[0];
       const d = daysLeft(a.expDate);
-      const rowStatus = statusOf(a);
-      const rowBg = rowStatus === 'expiring' ? 'rgba(245,158,11,0.25)' : rowStatus === 'expired' ? 'rgba(239,68,68,0.25)' : rowStatus === 'active' ? 'rgba(34,197,94,0.2)' : '';
-      const rowBorder = rowStatus === 'expiring' ? 'border-right:4px solid #f59e0b;border-left:4px solid #f59e0b' : rowStatus === 'expired' ? 'border-right:4px solid #ef4444;border-left:4px solid #ef4444' : rowStatus === 'active' ? 'border-right:4px solid #22c55e;border-left:4px solid #22c55e' : '';
-      t += `<tr style="${i > 0 ? 'border-top:1px dashed rgba(255,255,255,0.1);' : ''}background:${rowBg};${rowBorder}">`; 
-
-      // Name cell — only on first row, rowspan
-      if (i === 0) {
-        t += `<td rowspan="${rowspan}" style="vertical-align:top;padding-top:14px;border-left:3px solid ${rowspan > 1 ? 'var(--accent)' : 'transparent'}">
-          <div style="font-weight:700;font-size:15px;color:var(--text)">${name}</div>
-          ${rowspan > 1 ? `<div style="font-size:11px;color:var(--accent);margin-top:6px;background:rgba(79,142,247,0.1);padding:2px 8px;border-radius:10px;display:inline-block">${rowspan} أكونتات</div>` : ''}
-        </td>`;
-      }
-
+      const daysText = d === null ? '—' : d < 0 ? `منذ ${Math.abs(d)} يوم` : `${d} يوم`;
+      const daysColor = st === 'active' ? '#22c55e' : st === 'expiring' ? '#f59e0b' : '#ef4444';
+      const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
+      const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+      const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
       t += `
-        <td style="padding:10px 12px">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-            <span style="font-size:11px;font-weight:700;color:#1a6cf0;min-width:16px">U:</span>
-            <span class="mono" style="font-size:13px;color:var(--text);word-break:break-all">${a.username}</span>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <div style="font-family:monospace;font-size:12px;flex:1;min-width:0;color:var(--text2)">
+            <span style="color:#1a6cf0">U:</span> ${a.username} &nbsp;
+            <span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}
           </div>
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-            <span style="font-size:11px;font-weight:700;color:#1a6cf0;min-width:16px">P:</span>
-            <span class="mono" style="font-size:13px;color:var(--text2);word-break:break-all">${window.isGuest ? '••••••••' : a.password}</span>
-          </div>
-          ${window.isGuest ? '' : `<button class="copy-btn" style="width:100%;font-size:11px;padding:4px 8px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ</button>`}
-        </td>
-        <td style="font-size:13px;color:var(--text);direction:ltr;text-align:center">
-          ${window.isGuest ? '🔒 مخفي' : (a.phone ? `
-            <div style="font-weight:600;margin-bottom:4px">${a.phone}</div>
-            <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
-              <a href="tel:${a.phone}" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#4ade80;border-radius:8px;padding:3px 10px;font-size:11px;text-decoration:none;cursor:pointer">📞 اتصال</a>
-              <a href="https://wa.me/${a.phone.replace(/[^0-9]/g,'')}" target="_blank" style="background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.4);color:#25d366;border-radius:8px;padding:3px 10px;font-size:11px;text-decoration:none;cursor:pointer">💬 واتس</a>
-            </div>
-          ` : '—')}
-        </td>
-        <td style="text-align:center">
-          ${a.duration ? `<span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:10px;background:rgba(79,142,247,0.15);color:var(--accent);border:1px solid rgba(79,142,247,0.3)">${a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر'}</span>` : '—'}
-        </td>
-        <td>
-          <div>${formatDate(a.expDate)}</div>
-          ${d !== null ? `<div class="days-left">${d < 0 ? `منذ ${Math.abs(d)} يوم` : `متبقي ${d} يوم`}</div>` : ''}
-        </td>
-        <td>${statusBadge(a)}</td>
-        <td style="position:relative">
-          <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0">${paidBadge(a)}</button>
-          ${a.amount ? `<div style="font-size:12px;font-weight:700;margin-top:4px;padding:2px 8px;border-radius:8px;display:inline-block;${a.paid === 'paid' ? 'color:#22c55e;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3)' : 'color:#ef4444;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3)'}">${a.amount} KD</div>` : ''}
-        </td>
-        <td style="font-size:12px;color:var(--text2)">${a.notes || '—'}</td>
-        <td>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            ${window.isGuest ? '<span style="color:var(--text2);font-size:12px">👁️ عرض فقط</span>' : `
-            <button class="btn btn-primary" style="padding:6px 10px;font-size:12px" onclick="editAccount(${a.id})">✏️</button>
-            <button class="btn btn-danger" style="padding:6px 10px;font-size:12px" onclick="deleteAccount(${a.id})">🗑️</button>
-            <button onclick="showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;white-space:nowrap">📨 تأكيد</button>
-            <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;white-space:nowrap">🔔 تذكير</button>
+          <div style="font-size:14px;font-weight:700;color:${daysColor};flex-shrink:0">${st==='expired'?'منتهي':daysText}</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px">
+          <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0;display:flex;gap:4px">
+            <span style="font-size:11px;padding:2px 7px;border-radius:20px;background:${client==='paid'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.15)'};color:${client==='paid'?'#4ade80':'#f87171'};border:1px solid ${client==='paid'?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'}">عميل ${client==='paid'?'✓':'✗'}</span>
+            <span style="font-size:11px;padding:2px 7px;border-radius:20px;background:${merchant==='paid'?'rgba(34,197,94,0.15)':'rgba(245,158,11,0.15)'};color:${merchant==='paid'?'#4ade80':'#fbbf24'};border:1px solid ${merchant==='paid'?'rgba(34,197,94,0.3)':'rgba(245,158,11,0.3)'}">تاجر ${merchant==='paid'?'✓':'✗'}</span>
+          </button>
+          ${a.amount ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
+          <span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(79,142,247,0.12);color:var(--accent);border:1px solid rgba(79,142,247,0.25)">${dur}</span>
+          ${a.notes ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(148,163,184,0.1);color:var(--text2);border:1px solid var(--border)">${a.notes}</span>` : ''}
+          <div style="margin-right:auto;display:flex;gap:4px">
+            ${window.isGuest ? '' : `
+            <button class="copy-btn" style="font-size:11px;padding:3px 9px;display:flex;align-items:center;gap:4px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 <span>نسخ</span></button>
+            <button class="btn btn-primary" style="padding:3px 9px;font-size:11px;display:flex;align-items:center;gap:4px" onclick="editAccount(${a.id})">✏️ <span>تعديل</span></button>
+            <button class="btn btn-danger" style="padding:3px 9px;font-size:11px;display:flex;align-items:center;gap:4px" onclick="deleteAccount(${a.id})">🗑️ <span>مسح</span></button>
+            <button onclick="showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">📨 <span>إرسال</span></button>
+            <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">🔔 <span>تذكير</span></button>
             `}
           </div>
-        </td>
-      </tr>`;
-    });
+        </div>
+      </div>`;
+    } else {
+      // أكونتات متعددة - صفوف صغيرة
+      t += `<div style="display:flex;flex-direction:column;gap:6px">`;
+      accs.forEach(a => {
+        const d = daysLeft(a.expDate);
+        const ast = statusOf(a);
+        const daysText = d === null ? '—' : d < 0 ? `منذ ${Math.abs(d)} يوم` : `${d} يوم`;
+        const daysColor = ast === 'active' ? '#22c55e' : ast === 'expiring' ? '#f59e0b' : '#ef4444';
+        const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
+        const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+        const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
+        t += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="font-family:monospace;font-size:11px;flex:1;min-width:150px;color:var(--text2)">
+            <span style="color:#1a6cf0">U:</span> ${a.username} &nbsp;
+            <span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}
+          </div>
+          <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0;display:flex;gap:3px">
+            <span style="font-size:10px;padding:2px 6px;border-radius:20px;background:${client==='paid'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.15)'};color:${client==='paid'?'#4ade80':'#f87171'};border:1px solid ${client==='paid'?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'}">عميل ${client==='paid'?'✓':'✗'}</span>
+            <span style="font-size:10px;padding:2px 6px;border-radius:20px;background:${merchant==='paid'?'rgba(34,197,94,0.15)':'rgba(245,158,11,0.15)'};color:${merchant==='paid'?'#4ade80':'#fbbf24'};border:1px solid ${merchant==='paid'?'rgba(34,197,94,0.3)':'rgba(245,158,11,0.3)'}">تاجر ${merchant==='paid'?'✓':'✗'}</span>
+          </button>
+          ${a.amount ? `<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
+          <span style="font-size:12px;font-weight:700;color:${daysColor}">${ast==='expired'?'منتهي':daysText}</span>
+          <div style="display:flex;gap:3px">
+            ${window.isGuest ? '' : `
+            <button class="copy-btn" style="font-size:10px;padding:2px 8px;display:flex;align-items:center;gap:3px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 <span>نسخ</span></button>
+            <button class="btn btn-primary" style="padding:2px 8px;font-size:10px;display:flex;align-items:center;gap:3px" onclick="editAccount(${a.id})">✏️ <span>تعديل</span></button>
+            <button class="btn btn-danger" style="padding:2px 8px;font-size:10px;display:flex;align-items:center;gap:3px" onclick="deleteAccount(${a.id})">🗑️ <span>مسح</span></button>
+            <button onclick="showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">📨 <span>إرسال</span></button>
+            <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">🔔 <span>تذكير</span></button>
+            `}
+          </div>
+        </div>`;
+      });
+      t += `</div>`;
+    }
 
-    // Separator between different people
-    t += `<tr style="height:4px;background:var(--bg3)"><td colspan="9"></td></tr>`;
+    t += `</div>`;
   });
 
-  t += `</tbody></table></div>`;
   return t;
+}
+
+function showPhoneMenu(e, phone) {
+  e.stopPropagation();
+  document.querySelectorAll('.phone-menu').forEach(m => m.remove());
+  const phoneNum = phone.replace(/[^0-9]/g, '');
+  const menu = document.createElement('div');
+  menu.className = 'phone-menu';
+  menu.style.cssText = 'position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:10px;z-index:200;box-shadow:0 8px 30px rgba(0,0,0,0.5);min-width:180px;direction:rtl';
+  menu.innerHTML = `
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;padding:0 4px;font-weight:600">${phone}</div>
+    <a href="tel:${phone}" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;text-decoration:none;color:#4ade80;font-size:13px;font-family:Cairo,sans-serif" onmouseover="this.style.background='rgba(34,197,94,0.1)'" onmouseout="this.style.background=''">
+      <span>📞</span><span>اتصال</span>
+    </a>
+    <a href="https://wa.me/${phoneNum}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;text-decoration:none;color:#25d366;font-size:13px;font-family:Cairo,sans-serif" onmouseover="this.style.background='rgba(37,211,102,0.1)'" onmouseout="this.style.background=''">
+      <span>💬</span><span>واتساب</span>
+    </a>
+  `;
+  const rect = e.target.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('click', () => menu.remove(), {once:true}), 10);
 }
 
 function showPaidMenu(e, id) {
