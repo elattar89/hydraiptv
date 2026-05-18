@@ -1,8 +1,8 @@
-const CACHE = 'iptv-v1';
-const ASSETS = ['/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'iptv-v3';
+const STATIC = ['/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)));
   self.skipWaiting();
 });
 
@@ -14,11 +14,24 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Firebase requests تروح للنت دايماً
-  if (e.request.url.includes('firebase') || e.request.url.includes('google')) {
+  const url = e.request.url;
+
+  // Firebase و Google دايماً من النت
+  if (url.includes('firebase') || url.includes('google') || url.includes('gstatic')) {
     return;
   }
+
+  // index.html دايماً من النت عشان التحديثات تظهر فوراً
+  if (url.endsWith('/') || url.includes('index.html')) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // باقي الملفات من الـ cache
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request))
   );
 });
+
