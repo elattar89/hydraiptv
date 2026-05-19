@@ -180,7 +180,7 @@
   .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); border-radius: 10px; padding: 10px 18px; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 14px; }
   .btn-outline:hover { border-color: var(--text); color: var(--text); }
 
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--green); color: var(--green); padding: 10px 20px; border-radius: 10px; font-size: 14px; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--green); color: var(--green); padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
   .toast.show { opacity: 1; }
 
   footer {
@@ -340,6 +340,48 @@
     });
 
     window._firebaseReady = true;
+
+    // ===== Firebase للطلبات قيد الانتظار =====
+    const PENDING_DOC = doc(db, "iptv", "pending_requests");
+
+    window.savePendingFirebase = async function(data) {
+      window._savingPending = true;
+      try {
+        await setDoc(PENDING_DOC, { list: JSON.stringify(data) });
+      } catch(e) {
+        console.error("Firebase pending save error:", e);
+      }
+      window._savingPending = false;
+    };
+
+    onSnapshot(PENDING_DOC, (snapshot) => {
+      if (window._savingPending) return;
+      if (snapshot.exists()) {
+        try { _pendingRequests = JSON.parse(snapshot.data().list || '[]'); }
+        catch(e) { _pendingRequests = []; }
+      } else { _pendingRequests = []; }
+      if (typeof renderPendingSection === 'function') renderPendingSection();
+    });
+
+    // ===== Firebase لسلة المهملات =====
+    const TRASH_DOC = doc(db, "iptv", "trash");
+
+    window.saveTrashFirebase = async function(data) {
+      window._savingTrash = true;
+      try {
+        await setDoc(TRASH_DOC, { list: JSON.stringify(data) });
+      } catch(e) { console.error("Firebase trash save error:", e); }
+      window._savingTrash = false;
+    };
+
+    onSnapshot(TRASH_DOC, (snapshot) => {
+      if (window._savingTrash) return;
+      if (snapshot.exists()) {
+        try { _trashItems = JSON.parse(snapshot.data().list || '[]'); }
+        catch(e) { _trashItems = []; }
+      } else { _trashItems = []; }
+      if (typeof renderTrashBtn === 'function') renderTrashBtn();
+    });
   </script>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
@@ -399,8 +441,19 @@
   <button id="expiredListBtn" onclick="showExpiredListModal()" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">📋 كشف المنتهين</button>
   <button id="totalListBtn" onclick="showTotalListModal()" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(99,102,241,0.25)'" onmouseout="this.style.background='rgba(99,102,241,0.15)'">📊 الكشف الإجمالي</button>
   <button id="debtListBtn" onclick="showDebtListModal()" style="display:none;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#c084fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(168,85,247,0.25)'" onmouseout="this.style.background='rgba(168,85,247,0.15)'">📋 كشف الديون</button>
-  <button class="btn btn-primary" onclick="openAddModal()">+ إضافة حساب</button>
-  <button id="refreshBtn" onclick="manualRefresh()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:10px 14px;font-size:18px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;" title="تحديث البيانات">🔄</button>
+  <!-- زر إضافة حساب مع قائمة منسدلة -->
+  <div style="position:relative;display:inline-block" id="addBtnWrapper">
+    <button class="btn btn-primary" onclick="toggleAddMenu()" id="addMainBtn">+ إضافة حساب ▾</button>
+    <div id="addDropMenu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--bg2);border:1px solid var(--border);border-radius:12px;min-width:200px;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden">
+      <button onclick="closeAddMenu();openAddModal()" style="width:100%;background:none;border:none;color:var(--text);padding:12px 16px;text-align:right;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='none'">➕ إضافة حساب جديد</button>
+      <div style="height:1px;background:var(--border);margin:0 12px"></div>
+      <button onclick="closeAddMenu();openRequestMerchantModal()" style="width:100%;background:none;border:none;color:#60a5fa;padding:12px 16px;text-align:right;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.15s" onmouseover="this.style.background='rgba(79,142,247,0.1)'" onmouseout="this.style.background='none'">📨 طلب إضافة للتاجر</button>
+    </div>
+  </div>
+  <button id="refreshBtn" onclick="manualRefresh()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:6px" title="تحديث الصفحة">🔄 تحديث</button>
+  <button id="trashBtn" onclick="showTrashModal()" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;position:relative;display:flex;align-items:center;gap:6px" title="سلة المهملات">
+    🗑️ محذوف <span id="trashCount" style="display:none;background:#ef4444;color:white;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1"></span>
+  </button>
 </div>
 
 <main>
@@ -508,6 +561,7 @@
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal()">إلغاء</button>
       <button class="btn btn-primary" onclick="saveAccount()">💾 حفظ</button>
+      <button id="addAsNewUserBtn" class="btn btn-primary" style="display:none;background:linear-gradient(135deg,#22c55e,#15803d)" onclick="addAsNewUser()">➕ إضافة كمستخدم جديد</button>
     </div>
   </div>
 </div>
@@ -672,7 +726,15 @@ function renderStats() {
       <div style="font-size:22px;font-weight:700;color:#c084fc">${debtTotal}$</div>
       <span style="font-size:10px;color:rgba(255,255,255,0.4)">${debtAccounts.length} أكونت × 10$</span>
     </div>
+    <div onclick="showPendingListModal()" style="${base} rgba(251,146,60,0.3);background:rgba(251,146,60,0.12)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:11px;color:rgba(255,255,255,0.6)">قيد الطلب ⏳</span>
+      <div id="pendingPillCount" style="font-size:22px;font-weight:700;color:#fb923c">0</div>
+      <span style="font-size:10px;color:rgba(255,255,255,0.4)">طلب من التاجر</span>
+    </div>
   `;
+  // تحديث العداد بعد رسم الهيدر
+  const pillEl = document.getElementById('pendingPillCount');
+  if (pillEl && typeof _pendingRequests !== 'undefined') pillEl.textContent = _pendingRequests.length;
 }
 
 async function shareActivePDF() {
@@ -704,6 +766,29 @@ async function shareActivePDF() {
       alert('✅ تم نسخ الكشف — الصقه في أي تطبيق');
     });
   }
+}
+
+function showPendingListModal() {
+  const list = _pendingRequests;
+  document.getElementById('pendingListCount').textContent = 'إجمالي: ' + list.length + ' طلب';
+  document.getElementById('pendingListDate').textContent = 'تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-EG');
+  const rows = list.map((r, i) => {
+    const rowBg = i % 2 === 0 ? '#fff7ed' : '#fff';
+    const dur = r.duration === '6' ? '6 أشهر' : r.duration === '12' ? 'سنة' : r.duration === '15' ? '15 شهر' : (r.duration || '—');
+    return `<tr style="background:${rowBg}">
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#666">${i+1}</td>
+      <td style="padding:8px 6px;font-weight:700;border:1px solid #ddd;white-space:nowrap">${r.name||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;direction:ltr">${r.phone||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#c2410c;font-weight:700">${r.username||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#555">${window.isGuest ? '••••••' : (r.password||'—')}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-size:10px;color:#777">${(r.host||'—').replace('http://','')}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#c2410c">${r.date||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${r.amount ? r.amount+' KD' : '—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${dur}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="9" style="text-align:center;padding:20px;color:#999">لا توجد طلبات قيد الانتظار</td></tr>`;
+  document.getElementById('pendingListBody').innerHTML = rows;
+  document.getElementById('pendingListModal').style.display = 'block';
 }
 
 function showDebtListModal() {
@@ -1412,7 +1497,10 @@ function toggleNameDropdown() {
 function selectName(name) {
   document.getElementById('fName').value = name;
   document.getElementById('nameDropdown').style.display = 'none';
-  autoFillPhoneByName();
+  const match = accounts.find(x => x.name === name && x.phone);
+  if (match) document.getElementById('fPhone').value = match.phone;
+  document.getElementById('fUser').value = '';
+  document.getElementById('fPass').value = '';
 }
 
 function autoFillPhoneByName() {
@@ -1490,80 +1578,63 @@ function editAccount(id) {
 }
 
 
-let _pendingDupAccount = null;
+// متغيرات global للـ pending modal
+let _modalIsPending = false;
+let _modalPendingIdx = null;
+let _modalIsAddFromPending = false;
+
+
 
 function closeDupModal() {
   document.getElementById('dupModalBg').style.display = 'none';
   _pendingDupAccount = null;
+  window._merchantDupPerson = null;
+  window._merchantDupUser   = null;
 }
 
-function confirmDupSave() {
-  closeDupModal();
-  if (_pendingDupAccount) doSaveAccount(_pendingDupAccount);
-}
-
-function showDupModal(title, desc, accountData) {
+let _pendingDupExisting = null;
+function showDupModal(title, desc, accountData, existingPerson) {
   _pendingDupAccount = accountData;
+  _pendingDupExisting = existingPerson || null;
   document.getElementById('dupModalTitle').textContent = title;
   document.getElementById('dupModalDesc').innerHTML = desc;
   document.getElementById('dupModalBg').style.display = 'flex';
 }
 
-function doSaveAccount(a, skipDupCheck) {
-  // إعادة حساب تاريخ الانتهاء من تاريخ الاشتراك والمدة المختارة
-  if (a.startDate) {
-    const s = new Date(a.startDate);
-    const months = parseInt(a.duration) || 15;
-    const exp = new Date(s);
-    exp.setMonth(exp.getMonth() + months);
-    const yyyy = exp.getFullYear();
-    const mm = String(exp.getMonth() + 1).padStart(2, '0');
-    const lastDay = new Date(yyyy, exp.getMonth() + 1, 0).getDate();
-    const dd = String(Math.min(s.getDate(), lastDay)).padStart(2, '0');
-    a.expDate = `${yyyy}-${mm}-${dd}`;
-    a._expFixed = true;
-    a._datFixed = true;
-  }
-  if (editingId) {
-    const idx = accounts.findIndex(x => x.id === editingId);
-    if (idx !== -1) {
-      const old = accounts[idx];
-      const wasExpired = statusOf(old) === 'expired';
-      const dateChanged = a.expDate && a.expDate !== old.expDate;
-      if (wasExpired && dateChanged && !a.notes) a.notes = 'تجديد';
-      accounts[idx] = { ...old, ...a };
-    }
-  } else {
-    const maxId = accounts.reduce((m, x) => Math.max(m, x.id), 0);
-    accounts.push({ id: maxId + 1, ...a });
-  }
-  const wasEditing = !!editingId;
-  if (a.phone) accounts.forEach(x => { if (x.name === a.name) x.phone = a.phone; });
-  save(); closeModal();
-  document.getElementById('filterStatus').value = 'all';
-  document.getElementById('filterPaid').value = 'all';
-  document.getElementById('searchInput').value = '';
-  renderAll();
-  showToast(wasEditing ? '✅ تم التعديل — انتقل لقسمه الجديد' : '✅ تمت الإضافة');
-}
-
 function saveAccount() {
   const a = {
-    name: document.getElementById('fName').value.trim(),
-    phone: document.getElementById('fPhone').value.trim(),
-    username: document.getElementById('fUser').value.trim(),
-    password: document.getElementById('fPass').value.trim(),
-    host: document.getElementById('fHost').value.trim(),
-    startDate: document.getElementById('fDate').value,
-    expDate: document.getElementById('fExp').value, // محسوب تلقائياً
-    clientPaid: document.getElementById('fClientPaid').value,
+    name:         document.getElementById('fName').value.trim(),
+    phone:        document.getElementById('fPhone').value.trim(),
+    username:     document.getElementById('fUser').value.trim(),
+    password:     document.getElementById('fPass').value.trim(),
+    host:         document.getElementById('fHost').value.trim(),
+    startDate:    document.getElementById('fDate').value,
+    expDate:      document.getElementById('fExp').value,
+    clientPaid:   document.getElementById('fClientPaid').value,
     merchantPaid: document.getElementById('fMerchantPaid').value,
-    paid: document.getElementById('fClientPaid').value === 'paid' && document.getElementById('fMerchantPaid').value === 'paid' ? 'paid' : document.getElementById('fMerchantPaid').value === 'unpaid' && document.getElementById('fClientPaid').value === 'paid' ? 'debt' : 'unpaid',
-    amount: document.getElementById('fAmount').value,
-    duration: document.getElementById('fDuration') ? document.getElementById('fDuration').value : '15',
-    notes: document.getElementById('fNotes').value.trim(),
+    paid:         document.getElementById('fClientPaid').value === 'paid' && document.getElementById('fMerchantPaid').value === 'paid' ? 'paid' : document.getElementById('fMerchantPaid').value === 'unpaid' ? 'debt' : 'unpaid',
+    amount:       document.getElementById('fAmount').value,
+    duration:     (document.getElementById('fDuration') || {value:'15'}).value,
+    notes:        document.getElementById('fNotes').value.trim(),
   };
-  // التحقق من الحقول الإلزامية عند الإضافة فقط
+
+  const isPending        = !!_modalIsPending;
+  const isAddFromPending = !!_modalIsAddFromPending;
+
+  // حفظ على الكرت بدون إضافة
+  if (isPending && !isAddFromPending) {
+    const pIdx = _modalPendingIdx;
+    if (pIdx !== null && pIdx !== undefined) {
+      _pendingRequests[pIdx] = { ..._pendingRequests[pIdx], ...a };
+      if (window.savePendingFirebase) window.savePendingFirebase(_pendingRequests);
+    }
+    closeModal();
+    renderPendingSection();
+    showToast('✅ تم حفظ التعديلات على الكرت');
+    return;
+  }
+
+  // فحص الإلزامية عند الإضافة العادية أو إضافة كمستخدم جديد
   if (!editingId) {
     const required = [
       { val: a.name,      label: 'اسم الحساب' },
@@ -1571,9 +1642,7 @@ function saveAccount() {
       { val: a.password,  label: 'الباسورد' },
       { val: a.host,      label: 'الهوست' },
       { val: a.startDate, label: 'تاريخ الاشتراك' },
-      { val: a.paid,      label: 'حالة الدفع' },
       { val: a.amount,    label: 'قيمة الاشتراك' },
-      { val: a.duration,  label: 'مدة الاشتراك' },
     ];
     const missing = required.filter(r => !r.val);
     if (missing.length > 0) {
@@ -1582,67 +1651,199 @@ function saveAccount() {
     }
   }
 
-  // فحص التكرار فقط عند الإضافة وليس التعديل
-  if (!editingId) {
-    const nameLower  = a.name.trim().toLowerCase();
-    const phoneClean = a.phone.trim().replace(/\s+/g,'');
+  // فحص تكرار username
+  if (!editingId && a.username) {
+    const dupUser = accounts.find(x => x.username && x.username.trim().toLowerCase() === a.username.trim().toLowerCase());
+    if (dupUser) { showToast('❌ اليوزرنيم "' + a.username + '" موجود بالفعل!', true); return; }
+  }
 
+  // فحص تكرار الاسم أو التليفون
+  if (!editingId && a.name) {
+    const nameLower  = a.name.trim().toLowerCase();
+    const phoneClean = a.phone ? a.phone.trim().replace(/\s+/g,'') : '';
     const dupName  = accounts.find(x => x.name.trim().toLowerCase() === nameLower);
     const dupPhone = phoneClean && accounts.find(x => x.phone && x.phone.trim().replace(/\s+/g,'') === phoneClean);
 
-    // بناء قائمة الأكونتات الموجودة للشخص
-    const buildExistingList = (matchName) => {
-      const existing = accounts.filter(x => x.name.trim().toLowerCase() === matchName.trim().toLowerCase());
-      return existing.map(x =>
-        `<div style="background:rgba(79,142,247,0.1);border-radius:8px;padding:6px 12px;margin:4px 0;font-size:12px;text-align:right;direction:ltr">
-          <b>${x.username}</b> — ينتهي: ${x.expDate || '—'} — ${x.paid === 'paid' ? '✅ مدفوع' : '❌ غير مدفوع'}
-        </div>`
-      ).join('');
-    };
+    const buildList = (matchName) => accounts
+      .filter(x => x.name.trim().toLowerCase() === matchName.trim().toLowerCase())
+      .map(x => `<div style="background:rgba(79,142,247,0.1);border-radius:8px;padding:6px 12px;margin:4px 0;font-size:12px;direction:ltr;text-align:left"><b>${x.username}</b> — ينتهي: ${x.expDate || '—'}</div>`)
+      .join('');
 
-    if (dupName && dupPhone && dupName.name.trim().toLowerCase() === dupPhone.name.trim().toLowerCase()) {
-      showDupModal(
-        '⚠️ الاسم ورقم الهاتف مكررَين!',
-        `<b>"${a.name}"</b> موجود بالفعل برقم ${a.phone}.<br><br>
-         <div style="font-size:12px;color:var(--text2);margin-bottom:8px">الأكونتات الحالية لهذا الشخص:</div>
-         ${buildExistingList(a.name)}<br>
-         هل تريد إضافة أكونت جديد لنفس الشخص؟`,
-        a
-      );
+    if (dupName) {
+      showDupModal('⚠️ الاسم موجود بالفعل!',
+        `هل <b>"${a.name}"</b> هو نفس الشخص الموجود عندك؟<br><br>${buildList(a.name)}`, a, dupName);
       return;
-    } else if (dupName) {
-      showDupModal(
-        '⚠️ الاسم مكرر!',
-        `<b>"${a.name}"</b> موجود بالفعل عندك.<br><br>
-         <div style="font-size:12px;color:var(--text2);margin-bottom:8px">الأكونتات الحالية لهذا الشخص:</div>
-         ${buildExistingList(a.name)}<br>
-         هل تريد إضافة أكونت جديد لنفس الشخص؟`,
-        a
-      );
-      return;
-    } else if (dupPhone) {
-      showDupModal(
-        '⚠️ رقم الهاتف مكرر!',
-        `الرقم <b>${a.phone}</b> مسجل بالفعل باسم <b>"${dupPhone.name}"</b>.<br><br>
-         <div style="font-size:12px;color:var(--text2);margin-bottom:8px">الأكونتات الحالية لهذا الرقم:</div>
-         ${buildExistingList(dupPhone.name)}<br>
-         هل تريد المتابعة وإضافة الحساب؟`,
-        a
-      );
+    }
+    if (dupPhone) {
+      showDupModal('⚠️ رقم الهاتف موجود بالفعل!',
+        `الرقم <b>${a.phone}</b> عند <b>"${dupPhone.name}"</b>. هل هو نفس الشخص؟<br><br>${buildList(dupPhone.name)}`, a, dupPhone);
       return;
     }
   }
 
-  doSaveAccount(a);
-}
-function deleteAccount(id) {
-  if (!confirm('هل أنت متأكد من الحذف؟')) return;
-  accounts = accounts.filter(x => x.id !== id);
-  save(); renderAll();
-  showToast('🗑️ تم الحذف');
+  _doAdd(a);
 }
 
-function closeModal() { document.getElementById('modalBg').classList.remove('active'); }
+function _doAdd(a) {
+  // حساب تاريخ الانتهاء
+  if (a.startDate) {
+    const s = new Date(a.startDate);
+    const months = parseInt(a.duration) || 15;
+    const exp = new Date(s);
+    exp.setMonth(exp.getMonth() + months);
+    const yyyy = exp.getFullYear();
+    const mm = String(exp.getMonth()+1).padStart(2,'0');
+    const lastDay = new Date(yyyy, exp.getMonth()+1, 0).getDate();
+    const dd = String(Math.min(s.getDate(), lastDay)).padStart(2,'0');
+    a.expDate = `${yyyy}-${mm}-${dd}`;
+    a._expFixed = true; a._datFixed = true;
+  }
+
+  if (editingId) {
+    const idx = accounts.findIndex(x => x.id === editingId);
+    if (idx !== -1) {
+      const old = accounts[idx];
+      if (statusOf(old) === 'expired' && a.expDate !== old.expDate && !a.notes) a.notes = 'تجديد';
+      accounts[idx] = { ...old, ...a };
+    }
+  } else {
+    const maxId = accounts.reduce((m, x) => Math.max(m, x.id), 0);
+    accounts.push({ id: maxId+1, ...a });
+  }
+
+  const wasEditing = !!editingId;
+  if (a.phone) accounts.forEach(x => { if (x.name === a.name) x.phone = a.phone; });
+
+  // لو الإضافة جاية من كرت pending → احذف الكرت
+  const pIdx = _modalPendingIdx;
+  if (!wasEditing && pIdx !== null && pIdx !== undefined) {
+    _pendingRequests.splice(pIdx, 1);
+    if (window.savePendingFirebase) window.savePendingFirebase(_pendingRequests);
+  }
+
+  save(); closeModal();
+  renderAll(); renderPendingSection();
+  showToast(wasEditing ? '✅ تم التعديل' : '✅ تمت الإضافة');
+}
+
+function confirmDupSave() {
+  if (!_pendingDupAccount) return;
+  editingId = null;
+  const a = { ..._pendingDupAccount };
+  if (_pendingDupExisting) {
+    if (!a.name)  a.name  = _pendingDupExisting.name;
+    if (!a.phone) a.phone = _pendingDupExisting.phone;
+  }
+  closeDupModal();
+  _doAdd(a);
+}
+
+function addAsNewUser() {
+  if (!document.getElementById('fUser').value.trim()) { showToast('❌ اليوزرنيم مطلوب', true); return; }
+  _modalIsPending = false;
+  _modalIsAddFromPending = true;
+  saveAccount();
+}
+// ===== سلة المهملات =====
+let _trashItems = [];
+
+function renderTrashBtn() {
+  const cnt = document.getElementById('trashCount');
+  if (!cnt) return;
+  if (_trashItems.length > 0) {
+    cnt.textContent = _trashItems.length;
+    cnt.style.display = 'flex';
+    document.getElementById('trashBtn').style.background = 'rgba(239,68,68,0.2)';
+  } else {
+    cnt.style.display = 'none';
+    document.getElementById('trashBtn').style.background = 'rgba(239,68,68,0.1)';
+  }
+}
+
+function deleteAccount(id) {
+  if (!confirm('هل أنت متأكد من الحذف؟')) return;
+  const acc = accounts.find(x => x.id === id);
+  if (acc) {
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2,'0');
+    const mm = String(now.getMonth()+1).padStart(2,'0');
+    const yyyy = now.getFullYear();
+    _trashItems.unshift({ ...acc, _deletedAt: `${dd}/${mm}/${yyyy}` });
+    if (window.saveTrashFirebase) window.saveTrashFirebase(_trashItems);
+    renderTrashBtn();
+  }
+  accounts = accounts.filter(x => x.id !== id);
+  save(); renderAll();
+  showToast('🗑️ تم الحذف — يمكنك الاسترجاع من السلة');
+}
+
+function showTrashModal() {
+  document.getElementById('trashModalCount').textContent = _trashItems.length + ' عنصر محذوف';
+  const content = document.getElementById('trashModalContent');
+  if (!_trashItems.length) {
+    content.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2)">
+      <div style="font-size:48px;margin-bottom:12px">🗑️</div>
+      <div>السلة فارغة</div>
+    </div>`;
+  } else {
+    content.innerHTML = _trashItems.map((a, i) => `
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${a.name || '—'}</div>
+          <div style="font-size:12px;color:var(--text2);direction:ltr;text-align:right">${a.username} ${a.phone ? '| '+a.phone : ''}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">🗓️ حُذف: ${a._deletedAt || '—'}</div>
+        </div>
+        <button onclick="restoreFromTrash(${i})" style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#4ade80;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;white-space:nowrap">↩️ استرجاع</button>
+        <button onclick="deleteFromTrash(${i})" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;white-space:nowrap">✕ حذف نهائي</button>
+      </div>
+    `).join('');
+  }
+  document.getElementById('trashModal').style.display = 'flex';
+}
+
+function closeTrashModal() {
+  document.getElementById('trashModal').style.display = 'none';
+}
+
+function restoreFromTrash(idx) {
+  const acc = { ..._trashItems[idx] };
+  delete acc._deletedAt;
+  const maxId = accounts.reduce((m, x) => Math.max(m, x.id), 0);
+  acc.id = maxId + 1;
+  accounts.push(acc);
+  _trashItems.splice(idx, 1);
+  if (window.saveTrashFirebase) window.saveTrashFirebase(_trashItems);
+  save(); renderAll(); renderTrashBtn();
+  showTrashModal();
+  showToast('✅ تم استرجاع الحساب');
+}
+
+function deleteFromTrash(idx) {
+  if (!confirm('حذف نهائي؟ لا يمكن التراجع')) return;
+  _trashItems.splice(idx, 1);
+  if (window.saveTrashFirebase) window.saveTrashFirebase(_trashItems);
+  renderTrashBtn();
+  showTrashModal();
+  showToast('🗑️ تم الحذف النهائي');
+}
+
+function emptyTrash() {
+  if (!_trashItems.length) return;
+  if (!confirm('تفريغ السلة نهائياً؟')) return;
+  _trashItems = [];
+  if (window.saveTrashFirebase) window.saveTrashFirebase(_trashItems);
+  renderTrashBtn();
+  showTrashModal();
+  showToast('🗑️ تم تفريغ السلة');
+}
+
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('active');
+  _modalIsPending = false;
+  _modalIsAddFromPending = false;
+  _modalPendingIdx = null;
+  document.getElementById('addAsNewUserBtn').style.display = 'none';
+}
 
 function showToast(msg, err) {
   const t = document.getElementById('toast');
@@ -1650,7 +1851,7 @@ function showToast(msg, err) {
   t.style.borderColor = err ? 'var(--red)' : 'var(--green)';
   t.style.color = err ? 'var(--red)' : 'var(--green)';
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
 
 document.getElementById('modalBg').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
@@ -1661,26 +1862,7 @@ renderAll();
 
 // ====== تحديث يدوي ======
 function manualRefresh() {
-  const btn = document.getElementById('refreshBtn');
-  btn.style.transform = 'rotate(360deg)';
-  btn.style.transition = 'transform 0.6s ease';
-  setTimeout(() => { btn.style.transform = ''; btn.style.transition = 'all 0.3s'; }, 700);
-
-  // لو Firebase متاح → أعد جلب البيانات
-  if (window._firebaseReady) {
-    showToast('🔄 جاري تحديث البيانات...');
-    // Firebase onSnapshot بيشتغل تلقائي، بس لو عايز force reload للصفحة
-    // نعمل hard reload يتجاوز الكاش
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        regs.forEach(r => r.update());
-      });
-    }
-    // reload الصفحة بالكامل متجاوزاً الكاش
-    setTimeout(() => window.location.reload(true), 400);
-  } else {
-    window.location.reload(true);
-  }
+  window.location.reload();
 }
 
 function showMsg(id, type) {
@@ -1941,8 +2123,8 @@ function importFromExcel(input) {
     <h2 id="dupModalTitle" style="font-size:17px;margin-bottom:12px;color:#fbbf24"></h2>
     <div id="dupModalDesc" style="font-size:13px;color:var(--text2);margin-bottom:22px;line-height:1.8;max-height:260px;overflow-y:auto;text-align:right;direction:rtl"></div>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <button class="btn-outline" onclick="closeDupModal()" style="border-radius:10px;padding:10px 20px;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer">✕ إلغاء</button>
-      <button class="btn btn-primary" id="dupConfirmBtn" onclick="confirmDupSave()" style="background:linear-gradient(135deg,#f59e0b,#d97706)">➕ إضافة على نفس الشخص</button>
+      <button class="btn-outline" onclick="closeDupModal()" style="border-radius:10px;padding:10px 20px;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer">✕ إغلاق</button>
+      <button class="btn btn-primary" onclick="confirmDupSave()" style="background:linear-gradient(135deg,#22c55e,#15803d)">➕ نعم، أضف أكونت جديد</button>
     </div>
   </div>
 </div>
@@ -2250,6 +2432,45 @@ if (_auth === 'admin') {
 </style>
 
 
+<!-- كشف قيد الطلب من التاجر -->
+<div id="pendingListModal" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;overflow-y:auto;font-family:Cairo,sans-serif;color:#111;direction:rtl">
+  <div id="pendingListControls" style="position:fixed;top:0;right:0;left:0;background:#c2410c;padding:10px 20px;display:flex;align-items:center;gap:10px;z-index:10000;box-shadow:0 2px 10px rgba(0,0,0,0.3)">
+    <button onclick="window.print()" style="background:#fff;color:#c2410c;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🖨️ طباعة / PDF</button>
+    <button onclick="document.getElementById('pendingListModal').style.display='none'" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif">✕ إغلاق</button>
+    <div id="pendingListCount" style="color:rgba(255,255,255,0.8);font-size:13px;margin-right:auto"></div>
+  </div>
+  <div style="padding:70px 20px 30px">
+    <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #fb923c">
+      <div style="font-size:22px;font-weight:700;color:#c2410c">⏳ كشف قيد الطلب من التاجر</div>
+      <div style="font-size:13px;color:#666;margin-top:4px">Hydra IPTV - Ahmed EL-Attar</div>
+      <div id="pendingListDate" style="font-size:12px;color:#999;margin-top:2px"></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#c2410c;color:#fff">
+          <th style="padding:10px 8px;text-align:center;border:1px solid #ea580c">#</th>
+          <th style="padding:10px 8px;text-align:right;border:1px solid #ea580c">الاسم</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #ea580c">رقم الهاتف</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #ea580c">اليوزرنيم</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #ea580c">الباسورد</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #ea580c">الهوست</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #ea580c">تاريخ الطلب</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #ea580c">القيمة</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #ea580c">المدة</th>
+        </tr>
+      </thead>
+      <tbody id="pendingListBody"></tbody>
+    </table>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#999;border-top:1px solid #ddd;padding-top:10px">Hydra IPTV Manager — Ahmed EL-Attar</div>
+  </div>
+</div>
+
+<style>
+@media print {
+  #pendingListControls { display: none !important; }
+}
+</style>
+
 <!-- كشف الديون - Full Page Print Style -->
 <div id="debtModal" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;overflow-y:auto;font-family:Cairo,sans-serif;color:#111;direction:rtl">
   <div id="debtModalControls" style="position:fixed;top:0;right:0;left:0;background:#5b21b6;padding:10px 20px;display:flex;align-items:center;gap:10px;z-index:10000;box-shadow:0 2px 10px rgba(0,0,0,0.3)">
@@ -2359,10 +2580,402 @@ if (_auth === 'admin') {
   </div>
 </div>
 <!-- بوب آب تفاصيل الشخص -->
+<!-- سلة المهملات -->
+<div id="trashModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:800;align-items:center;justify-content:center;backdrop-filter:blur(4px)" onclick="if(event.target===this)closeTrashModal()">
+  <div style="background:var(--bg2);border:1px solid rgba(239,68,68,0.4);border-radius:20px;width:600px;max-width:94vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
+    <div style="background:rgba(239,68,68,0.1);border-bottom:1px solid rgba(239,68,68,0.3);border-radius:20px 20px 0 0;padding:18px 22px;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🗑️</span>
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)">سلة المهملات</div>
+          <div style="font-size:12px;color:var(--text2)" id="trashModalCount"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="emptyTrash()" style="background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600">🗑️ تفريغ السلة</button>
+        <button onclick="closeTrashModal()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer">✕</button>
+      </div>
+    </div>
+    <div id="trashModalContent" style="padding:16px 22px 22px"></div>
+  </div>
+</div>
+
 <div id="personDetailsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;align-items:center;justify-content:center;backdrop-filter:blur(4px)" onclick="if(event.target===this)closePersonDetails()">
   <div id="personDetailsContent" style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;width:460px;max-width:94vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
   </div>
 </div>
+
+<!-- بوب آب تكرار التاجر -->
+<div id="mrqDupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:800;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid rgba(245,158,11,0.4);border-radius:18px;padding:28px;width:420px;max-width:93vw;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
+    <div style="font-size:40px;margin-bottom:10px">⚠️</div>
+    <h2 id="mrqDupTitle" style="font-size:16px;margin-bottom:12px;color:#fbbf24"></h2>
+    <pre id="mrqDupDesc" style="font-size:13px;color:var(--text2);margin-bottom:22px;line-height:1.8;text-align:right;direction:rtl;white-space:pre-wrap;font-family:Cairo,sans-serif"></pre>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="document.getElementById('mrqDupModal').style.display='none'" class="btn-outline" style="border-radius:10px;padding:10px 20px;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer">✕ لا، إغلاق</button>
+      <button onclick="mrqDupConfirm()" class="btn btn-primary" style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:10px;padding:10px 20px;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer">✅ نعم، أضف أكونت جديد</button>
+    </div>
+  </div>
+</div>
+
+<!-- بوب آب طلب إضافة للتاجر -->
+<div id="requestMerchantModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:700;align-items:center;justify-content:center;backdrop-filter:blur(4px)" onclick="if(event.target===this)closeRequestMerchantModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px;width:480px;max-width:94vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
+    <h3 style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">📨 طلب إضافة حساب للتاجر</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px">الخانات كلها اختيارية ما عدا اليوزرنيم — البيانات تُحفظ على الكرت فقط ولا تظهر في رسالة الواتساب</p>
+
+    <!-- اليوزرنيم - الوحيد الإلزامي -->
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;color:#fb923c;display:block;margin-bottom:5px">اسم المستخدم (يوزرنيم) *</label>
+      <input id="merchantReqUsername" type="text" placeholder="مثال: Ahmed123" oninput="updateMerchantReqMsg()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px;outline:none;direction:ltr" onfocus="this.style.borderColor='var(--accent2)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
+
+    <!-- باقي البيانات اختيارية -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div style="position:relative">
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">الاسم</label>
+        <div style="position:relative">
+          <input id="mrqName" type="text" placeholder="اختياري" autocomplete="off"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 12px 9px 36px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none"
+            onfocus="this.style.borderColor='var(--accent2)'" onblur="this.style.borderColor='var(--border)'"
+            oninput="renderMrqNameDropdown(this.value)">
+          <button type="button" onclick="event.stopPropagation();toggleMrqNameDropdown()"
+            style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:2px 4px">▾</button>
+        </div>
+        <div id="mrqNameDropdown" style="display:none;position:absolute;top:100%;right:0;left:0;background:var(--bg2);border:1px solid var(--accent);border-radius:10px;z-index:999;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:4px"></div>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">رقم الهاتف</label>
+        <input id="mrqPhone" type="text" placeholder="اختياري" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none;direction:ltr" onfocus="this.style.borderColor='var(--accent2)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">الباسورد</label>
+        <input id="mrqPass" type="text" placeholder="اختياري" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none;direction:ltr" onfocus="this.style.borderColor='var(--accent2)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">الهوست</label>
+        <select id="mrqHost" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none">
+          <option value="">— اختياري —</option>
+          <option value="http://tvhydra.com">Host 1 — tvhydra.com</option>
+          <option value="http://hydraa.st:80">Host 2 — hydraa.st</option>
+          <option value="http://hydratv.cc:80">Host 3 — hydratv.cc</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">تاريخ الاشتراك</label>
+        <input id="mrqDate" type="date" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:Cairo,sans-serif;font-size:12px;outline:none" onfocus="this.style.borderColor='var(--accent2)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">المدة</label>
+        <select id="mrqDuration" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none">
+          <option value="15">15 شهر</option>
+          <option value="12">سنة</option>
+          <option value="6">6 أشهر</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">القيمة</label>
+        <select id="mrqAmount" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none">
+          <option value="">—</option>
+          <option value="5">5 KD</option>
+          <option value="10">10 KD</option>
+          <option value="15">15 KD</option>
+          <option value="20">20 KD</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">ملاحظات</label>
+      <input id="mrqNotes" type="text" placeholder="اختياري" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none" onfocus="this.style.borderColor='var(--accent2)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
+
+    <!-- الرسالة -->
+    <div style="margin-bottom:16px">
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">رسالة الواتساب للتاجر</label>
+      <textarea id="merchantReqMsgBox" rows="4" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none;resize:vertical;direction:rtl" onfocus="this.style.borderColor='var(--accent2)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button onclick="sendMerchantReqWa()" style="flex:1;background:linear-gradient(135deg,#25d366,#128c7e);color:white;border:none;border-radius:10px;padding:12px;cursor:pointer;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity 0.2s" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.534 5.857L.057 23.852a.5.5 0 0 0 .609.61l6.102-1.51A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.686-.538-5.197-1.469l-.371-.225-3.863.955.998-3.77-.243-.389A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+        إرسال واتساب
+      </button>
+      <button onclick="copyMerchantReqMsg()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:12px 16px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(79,142,247,0.25)'" onmouseout="this.style.background='rgba(79,142,247,0.15)'">📋 نسخ</button>
+      <button onclick="closeRequestMerchantModal()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:10px;padding:12px 16px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='var(--bg3)'">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// رقم التاجر على واتساب — غيّره لرقم التاجر الحقيقي (بدون + أو 00)
+const MERCHANT_WHATSAPP = '96500000000';
+
+// ===== نظام الطلبات قيد الانتظار (Firebase) =====
+let _pendingRequests = [];
+
+function addPendingRequest(username, extra) {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2,'0');
+  const mm = String(now.getMonth()+1).padStart(2,'0');
+  const yyyy = now.getFullYear();
+  _pendingRequests.push({ username, date: `${dd}/${mm}/${yyyy}`, ...(extra || {}) });
+  if (window.savePendingFirebase) window.savePendingFirebase(_pendingRequests);
+  renderPendingSection();
+}
+function removePendingRequest(idx) {
+  _pendingRequests.splice(idx, 1);
+  if (window.savePendingFirebase) window.savePendingFirebase(_pendingRequests);
+  renderPendingSection();
+}
+function renderPendingSection() {
+  const list = _pendingRequests;
+  // تحديث عداد الهيدر
+  setTimeout(() => {
+    const pillEl = document.getElementById('pendingPillCount');
+    if (pillEl) pillEl.textContent = list.length;
+  }, 0);
+  let container = document.getElementById('pendingRequestsSection');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'pendingRequestsSection';
+    const main = document.querySelector('main');
+    const tables = document.getElementById('tablesContainer');
+    main.insertBefore(container, tables);
+  }
+  if (!list.length) { container.innerHTML = ''; return; }
+  container.innerHTML = `
+    <div style="margin-bottom:18px">
+      <div style="font-size:13px;font-weight:700;color:#fb923c;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:#fb923c;display:inline-block;box-shadow:0 0 6px #fb923c"></span>
+        قيد الطلب من التاجر
+        <span style="font-size:11px;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.4);border-radius:20px;padding:1px 10px;color:#fb923c">${list.length}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        ${list.map((req, i) => `
+          <div onclick="openPendingModal(${i})" style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.35);border-radius:14px;padding:12px 16px;min-width:160px;position:relative;border-top:3px solid #fb923c;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(251,146,60,0.15)'" onmouseout="this.style.background='rgba(251,146,60,0.08)'">
+            <div style="font-size:10px;color:#fb923c;margin-bottom:4px;font-weight:600;letter-spacing:0.5px">⏳ قيد الطلب</div>
+            <div style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace;direction:ltr;margin-bottom:6px">${req.username}</div>
+            <div style="font-size:11px;color:var(--text2)">📅 ${req.date}</div>
+            <button onclick="event.stopPropagation();removePendingRequest(${i})" title="حذف الطلب" style="position:absolute;top:8px;left:10px;background:none;border:none;color:rgba(251,146,60,0.5);font-size:14px;cursor:pointer;line-height:1;padding:0;transition:color 0.2s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='rgba(251,146,60,0.5)'">✕</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function openPendingModal(idx) {
+  const req = _pendingRequests[idx];
+  if (!req) return;
+  editingId = null;
+  document.getElementById('modalTitle').textContent = '⏳ طلب قيد الانتظار';
+  document.getElementById('fName').value     = req.name     || '';
+  document.getElementById('fPhone').value    = req.phone    || '';
+  document.getElementById('fUser').value     = req.username || '';
+  document.getElementById('fPass').value     = req.password || '';
+  document.getElementById('fHost').value     = req.host     || '';
+  document.getElementById('fDate').value     = req.startDate|| '';
+  document.getElementById('fExp').value      = req.expDate  || '';
+  document.getElementById('fNotes').value    = req.notes    || '';
+  document.getElementById('fAmount').value   = req.amount   || '';
+  const durEl = document.getElementById('fDuration');
+  if (durEl) durEl.value = req.duration || '15';
+  document.getElementById('fClientPaid').value   = req.clientPaid   || 'paid';
+  document.getElementById('fMerchantPaid').value = req.merchantPaid || 'paid';
+  document.getElementById('addAsNewUserBtn').style.display = '';
+  _modalPendingIdx = idx;
+  _modalIsPending  = true;
+  document.getElementById('modalBg').classList.add('active');
+  const fNameEl = document.getElementById('fName');
+  fNameEl.oninput = function() {
+    autoFillPhoneByName();
+    const val = this.value.trim();
+    if (val) renderNameDropdown(val); else renderNameDropdown('');
+  };
+}
+
+
+// رسم الطلبات عند التحميل
+document.addEventListener('DOMContentLoaded', function() { renderPendingSection(); });
+// أو مباشرة لو DOMContentLoaded فات
+if (document.readyState !== 'loading') { setTimeout(renderPendingSection, 200); }
+
+function toggleAddMenu() {
+  const menu = document.getElementById('addDropMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+function closeAddMenu() {
+  document.getElementById('addDropMenu').style.display = 'none';
+}
+document.addEventListener('click', function(e) {
+  const wrapper = document.getElementById('addBtnWrapper');
+  if (wrapper && !wrapper.contains(e.target)) closeAddMenu();
+});
+
+function showMerchantDupModal(reason, existingPerson, username) {
+  window._merchantDupPerson = existingPerson;
+  window._merchantDupUser   = username;
+
+  const existing = accounts.filter(x => x.name && existingPerson.name && x.name.trim().toLowerCase() === existingPerson.name.trim().toLowerCase());
+  const acctList = existing.length
+    ? existing.map(x => `• ${x.username} — ينتهي: ${x.expDate || '—'}`).join('\n')
+    : '';
+
+  document.getElementById('mrqDupTitle').textContent = '⚠️ ' + reason;
+  document.getElementById('mrqDupDesc').textContent =
+    'هل تريد إضافة أكونت جديد بـ username "' + username + '" لنفس الشخص؟' +
+    (acctList ? '\n\nأكونتاته الحالية:\n' + acctList : '');
+  document.getElementById('mrqDupModal').style.display = 'flex';
+}
+
+function mrqDupConfirm() {
+  document.getElementById('mrqDupModal').style.display = 'none';
+  doSendMerchantReqWithPerson(window._merchantDupPerson, window._merchantDupUser);
+}
+function doSendMerchantReqWithPerson(existingPerson, username) {
+  const msg = document.getElementById('merchantReqMsgBox').value.trim();
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+
+  // بيانات الكرت = بيانات الشخص الموجود + اليوزرنيم الجديد + أي بيانات إضافية من الفورم
+  const extra = {
+    name:      existingPerson.name     || document.getElementById('mrqName').value.trim(),
+    phone:     existingPerson.phone    || document.getElementById('mrqPhone').value.trim(),
+    password:  document.getElementById('mrqPass').value.trim(),
+    host:      document.getElementById('mrqHost').value     || existingPerson.host,
+    startDate: document.getElementById('mrqDate').value,
+    duration:  document.getElementById('mrqDuration').value,
+    amount:    document.getElementById('mrqAmount').value   || existingPerson.amount,
+    notes:     document.getElementById('mrqNotes').value.trim(),
+    clientPaid:   existingPerson.clientPaid   || 'paid',
+    merchantPaid: existingPerson.merchantPaid || 'paid',
+  };
+  addPendingRequest(username, extra);
+  closeRequestMerchantModal();
+}
+function renderMrqNameDropdown(filter) {
+  const dd = document.getElementById('mrqNameDropdown');
+  if (!dd) return;
+  const map = getUniqueNames();
+  const names = Object.keys(map).filter(n => !filter || n.toLowerCase().includes(filter.toLowerCase()));
+  if (!names.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = names.map(n =>
+    `<div class="name-suggestion" onclick="selectMrqName('${n.replace(/'/g,"\\'")}')">
+      <span>${n}</span>
+      <span class="acct-count">${map[n].count} أكونت</span>
+    </div>`
+  ).join('');
+  dd.style.display = 'block';
+}
+
+function toggleMrqNameDropdown() {
+  const dd = document.getElementById('mrqNameDropdown');
+  if (!dd) return;
+  if (dd.style.display === 'block') { dd.style.display = 'none'; return; }
+  renderMrqNameDropdown('');
+}
+
+function selectMrqName(name) {
+  document.getElementById('mrqName').value = name;
+  document.getElementById('mrqNameDropdown').style.display = 'none';
+  // تملية التليفون تلقائياً
+  const match = accounts.find(x => x.name === name && x.phone);
+  if (match) document.getElementById('mrqPhone').value = match.phone;
+}
+
+// إغلاق الـ dropdown لما تدوس برا
+document.addEventListener('click', function(e) {
+  const dd = document.getElementById('mrqNameDropdown');
+  const input = document.getElementById('mrqName');
+  if (dd && input && !dd.contains(e.target) && e.target !== input && !e.target.closest('#mrqNameDropdown')) {
+    dd.style.display = 'none';
+  }
+});
+function openRequestMerchantModal() {
+  ['merchantReqUsername','mrqName','mrqPhone','mrqPass','mrqNotes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mrqHost').value = '';
+  document.getElementById('mrqDuration').value = '15';
+  document.getElementById('mrqAmount').value = '';
+  document.getElementById('merchantReqMsgBox').value = 'السلام عليكم ,\nالرجاء التكرم و انشاء حساب جديد للمستخدم\n\nUsername: \n\nوشكرا لتعاونكم 🙏';
+  document.getElementById('requestMerchantModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('merchantReqUsername').focus(), 100);
+}
+function closeRequestMerchantModal() {
+  document.getElementById('requestMerchantModal').style.display = 'none';
+}
+function updateMerchantReqMsg() {
+  const user = document.getElementById('merchantReqUsername').value.trim();
+  document.getElementById('merchantReqMsgBox').value =
+    'السلام عليكم ,\nالرجاء التكرم و انشاء حساب جديد للمستخدم\n\nUsername: ' + (user || '...') + '\n\nوشكرا لتعاونكم 🙏';
+}
+function sendMerchantReqWa() {
+  const msg  = document.getElementById('merchantReqMsgBox').value.trim();
+  const user = document.getElementById('merchantReqUsername').value.trim();
+  if (!user) { showToast('❌ أدخل اسم المستخدم أولاً', true); return; }
+
+  const dupUser = accounts.find(x => x.username && x.username.trim().toLowerCase() === user.toLowerCase());
+  if (dupUser) { showToast('❌ اليوزرنيم "' + user + '" موجود بالفعل عند ' + (dupUser.name || 'أحد العملاء'), true); return; }
+
+  const dupPending = _pendingRequests.find(x => x.username && x.username.trim().toLowerCase() === user.toLowerCase());
+  if (dupPending) { showToast('❌ اليوزرنيم "' + user + '" موجود بالفعل في قيد الطلب', true); return; }
+
+  const name = document.getElementById('mrqName').value.trim();
+  const phone = document.getElementById('mrqPhone').value.trim();
+  const phoneClean = phone.replace(/\s+/g,'');
+
+  // فحص تكرار الاسم أو التليفون — لو موجود نسأل المستخدم
+  let existingPerson = null;
+  let dupReason = '';
+
+  if (name) {
+    const d = accounts.find(x => x.name && x.name.trim().toLowerCase() === name.toLowerCase());
+    if (d) { existingPerson = d; dupReason = 'الاسم "' + name + '" موجود بالفعل'; }
+  }
+  if (!existingPerson && phoneClean) {
+    const d = accounts.find(x => x.phone && x.phone.trim().replace(/\s+/g,'') === phoneClean);
+    if (d) { existingPerson = d; dupReason = 'رقم الهاتف موجود بالفعل عند "' + d.name + '"'; }
+  }
+  if (!existingPerson && name) {
+    const d = _pendingRequests.find(x => x.name && x.name.trim().toLowerCase() === name.toLowerCase());
+    if (d) { existingPerson = d; dupReason = 'الاسم "' + name + '" موجود بالفعل في قيد الطلب'; }
+  }
+  if (!existingPerson && phoneClean) {
+    const d = _pendingRequests.find(x => x.phone && x.phone.trim().replace(/\s+/g,'') === phoneClean);
+    if (d) { existingPerson = d; dupReason = 'رقم الهاتف موجود بالفعل في قيد الطلب'; }
+  }
+
+  if (existingPerson) {
+    // نسأل المستخدم هل يريد إضافة أكونت جديد لنفس الشخص
+    showMerchantDupModal(dupReason, existingPerson, user);
+    return;
+  }
+
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+
+  // جمع البيانات الإضافية لتحفظ على الكرت فقط
+  const extra = {
+    name:     document.getElementById('mrqName').value.trim(),
+    phone:    document.getElementById('mrqPhone').value.trim(),
+    password: document.getElementById('mrqPass').value.trim(),
+    host:     document.getElementById('mrqHost').value,
+    startDate:document.getElementById('mrqDate').value,
+    duration: document.getElementById('mrqDuration').value,
+    amount:   document.getElementById('mrqAmount').value,
+    notes:    document.getElementById('mrqNotes').value.trim(),
+  };
+  addPendingRequest(user, extra);
+  closeRequestMerchantModal();
+}
+function copyMerchantReqMsg() {
+  const msg = document.getElementById('merchantReqMsgBox').value;
+  navigator.clipboard.writeText(msg).then(() => {
+    if (window.showToast) showToast('📋 تم نسخ الرسالة');
+  });
+}
+</script>
 
 <script>
 function showPersonDetails(name) {
