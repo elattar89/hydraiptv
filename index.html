@@ -396,6 +396,8 @@
   </select>
   <button id="expiringListBtn" onclick="showExpiringListModal()" style="display:none;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(245,158,11,0.25)'" onmouseout="this.style.background='rgba(245,158,11,0.15)'">📋 كشف المنتهية قريباً</button>
   <button id="activeListBtn" onclick="showActiveListModal()" style="display:none;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#4ade80;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'">📋 كشف النشطاء</button>
+  <button id="expiredListBtn" onclick="showExpiredListModal()" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">📋 كشف المنتهين</button>
+  <button id="totalListBtn" onclick="showTotalListModal()" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(99,102,241,0.25)'" onmouseout="this.style.background='rgba(99,102,241,0.15)'">📊 الكشف الإجمالي</button>
   <button id="debtListBtn" onclick="showDebtListModal()" style="display:none;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#c084fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(168,85,247,0.25)'" onmouseout="this.style.background='rgba(168,85,247,0.15)'">📋 كشف الديون</button>
   <button class="btn btn-primary" onclick="openAddModal()">+ إضافة حساب</button>
   <button id="refreshBtn" onclick="manualRefresh()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:10px 14px;font-size:18px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;" title="تحديث البيانات">🔄</button>
@@ -832,6 +834,157 @@ function showActiveListModal() {
   document.getElementById('activeModal').style.display = 'block';
 }
 
+function showExpiredListModal() {
+  const expired = accounts.filter(a => statusOf(a) === 'expired')
+    .sort((a,b) => new Date(b.expDate||0) - new Date(a.expDate||0));
+
+  document.getElementById('expiredModalCount').textContent = 'إجمالي: ' + expired.length + ' حساب منتهي';
+  document.getElementById('expiredModalDate').textContent = 'تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-EG');
+
+  const rows = expired.map((a, i) => {
+    const diff = Math.ceil((new Date() - new Date(a.expDate)) / 86400000);
+    const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
+    const paidText = a.paid === 'paid' ? 'مدفوع' : a.paid === 'debt' ? 'دين للتاجر' : 'غير مدفوع';
+    const paidColor = a.paid === 'paid' ? '#16a34a' : a.paid === 'debt' ? '#d97706' : '#dc2626';
+    const rowBg = i % 2 === 0 ? '#fff5f5' : '#fff';
+    return `<tr style="background:${rowBg}">
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#666">${i+1}</td>
+      <td style="padding:8px 6px;font-weight:700;border:1px solid #ddd;white-space:nowrap">${a.name}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;direction:ltr">${window.isGuest ? '—' : (a.phone || '—')}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#7f1d1d">${a.username}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#555">${window.isGuest ? '••••••' : a.password}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-size:10px;color:#777">${(a.host||'—').replace('http://','')}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${a.startDate||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#dc2626;font-weight:600">${a.expDate||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:700;color:#dc2626">${diff > 0 ? 'منذ ' + diff + ' يوم' : '—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${dur}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:600;color:${paidColor}">${paidText}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:700;color:${a.paid==='paid'?'#16a34a':'#dc2626'}">${a.amount ? a.amount+' KD' : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('expiredModalBody').innerHTML = rows;
+  document.getElementById('expiredModal').style.display = 'block';
+}
+
+function shareExpiredList() {
+  const expired = accounts.filter(a => statusOf(a) === 'expired')
+    .sort((a,b) => new Date(b.expDate||0) - new Date(a.expDate||0));
+  let text = 'كشف الحسابات المنتهية - Hydra IPTV\n' + new Date().toLocaleDateString('ar-EG') + '\n' + '─'.repeat(25) + '\n';
+  expired.forEach((a, i) => {
+    const diff = Math.ceil((new Date() - new Date(a.expDate)) / 86400000);
+    text += `${i+1}. ${a.name}\n📞 ${a.phone||'—'}\n👤 ${a.username} | 🔑 ${a.password}\n📅 انتهى: ${a.expDate||'—'} (منذ ${diff} يوم)\n${'─'.repeat(20)}\n`;
+  });
+  if (navigator.share) {
+    navigator.share({ title: 'كشف المنتهين - Hydra IPTV', text });
+  } else {
+    navigator.clipboard.writeText(text).then(() => alert('تم نسخ الكشف'));
+  }
+}
+
+function buildSectionRows(list, type) {
+  return list.map((a, i) => {
+    const d = Math.ceil((new Date(a.expDate) - new Date()) / 86400000);
+    const diff = Math.ceil((new Date() - new Date(a.expDate)) / 86400000);
+    const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
+    const paidText = a.paid === 'paid' ? 'مدفوع' : a.paid === 'debt' ? 'دين للتاجر' : 'غير مدفوع';
+    const paidColor = a.paid === 'paid' ? '#16a34a' : a.paid === 'debt' ? '#d97706' : '#dc2626';
+    const borderColor = type === 'expiring' ? '#fde68a' : type === 'active' ? '#bfdbfe' : '#fecaca';
+    const rowBg = i % 2 === 0 ? (type === 'expiring' ? '#fffbeb' : type === 'active' ? '#f8faff' : '#fff5f5') : '#fff';
+    const daysCell = type === 'expired'
+      ? `<td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};font-weight:700;color:#dc2626">${diff > 0 ? 'منذ ' + diff + ' يوم' : '—'}</td>`
+      : `<td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};font-weight:700;color:${type==='active'?'#15803d':'#b45309'}">${d} يوم</td>`;
+    return `<tr style="background:${rowBg}">
+      <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};color:#666">${i+1}</td>
+      <td style="padding:7px 6px;font-weight:700;border:1px solid ${borderColor};white-space:nowrap">${a.name}</td>
+      <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};direction:ltr">${window.isGuest ? '—' : (a.phone || '—')}</td>
+      <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};font-family:monospace;color:#374151">${a.username}</td>
+      <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};font-family:monospace;color:#555">${window.isGuest ? '••••••' : a.password}</td>
+      <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};color:${type==='expired'?'#dc2626':type==='expiring'?'#b45309':'#15803d'};font-weight:600">${a.expDate||'—'}</td>
+      ${daysCell}
+      <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor}">${dur}</td>
+      <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};font-weight:600;color:${window.isGuest ? '#666' : paidColor}">${window.isGuest ? '—' : paidText}</td>
+    </tr>`;
+  }).join('');
+}
+
+function showTotalListModal() {
+  const expiring = accounts.filter(a => statusOf(a) === 'expiring').sort((a,b) => new Date(a.expDate) - new Date(b.expDate));
+  const active   = accounts.filter(a => statusOf(a) === 'active').sort((a,b) => new Date(b.expDate) - new Date(a.expDate));
+  const expired  = accounts.filter(a => statusOf(a) === 'expired').sort((a,b) => new Date(b.expDate) - new Date(a.expDate));
+
+  const total = expiring.length + active.length + expired.length;
+  document.getElementById('totalModalCount').textContent = 'إجمالي: ' + total + ' حساب';
+  document.getElementById('totalModalDate').textContent = 'تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-EG');
+  document.getElementById('totalModalSummaryExpiring').textContent = expiring.length;
+  document.getElementById('totalModalSummaryActive').textContent = active.length;
+  document.getElementById('totalModalSummaryExpired').textContent = expired.length;
+
+  const thStyle = (color, border) => `style="padding:7px 8px;text-align:center;border:1px solid ${border};white-space:nowrap;color:${color}"`;
+  const thRight = (color, border) => `style="padding:7px 8px;text-align:right;border:1px solid ${border};white-space:nowrap;color:${color}"`;
+
+  function sectionTable(list, type, bg, headerBg, thColor, borderColor) {
+    if (!list.length) return '';
+    const label = type === 'expiring' ? '⚠️ ينتهي قريباً' : type === 'active' ? '✅ نشط' : '❌ منتهي';
+    return `
+    <div style="margin-bottom:20px">
+      <div style="background:${headerBg};color:#fff;padding:8px 12px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700">${label} — ${list.length} حساب</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="background:${bg}">
+          <th ${thStyle(thColor, borderColor)}>#</th>
+          <th ${thRight(thColor, borderColor)}>الاسم</th>
+          <th ${thStyle(thColor, borderColor)}>رقم الهاتف</th>
+          <th ${thStyle(thColor, borderColor)}>اليوزرنيم</th>
+          <th ${thStyle(thColor, borderColor)}>الباسورد</th>
+          <th ${thStyle(thColor, borderColor)}>تاريخ الانتهاء</th>
+          <th ${thStyle(thColor, borderColor)}>${type === 'expired' ? 'منذ كم يوم' : 'أيام متبقية'}</th>
+          <th ${thStyle(thColor, borderColor)}>المدة</th>
+          <th ${thStyle(thColor, borderColor)}>الدفع</th>
+        </tr></thead>
+        <tbody>${buildSectionRows(list, type)}</tbody>
+      </table>
+    </div>`;
+  }
+
+  document.getElementById('totalModalSections').innerHTML =
+    sectionTable(expiring, 'expiring', '#fef3c7', '#92400e', '#92400e', '#fde68a') +
+    sectionTable(active,   'active',   '#eff6ff', '#1a3a6e', '#1e40af', '#bfdbfe') +
+    sectionTable(expired,  'expired',  '#fef2f2', '#7f1d1d', '#991b1b', '#fecaca');
+
+  document.getElementById('totalModal').style.display = 'block';
+}
+
+function shareTotalList() {
+  const expiring = accounts.filter(a => statusOf(a) === 'expiring');
+  const active   = accounts.filter(a => statusOf(a) === 'active');
+  const expired  = accounts.filter(a => statusOf(a) === 'expired');
+  const date = new Date().toLocaleDateString('ar-EG');
+  let text = `📊 الكشف الإجمالي - Hydra IPTV
+${date}
+${'─'.repeat(25)}
+`;
+  text += `✅ نشط: ${active.length} | ⚠️ قريب الانتهاء: ${expiring.length} | ❌ منتهي: ${expired.length}
+${'─'.repeat(25)}
+
+`;
+  const fmt = (list, label) => {
+    if (!list.length) return '';
+    let s = `${label}
+${'─'.repeat(20)}
+`;
+    list.forEach((a,i) => { s += `${i+1}. ${a.name}
+👤 ${a.username} | 📅 ${a.expDate||'—'}
+`; });
+    return s + '\n';
+  };
+  text += fmt(expiring, '⚠️ ينتهي قريباً') + fmt(active, '✅ نشط') + fmt(expired, '❌ منتهي');
+  if (navigator.share) {
+    navigator.share({ title: 'الكشف الإجمالي - Hydra IPTV', text });
+  } else {
+    navigator.clipboard.writeText(text).then(() => alert('تم نسخ الكشف'));
+  }
+}
+
 function setFilter(val) {
   if (val === 'unpaid') {
     document.getElementById('filterStatus').value = 'all';
@@ -849,6 +1002,8 @@ function setFilter(val) {
   if (activeBtn) activeBtn.style.display = (val === 'active') ? 'inline-block' : 'none';
   const expiringBtn = document.getElementById('expiringListBtn');
   if (expiringBtn) expiringBtn.style.display = (val === 'expiring') ? 'inline-block' : 'none';
+  const expiredBtn = document.getElementById('expiredListBtn');
+  if (expiredBtn) expiredBtn.style.display = (val === 'expired') ? 'inline-block' : 'none';
   const debtBtn = document.getElementById('debtListBtn');
   const curPaid = document.getElementById('filterPaid').value;
   if (debtBtn) debtBtn.style.display = (val === 'debt' || curPaid === 'merchant_unpaid') ? 'inline-block' : 'none';
@@ -985,17 +1140,19 @@ function buildTable(rows) {
     t += `<div style="background:${cardBg};border:1px solid ${borderColor};border-right:4px solid ${borderColor};border-radius:12px;padding:12px 14px;margin-bottom:8px">
       <!-- Header الشخص -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:${accs.length > 1 ? '10px' : '0'}">
-        <div style="width:40px;height:40px;border-radius:50%;background:${avatarBg};color:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">${initials}</div>
+        <div onclick="showPersonDetails('${name.replace(/'/g,"\\'")}')" style="width:40px;height:40px;border-radius:50%;background:${avatarBg};color:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s" onmouseover="this.style.transform='scale(1.12)';this.style.boxShadow='0 0 0 3px ${borderColor}44'" onmouseout="this.style.transform='';this.style.boxShadow=''">${initials}</div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <div onclick="${!window.isGuest ? `openPersonEdit('${name.replace(/'/g,"\\'")}')`  : ''}" style="font-size:15px;font-weight:700;color:var(--text);cursor:${!window.isGuest ? 'pointer' : 'default'};display:inline-block" ${!window.isGuest ? 'title="اضغط لتعديل بيانات الشخص"' : ''}>${name}${!window.isGuest ? ' <span style="font-size:11px;opacity:0.4">✏️</span>' : ''}</div>
             ${!window.isGuest && first.phone ? `<button onclick="showPhoneMenu(event,'${first.phone}')" style="background:rgba(34,197,94,0.12);color:#4ade80;border-radius:20px;padding:2px 10px;font-size:11px;border:1px solid rgba(34,197,94,0.3);cursor:pointer;font-family:Cairo,sans-serif;direction:ltr">${first.phone}</button>` : ''}
+            ${!window.isGuest && accs.length === 1 ? `<button class="btn btn-primary" style="padding:2px 8px;font-size:11px;display:flex;align-items:center;gap:3px" onclick="editAccount(${accs[0].id})">✏️ <span>تعديل</span></button><button class="btn btn-danger" style="padding:2px 8px;font-size:11px;display:flex;align-items:center;gap:3px" onclick="deleteAccount(${accs[0].id})">🗑️ <span>مسح</span></button>` : ''}
           </div>
           <div style="font-size:11px;color:var(--text2);margin-top:1px">
             ${first.host ? `<span style="font-family:monospace">${(first.host||'').replace('http://','').replace(':80','')}</span>` : ''}
           </div>
         </div>
         ${accs.length > 1 ? `<span style="background:rgba(79,142,247,0.15);color:#60a5fa;border:1px solid rgba(79,142,247,0.3);font-size:11px;padding:2px 8px;border-radius:20px;flex-shrink:0">${accs.length} أكونتات</span>` : ''}
+        ${first.startDate ? `<div style="flex-shrink:0;font-size:11px;color:var(--text2);white-space:nowrap">تاريخ الاشتراك <span style="direction:ltr;display:inline-block">${first.startDate.slice(8,10)}/${first.startDate.slice(5,7)}/${first.startDate.slice(0,4)}</span></div>` : ''}
       </div>`;
 
     // الأكونتات
@@ -1014,6 +1171,7 @@ function buildTable(rows) {
             <span style="color:#1a6cf0">U:</span> ${a.username} &nbsp;
             <span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}
           </div>
+          ${!window.isGuest ? `<button class="copy-btn" style="font-size:11px;padding:3px 9px;display:flex;align-items:center;gap:4px;flex-shrink:0" onclick="copyBoth('${a.username}','${a.password}',this)">📋 <span>نسخ</span></button>` : ''}
           <div style="font-size:14px;font-weight:700;color:${daysColor};flex-shrink:0">${st==='expired'?'منتهي':daysText}</div>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px">
@@ -1026,11 +1184,11 @@ function buildTable(rows) {
           ${a.notes ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(148,163,184,0.1);color:var(--text2);border:1px solid var(--border)">${a.notes}</span>` : ''}
           <div style="margin-right:auto;display:flex;gap:4px">
             ${window.isGuest ? '' : `
-            <button class="copy-btn" style="font-size:11px;padding:3px 9px;display:flex;align-items:center;gap:4px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 <span>نسخ</span></button>
-            <button class="btn btn-primary" style="padding:3px 9px;font-size:11px;display:flex;align-items:center;gap:4px" onclick="editAccount(${a.id})">✏️ <span>تعديل</span></button>
-            <button class="btn btn-danger" style="padding:3px 9px;font-size:11px;display:flex;align-items:center;gap:4px" onclick="deleteAccount(${a.id})">🗑️ <span>مسح</span></button>
-            <button onclick="showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">📨 <span>إرسال</span></button>
-            <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">🔔 <span>تذكير</span></button>
+            <button onclick="showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">📨 <span>إرسال كود الاشتراك</span></button>
+            <button onclick="showMsg(${a.id},'changePass')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">🔑 <span>إرسال كلمة السر للمستخدم</span></button>
+            <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">🔔 <span>تذكير المستخدم بالتجديد</span></button>
+            <button onclick="showMsg(${a.id},'remindMerchant')" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">💰 <span>طلب تجديد اشتراك</span></button>
+            <button onclick="showMsg(${a.id},'changePassMerchant')" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.4);color:#fca5a5;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">🔐 <span>طلب تغيير كلمة السر</span></button>
             `}
           </div>
         </div>
@@ -1062,8 +1220,11 @@ function buildTable(rows) {
             <button class="copy-btn" style="font-size:10px;padding:2px 8px;display:flex;align-items:center;gap:3px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 <span>نسخ</span></button>
             <button class="btn btn-primary" style="padding:2px 8px;font-size:10px;display:flex;align-items:center;gap:3px" onclick="editAccount(${a.id})">✏️ <span>تعديل</span></button>
             <button class="btn btn-danger" style="padding:2px 8px;font-size:10px;display:flex;align-items:center;gap:3px" onclick="deleteAccount(${a.id})">🗑️ <span>مسح</span></button>
-            <button onclick="showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">📨 <span>إرسال</span></button>
-            <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">🔔 <span>تذكير</span></button>
+            <button onclick="showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">📨 <span>إرسال كود الاشتراك</span></button>
+            <button onclick="showMsg(${a.id},'changePass')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">🔑 <span>إرسال كلمة السر للمستخدم</span></button>
+            <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">🔔 <span>تذكير المستخدم بالتجديد</span></button>
+            <button onclick="showMsg(${a.id},'remindMerchant')" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">💰 <span>طلب تجديد اشتراك</span></button>
+            <button onclick="showMsg(${a.id},'changePassMerchant')" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.4);color:#fca5a5;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">🔐 <span>طلب تغيير كلمة السر</span></button>
             `}
           </div>
         </div>`;
@@ -1125,11 +1286,14 @@ function showPhoneMenu(e, phone) {
       <span>💬</span><span>واتساب</span>
     </a>
   `;
-  const rect = e.target.getBoundingClientRect();
-  menu.style.top = (rect.bottom + 4) + 'px';
-  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  menu.style.top = '50%';
+  menu.style.left = '50%';
+  menu.style.transform = 'translate(-50%, -50%)';
+  const overlay1 = document.createElement('div');
+  overlay1.style.cssText = 'position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.4);';
+  overlay1.onclick = () => { menu.remove(); overlay1.remove(); };
+  document.body.appendChild(overlay1);
   document.body.appendChild(menu);
-  setTimeout(() => document.addEventListener('click', () => menu.remove(), {once:true}), 10);
 }
 
 function showPaidMenu(e, id) {
@@ -1159,11 +1323,14 @@ function showPaidMenu(e, id) {
       <span>🟡</span><span>لم أسدد للتاجر</span>${merchant==='unpaid'?'<span style="margin-right:auto">●</span>':''}
     </div>
   `;
-  const rect = e.target.getBoundingClientRect();
-  menu.style.top = (rect.bottom + 4) + 'px';
-  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  menu.style.top = '50%';
+  menu.style.left = '50%';
+  menu.style.transform = 'translate(-50%, -50%)';
+  const overlay2 = document.createElement('div');
+  overlay2.style.cssText = 'position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.4);';
+  overlay2.onclick = () => { menu.remove(); overlay2.remove(); };
+  document.body.appendChild(overlay2);
   document.body.appendChild(menu);
-  setTimeout(() => document.addEventListener('click', () => menu.remove(), {once:true}), 10);
 }
 
 
@@ -1396,21 +1563,23 @@ function saveAccount() {
     duration: document.getElementById('fDuration') ? document.getElementById('fDuration').value : '15',
     notes: document.getElementById('fNotes').value.trim(),
   };
-  // التحقق من كل الحقول الإلزامية ماعدا الملاحظات
-  const required = [
-    { val: a.name,      label: 'اسم الحساب' },
-    { val: a.username,  label: 'اليوزرنيم' },
-    { val: a.password,  label: 'الباسورد' },
-    { val: a.host,      label: 'الهوست' },
-    { val: a.startDate, label: 'تاريخ الاشتراك' },
-    { val: a.paid,      label: 'حالة الدفع' },
-    { val: a.amount,    label: 'قيمة الاشتراك' },
-    { val: a.duration,  label: 'مدة الاشتراك' },
-  ];
-  const missing = required.filter(r => !r.val);
-  if (missing.length > 0) {
-    showToast('❌ الحقول التالية مطلوبة: ' + missing.map(r => r.label).join('، '), true);
-    return;
+  // التحقق من الحقول الإلزامية عند الإضافة فقط
+  if (!editingId) {
+    const required = [
+      { val: a.name,      label: 'اسم الحساب' },
+      { val: a.username,  label: 'اليوزرنيم' },
+      { val: a.password,  label: 'الباسورد' },
+      { val: a.host,      label: 'الهوست' },
+      { val: a.startDate, label: 'تاريخ الاشتراك' },
+      { val: a.paid,      label: 'حالة الدفع' },
+      { val: a.amount,    label: 'قيمة الاشتراك' },
+      { val: a.duration,  label: 'مدة الاشتراك' },
+    ];
+    const missing = required.filter(r => !r.val);
+    if (missing.length > 0) {
+      showToast('❌ الحقول التالية مطلوبة: ' + missing.map(r => r.label).join('، '), true);
+      return;
+    }
   }
 
   // فحص التكرار فقط عند الإضافة وليس التعديل
@@ -1546,7 +1715,7 @@ https://apps.apple.com/us/app/hydra-tv/id6443712530
 http://www.iptvsmarters.com/smarters4-0.apk
 https://hydratv.app/`;
     document.getElementById('msgModalTitle').textContent = '📨 رسالة التأكيد — ' + a.name;
-  } else {
+  } else if (type === 'remind') {
     const exp = a.expDate ? formatDate(a.expDate) : '—';
     const d = daysLeft(a.expDate);
     const dText = d !== null ? (d < 0 ? `(منتهي منذ ${Math.abs(d)} يوم)` : `(متبقي ${d} يوم)`) : '';
@@ -1559,7 +1728,44 @@ Username : ${a.username}
 Password: ${a.password}
 
 للتجديد تواصل معنا في أقرب وقت حتى لا تنقطع الخدمة عنك. 🙏`;
-    document.getElementById('msgModalTitle').textContent = '🔔 رسالة التذكير — ' + a.name;
+    document.getElementById('msgModalTitle').textContent = '🔔 تذكير المستخدم بالتجديد — ' + a.name;
+  } else if (type === 'remindMerchant') {
+    const exp = a.expDate ? formatDate(a.expDate) : '—';
+    const d = daysLeft(a.expDate);
+    const dText = d !== null ? (d < 0 ? `(منتهي منذ ${Math.abs(d)} يوم)` : `(متبقي ${d} يوم)`) : '';
+    text = `تجديد اشتراك — ${a.name} 🔄
+
+السلام عليكم،
+يرجى تجديد اشتراك العميل
+
+▪️ Username: ${a.username}
+▪️ Password: ${a.password}
+▪️ تاريخ الانتهاء: ${exp} ${dText}
+
+شكراً 🙏`;
+    document.getElementById('msgModalTitle').textContent = '💰 طلب تجديد اشتراك — ' + a.name;
+  } else if (type === 'changePassMerchant') {
+    text = `طلب تغيير كلمة السر — ${a.name} 🔑
+
+السلام عليكم،
+يرجى تغيير كلمة السر للعميل
+
+▪️ Username: ${a.username}
+▪️ Password الحالية: ${a.password}
+
+شكراً 🙏`;
+    document.getElementById('msgModalTitle').textContent = '🔐 طلب تغيير كلمة السر — ' + a.name;
+  } else if (type === 'changePass') {
+    text = `إرسال كلمة السر للمستخدم 🔑
+
+عزيزي ${a.name}،
+تم تغيير كلمة السر الخاصة باشتراكك.
+
+Username : ${a.username}
+New Password : ${a.password}
+
+يرجى تحديث التطبيق بكلمة السر الجديدة. 🙏`;
+    document.getElementById('msgModalTitle').textContent = '🔑 إرسال كلمة السر للمستخدم — ' + a.name;
   }
   document.getElementById('msgText').value = text;
 
@@ -1570,7 +1776,6 @@ Password: ${a.password}
     const phone = rawPhone.startsWith('+') ? rawPhone.replace('+','') : rawPhone.startsWith('00') ? rawPhone.slice(2) : rawPhone;
     window._currentMsgPhone = phone;
     document.getElementById('waBtn').style.display = 'inline-flex';
-    window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
   } else {
     document.getElementById('waBtn').style.display = 'none';
   }
@@ -1793,10 +1998,16 @@ function importFromExcel(input) {
       <input id="loginPass" type="password" placeholder="أدخل كلمة المرور"
         style="width:100%;background:rgba(255,255,255,0.9);border:none;border-radius:10px;padding:12px 16px;font-size:15px;font-family:Cairo,sans-serif;box-sizing:border-box;color:#333;text-align:right;"
         onkeydown="if(event.key==='Enter') doLogin()">
-      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;color:rgba(255,255,255,0.6);font-size:13px;user-select:none">
-        <input type="checkbox" onchange="toggleLoginPass(this)" style="width:16px;height:16px;cursor:pointer;accent-color:#4f8ef7;">
-        إظهار كلمة المرور
-      </label>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:rgba(255,255,255,0.6);font-size:13px;user-select:none">
+          <input type="checkbox" onchange="toggleLoginPass(this)" style="width:16px;height:16px;cursor:pointer;accent-color:#4f8ef7;">
+          إظهار كلمة المرور
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:rgba(255,255,255,0.75);font-size:13px;user-select:none">
+          تذكرني
+          <input type="checkbox" id="rememberMe" style="width:16px;height:16px;cursor:pointer;accent-color:#4f8ef7;">
+        </label>
+      </div>
     </div>
 
     <button onclick="doLogin()"
@@ -1820,6 +2031,7 @@ window.isGuest = false;
 
 function doLogout() {
   sessionStorage.removeItem('hydra_auth');
+  localStorage.removeItem('hydra_auth_persist');
   window.isGuest = false;
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginUser').value = '';
@@ -1834,10 +2046,16 @@ function toggleLoginPass(cb) {
 function doLogin() {
   const u = document.getElementById('loginUser').value.trim().toLowerCase();
   const p = document.getElementById('loginPass').value.trim();
+  const remember = document.getElementById('rememberMe').checked;
   if (u === 'elattar89' && p === 'Rio@2211') {
     window.isGuest = false;
     document.getElementById('loginScreen').style.display = 'none';
     sessionStorage.setItem('hydra_auth', 'admin');
+    if (remember) {
+      localStorage.setItem('hydra_auth_persist', 'admin');
+    } else {
+      localStorage.removeItem('hydra_auth_persist');
+    }
     setTimeout(applyGuestMode, 50);
   } else {
     document.getElementById('loginError').style.display = 'block';
@@ -1850,25 +2068,26 @@ function doGuestLogin() {
   window.isGuest = true;
   document.getElementById('loginScreen').style.display = 'none';
   sessionStorage.setItem('hydra_auth', 'guest');
-  // إخفاء زرار الإضافة وتطبيق وضع القراءة
   applyGuestMode();
 }
 
 function applyGuestMode() {
   const addBtn = document.querySelector('button[onclick="openAddModal()"]');
-  const filterBar = document.querySelector('.toolbar');
   if (window.isGuest) {
     if (addBtn) addBtn.style.display = 'none';
   } else {
     if (addBtn) addBtn.style.display = '';
   }
+  // إعادة رسم الكروت بعد تغيير صلاحيات الجيست
+  if (typeof renderAll === 'function') renderAll();
 }
 
-// لو سبق ودخل في نفس الجلسة
-const _auth = sessionStorage.getItem('hydra_auth');
+// تحقق من الجلسة الحالية أو التذكر الدائم
+const _auth = sessionStorage.getItem('hydra_auth') || localStorage.getItem('hydra_auth_persist');
 if (_auth === 'admin') {
   window.isGuest = false;
   document.getElementById('loginScreen').style.display = 'none';
+  sessionStorage.setItem('hydra_auth', 'admin');
 } else if (_auth === 'guest') {
   window.isGuest = true;
   document.getElementById('loginScreen').style.display = 'none';
@@ -1941,6 +2160,92 @@ if (_auth === 'admin') {
   #activeModalTable th { background: #1a3a6e !important; color: #fff !important; }
   #activeModalTable th, #activeModalTable td { padding: 5px 4px !important; border: 1px solid #ccc !important; }
   #activeModalTable tr:nth-child(even) td { background: #f5f8ff !important; }
+}
+</style>
+
+
+<!-- الكشف الإجمالي - Full Page Print Style -->
+<div id="totalModal" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;overflow-y:auto;font-family:Cairo,sans-serif;color:#111;direction:rtl">
+  <div id="totalModalControls" style="position:fixed;top:0;right:0;left:0;background:#312e81;padding:10px 20px;display:flex;align-items:center;gap:10px;z-index:10000;box-shadow:0 2px 10px rgba(0,0,0,0.3)">
+    <button onclick="window.print()" style="background:#fff;color:#312e81;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🖨️ طباعة / PDF</button>
+    <button onclick="shareTotalList()" style="background:#25d366;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">📤 مشاركة</button>
+    <button onclick="document.getElementById('totalModal').style.display='none'" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif">✕ إغلاق</button>
+    <div id="totalModalCount" style="color:rgba(255,255,255,0.8);font-size:13px;margin-right:auto"></div>
+  </div>
+  <div style="padding:70px 20px 30px">
+    <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #312e81">
+      <div style="font-size:22px;font-weight:700;color:#312e81">📊 الكشف الإجمالي للحسابات</div>
+      <div style="font-size:13px;color:#666;margin-top:4px">Hydra IPTV — Ahmed EL-Attar</div>
+      <div id="totalModalDate" style="font-size:12px;color:#999;margin-top:2px"></div>
+    </div>
+    <!-- إحصاء سريع -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;max-width:400px;margin-left:auto;margin-right:auto">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;text-align:center">
+        <div id="totalModalSummaryExpiring" style="font-size:24px;font-weight:700;color:#b45309">—</div>
+        <div style="font-size:11px;color:#d97706;margin-top:2px">ينتهي قريباً</div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;text-align:center">
+        <div id="totalModalSummaryActive" style="font-size:24px;font-weight:700;color:#15803d">—</div>
+        <div style="font-size:11px;color:#16a34a;margin-top:2px">نشط</div>
+      </div>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px;text-align:center">
+        <div id="totalModalSummaryExpired" style="font-size:24px;font-weight:700;color:#b91c1c">—</div>
+        <div style="font-size:11px;color:#dc2626;margin-top:2px">منتهي</div>
+      </div>
+    </div>
+    <!-- الجداول الثلاثة -->
+    <div id="totalModalSections"></div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#999;border-top:1px solid #ddd;padding-top:10px">Hydra IPTV Manager — Ahmed EL-Attar</div>
+  </div>
+</div>
+
+<style>
+@media print {
+  #totalModalControls { display: none !important; }
+}
+</style>
+
+
+<!-- كشف المنتهين - Full Page Print Style -->
+<div id="expiredModal" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;overflow-y:auto;font-family:Cairo,sans-serif;color:#111;direction:rtl">
+  <div id="expiredModalControls" style="position:fixed;top:0;right:0;left:0;background:#7f1d1d;padding:10px 20px;display:flex;align-items:center;gap:10px;z-index:10000;box-shadow:0 2px 10px rgba(0,0,0,0.3)">
+    <button onclick="window.print()" style="background:#fff;color:#7f1d1d;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🖨️ طباعة / PDF</button>
+    <button onclick="shareExpiredList()" style="background:#25d366;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">📤 مشاركة</button>
+    <button onclick="document.getElementById('expiredModal').style.display='none'" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif">✕ إغلاق</button>
+    <div id="expiredModalCount" style="color:rgba(255,255,255,0.8);font-size:13px;margin-right:auto"></div>
+  </div>
+  <div style="padding:70px 20px 30px">
+    <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #dc2626">
+      <div style="font-size:22px;font-weight:700;color:#7f1d1d">❌ كشف الحسابات المنتهية</div>
+      <div style="font-size:13px;color:#666;margin-top:4px">Hydra IPTV - Ahmed EL-Attar</div>
+      <div id="expiredModalDate" style="font-size:12px;color:#999;margin-top:2px"></div>
+    </div>
+    <table id="expiredModalTable" style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#7f1d1d;color:#fff">
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">#</th>
+          <th style="padding:10px 8px;text-align:right;border:1px solid #991b1b">الاسم</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">رقم الهاتف</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">اليوزرنيم</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">الباسورد</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">الهوست</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">تاريخ الاشتراك</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">تاريخ الانتهاء</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">منذ كم يوم</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">المدة</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">الدفع</th>
+          <th style="padding:10px 8px;text-align:center;border:1px solid #991b1b">القيمة</th>
+        </tr>
+      </thead>
+      <tbody id="expiredModalBody"></tbody>
+    </table>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#999;border-top:1px solid #ddd;padding-top:10px">Hydra IPTV Manager — Ahmed EL-Attar</div>
+  </div>
+</div>
+
+<style>
+@media print {
+  #expiredModalControls { display: none !important; }
 }
 </style>
 
@@ -2053,5 +2358,108 @@ if (_auth === 'admin') {
     </div>
   </div>
 </div>
+<!-- بوب آب تفاصيل الشخص -->
+<div id="personDetailsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;align-items:center;justify-content:center;backdrop-filter:blur(4px)" onclick="if(event.target===this)closePersonDetails()">
+  <div id="personDetailsContent" style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;width:460px;max-width:94vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
+  </div>
+</div>
+
+<script>
+function showPersonDetails(name) {
+  const accs = accounts.filter(a => a.name === name);
+  if (!accs.length) return;
+  const first = accs[0];
+  const st = statusOf(first);
+  const borderColor = st === 'active' ? '#22c55e' : st === 'expiring' ? '#f59e0b' : st === 'expired' ? '#ef4444' : '#64748b';
+  const avatarBg = st === 'active' ? 'rgba(34,197,94,0.2)' : st === 'expiring' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)';
+  const avatarColor = st === 'active' ? '#4ade80' : st === 'expiring' ? '#fbbf24' : '#f87171';
+  const nameParts = name.trim().split(/\s+/);
+  const initials = nameParts.length >= 2 ? (nameParts[0][0]+nameParts[1][0]).toUpperCase() : name.slice(0,2).toUpperCase();
+  const statusLabel = st === 'active' ? '✅ نشط' : st === 'expiring' ? '⚠️ ينتهي قريباً' : st === 'expired' ? '⛔ منتهي' : '—';
+  const statusBadgeStyle = st === 'active'
+    ? 'background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3)'
+    : st === 'expiring'
+    ? 'background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)'
+    : 'background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)';
+
+  const row = (label, val, mono) => val
+    ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <span style="font-size:12px;color:var(--text2)">${label}</span>
+        <span style="font-size:13px;color:var(--text);font-weight:600;${mono?'font-family:monospace;':''}direction:ltr;text-align:left">${val}</span>
+       </div>`
+    : '';
+
+  const accsHtml = accs.map((a, i) => {
+    const d = daysLeft(a.expDate);
+    const dText = d === null ? '—' : d < 0 ? `منتهي منذ ${Math.abs(d)} يوم` : `متبقي ${d} يوم`;
+    const dColor = statusOf(a) === 'active' ? '#4ade80' : statusOf(a) === 'expiring' ? '#fbbf24' : '#f87171';
+    const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
+    const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+    const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
+    return `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:10px">
+      ${accs.length > 1 ? `<div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600">الأكونت ${i+1}</div>` : ''}
+      ${row('اليوزرنيم', a.username, true)}
+      ${row('الباسورد', window.isGuest ? '••••••' : a.password, true)}
+      ${row('الهوست', (a.host||'').replace('http://','').replace(':80',''), true)}
+      ${row('تاريخ الاشتراك', a.startDate ? a.startDate.slice(8,10)+'/'+a.startDate.slice(5,7)+'/'+a.startDate.slice(0,4) : null)}
+      ${row('تاريخ الانتهاء', a.expDate ? a.expDate.slice(8,10)+'/'+a.expDate.slice(5,7)+'/'+a.expDate.slice(0,4) : null)}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <span style="font-size:12px;color:var(--text2)">الوقت المتبقي</span>
+        <span style="font-size:13px;font-weight:700;color:${dColor}">${dText}</span>
+      </div>
+      ${row('مدة الاشتراك', dur)}
+      ${row('القيمة', a.amount ? a.amount+' KD' : null)}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <span style="font-size:12px;color:var(--text2)">حالة الدفع</span>
+        <div style="display:flex;gap:6px">
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${client==='paid'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.15)'};color:${client==='paid'?'#4ade80':'#f87171'};border:1px solid ${client==='paid'?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'}">عميل ${client==='paid'?'✓':'✗'}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${merchant==='paid'?'rgba(34,197,94,0.15)':'rgba(245,158,11,0.15)'};color:${merchant==='paid'?'#4ade80':'#fbbf24'};border:1px solid ${merchant==='paid'?'rgba(34,197,94,0.3)':'rgba(245,158,11,0.3)'}">تاجر ${merchant==='paid'?'✓':'✗'}</span>
+        </div>
+      </div>
+      ${a.notes ? row('ملاحظات', a.notes) : ''}
+      ${!window.isGuest ? `
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button class="copy-btn" style="font-size:11px;padding:4px 10px" onclick="copyBoth('${a.username}','${a.password.replace(/'/g,"\\'")}',this)">📋 نسخ</button>
+        <button class="btn btn-primary" style="padding:4px 10px;font-size:11px" onclick="closePersonDetails();editAccount(${a.id})">✏️ تعديل</button>
+        <button onclick="closePersonDetails();showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif">📨 إرسال كود الاشتراك</button>
+        <button onclick="closePersonDetails();showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif">🔔 تذكير المستخدم بالتجديد</button>
+        <button onclick="closePersonDetails();showMsg(${a.id},'remindMerchant')" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif">💰 طلب تجديد اشتراك</button>
+        <button onclick="closePersonDetails();showMsg(${a.id},'changePassMerchant')" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.4);color:#fca5a5;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif">🔐 طلب تغيير كلمة السر</button>
+        <button onclick="closePersonDetails();showMsg(${a.id},'changePass')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif">🔑 إرسال كلمة السر للمستخدم</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('personDetailsContent').innerHTML = `
+    <!-- هيدر -->
+    <div style="background:linear-gradient(135deg,${avatarBg},transparent);border-bottom:1px solid var(--border);border-radius:20px 20px 0 0;padding:22px 22px 18px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:56px;height:56px;border-radius:50%;background:${avatarBg};color:${avatarColor};border:2px solid ${borderColor};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0">${initials}</div>
+        <div style="flex:1">
+          <div style="font-size:18px;font-weight:700;color:var(--text)">${name}</div>
+          ${first.phone ? `<div style="font-size:13px;color:var(--text2);margin-top:2px;direction:ltr">${first.phone}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <span style="font-size:12px;padding:3px 10px;border-radius:20px;${statusBadgeStyle}">${statusLabel}</span>
+          ${accs.length > 1 ? `<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(79,142,247,0.15);color:#60a5fa;border:1px solid rgba(79,142,247,0.3)">${accs.length} أكونتات</span>` : ''}
+        </div>
+      </div>
+    </div>
+    <!-- البيانات -->
+    <div style="padding:16px 22px 22px">
+      ${accsHtml}
+      <button onclick="closePersonDetails()" style="width:100%;margin-top:16px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:10px;padding:10px;cursor:pointer;font-family:Cairo,sans-serif;font-size:14px">إغلاق</button>
+    </div>
+  `;
+
+  const modal = document.getElementById('personDetailsModal');
+  modal.style.display = 'flex';
+}
+
+function closePersonDetails() {
+  document.getElementById('personDetailsModal').style.display = 'none';
+}
+</script>
 </body>
 </html>
