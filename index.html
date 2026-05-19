@@ -2254,13 +2254,15 @@ function doGuestLogin() {
 }
 
 function applyGuestMode() {
-  const addBtn = document.querySelector('button[onclick="openAddModal()"]');
+  const wrapper = document.getElementById('addBtnWrapper');
+  const trashBtn = document.getElementById('trashBtn');
   if (window.isGuest) {
-    if (addBtn) addBtn.style.display = 'none';
+    if (wrapper) wrapper.style.display = 'none';
+    if (trashBtn) trashBtn.style.display = 'none';
   } else {
-    if (addBtn) addBtn.style.display = '';
+    if (wrapper) wrapper.style.display = '';
+    if (trashBtn) trashBtn.style.display = '';
   }
-  // إعادة رسم الكروت بعد تغيير صلاحيات الجيست
   if (typeof renderAll === 'function') renderAll();
 }
 
