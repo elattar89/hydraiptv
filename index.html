@@ -1741,11 +1741,19 @@ function _doAdd(a) {
   const wasEditing = !!editingId;
   if (a.phone) accounts.forEach(x => { if (x.name === a.name) x.phone = a.phone; });
 
-  // لو الإضافة جاية من كرت pending → احذف الكرت
+  // لو الإضافة جاية من كرت pending التاجر → احذف الكرت
   const pIdx = _modalPendingIdx;
-  if (!wasEditing && pIdx !== null && pIdx !== undefined) {
+  if (!wasEditing && pIdx !== null && pIdx !== undefined && pIdx >= 0) {
     _pendingRequests.splice(pIdx, 1);
     if (window.savePendingFirebase) window.savePendingFirebase(_pendingRequests);
+  }
+
+  // لو الإضافة جاية من طلب فورم → approve في Firebase
+  if (!wasEditing && window._currentFormRegId) {
+    const regId = window._currentFormRegId;
+    window._currentFormRegId   = null;
+    window._currentFormRegData = null;
+    if (window.approveFormReg) window.approveFormReg(regId);
   }
 
   save(); closeModal();
@@ -2769,40 +2777,247 @@ function removePendingRequest(idx) {
   renderPendingSection();
 }
 function renderPendingSection() {
-  const list = _pendingRequests;
-  // تحديث عداد الهيدر
+  const merchantList = _pendingRequests || [];
+  const formList     = window._formRegistrations || [];
+  const totalCount   = merchantList.length + formList.length;
+
   setTimeout(() => {
     const pillEl = document.getElementById('pendingPillCount');
-    if (pillEl) pillEl.textContent = list.length;
+    if (pillEl) pillEl.textContent = totalCount;
   }, 0);
+
   let container = document.getElementById('pendingRequestsSection');
   if (!container) {
     container = document.createElement('div');
     container.id = 'pendingRequestsSection';
-    const main = document.querySelector('main');
+    const main   = document.querySelector('main');
     const tables = document.getElementById('tablesContainer');
     main.insertBefore(container, tables);
   }
-  if (!list.length) { container.innerHTML = ''; return; }
+
+  if (!totalCount) { container.innerHTML = ''; return; }
+
+  // badge لكل نوع
+  function badgeByType(clientType) {
+    if (clientType === 'renew')     return '<span style="display:inline-block;background:rgba(59,130,246,0.18);color:#3b82f6;border:1px solid #3b82f655;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;margin-right:6px;">تجديد</span>';
+    if (clientType === 'returning') return '<span style="display:inline-block;background:rgba(168,85,247,0.18);color:#a855f7;border:1px solid #a855f755;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;margin-right:6px;">جديد</span>';
+    return '<span style="display:inline-block;background:rgba(34,197,94,0.18);color:#22c55e;border:1px solid #22c55e55;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;margin-right:6px;">جديد</span>';
+  }
+
+  // كروت الفورم — كلها بنفس اللون البرتقالي
+  const formCards = formList.map((req) => {
+    const date = req.createdAt ? new Date(req.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : '—';
+    return `
+      <div onclick="openFormRegModal('${req._firestoreId}')"
+        style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.35);border-top:3px solid #fb923c;border-radius:14px;padding:12px 16px;min-width:160px;position:relative;cursor:pointer;transition:all 0.2s"
+        onmouseover="this.style.background='rgba(251,146,60,0.15)'"
+        onmouseout="this.style.background='rgba(251,146,60,0.08)'">
+        <div style="font-size:10px;color:#fb923c;margin-bottom:6px;font-weight:600;">⏳ قيد الطلب</div>
+        <div style="display:flex;align-items:center;margin-bottom:4px;">
+          <span style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace;direction:ltr;">${req.username || '—'}</span>
+          ${badgeByType(req.clientType)}
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">👤 ${req.name || '—'}</div>
+        <div style="font-size:11px;color:var(--text2);">📅 ${date}</div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button onclick="event.stopPropagation();approveFormRegAction('${req._firestoreId}')"
+            style="flex:1;background:#fb923c;color:white;border:none;border-radius:8px;padding:4px 0;font-size:11px;font-family:Cairo,sans-serif;cursor:pointer;font-weight:700;">✓ قبول</button>
+          <button onclick="event.stopPropagation();rejectFormRegAction('${req._firestoreId}')"
+            style="flex:1;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid #ef444455;border-radius:8px;padding:4px 0;font-size:11px;font-family:Cairo,sans-serif;cursor:pointer;font-weight:700;">✕ رفض</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  // كروت التاجر
+  const merchantCards = merchantList.map((req, i) => `
+    <div onclick="openPendingModal(${i})"
+      style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.35);border-radius:14px;padding:12px 16px;min-width:160px;position:relative;border-top:3px solid #fb923c;cursor:pointer;transition:all 0.2s"
+      onmouseover="this.style.background='rgba(251,146,60,0.15)'"
+      onmouseout="this.style.background='rgba(251,146,60,0.08)'">
+      <div style="font-size:10px;color:#fb923c;margin-bottom:4px;font-weight:600;">⏳ قيد الطلب من التاجر</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace;direction:ltr;margin-bottom:6px">${req.username}</div>
+      <div style="font-size:11px;color:var(--text2)">📅 ${req.date}</div>
+      <button onclick="event.stopPropagation();removePendingRequest(${i})" title="حذف الطلب"
+        style="position:absolute;top:8px;left:10px;background:none;border:none;color:rgba(251,146,60,0.5);font-size:14px;cursor:pointer;line-height:1;padding:0;transition:color 0.2s"
+        onmouseover="this.style.color='#ef4444'"
+        onmouseout="this.style.color='rgba(251,146,60,0.5)'">✕</button>
+    </div>`).join('');
+
   container.innerHTML = `
     <div style="margin-bottom:18px">
       <div style="font-size:13px;font-weight:700;color:#fb923c;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
         <span style="width:8px;height:8px;border-radius:50%;background:#fb923c;display:inline-block;box-shadow:0 0 6px #fb923c"></span>
-        قيد الطلب من التاجر
-        <span style="font-size:11px;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.4);border-radius:20px;padding:1px 10px;color:#fb923c">${list.length}</span>
+        قيد الطلب
+        <span style="font-size:11px;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.4);border-radius:20px;padding:1px 10px;color:#fb923c">${totalCount}</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;">
-        ${list.map((req, i) => `
-          <div onclick="openPendingModal(${i})" style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.35);border-radius:14px;padding:12px 16px;min-width:160px;position:relative;border-top:3px solid #fb923c;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(251,146,60,0.15)'" onmouseout="this.style.background='rgba(251,146,60,0.08)'">
-            <div style="font-size:10px;color:#fb923c;margin-bottom:4px;font-weight:600;letter-spacing:0.5px">⏳ قيد الطلب</div>
-            <div style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace;direction:ltr;margin-bottom:6px">${req.username}</div>
-            <div style="font-size:11px;color:var(--text2)">📅 ${req.date}</div>
-            <button onclick="event.stopPropagation();removePendingRequest(${i})" title="حذف الطلب" style="position:absolute;top:8px;left:10px;background:none;border:none;color:rgba(251,146,60,0.5);font-size:14px;cursor:pointer;line-height:1;padding:0;transition:color 0.2s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='rgba(251,146,60,0.5)'">✕</button>
-          </div>
-        `).join('')}
+        ${formCards}
+        ${merchantCards}
       </div>
     </div>
   `;
+}
+
+// ===== فتح مودال طلب الفورم =====
+function openFormRegModal(firestoreId) {
+  const reg = (window._formRegistrations || []).find(r => r._firestoreId === firestoreId);
+  if (!reg) return;
+  window._currentFormRegId  = firestoreId;
+  window._currentFormRegData = reg;
+  editingId = null;
+
+  if (reg.clientType === 'renew') {
+    // مودال تجديد مخصص
+    openRenewApprovalModal(reg);
+    return;
+  }
+
+  // اشتراك جديد أو عميل قديم
+  const isReturning = reg.clientType === 'returning';
+  const title = isReturning ? '👤 عميل قديم — أكونت جديد' : '🆕 طلب اشتراك جديد';
+  document.getElementById('modalTitle').textContent = title;
+
+  // لو عميل قديم — ابحث عنه بالتليفون واملأ اسمه تلقائي
+  let prefillName  = reg.name  || '';
+  let prefillPhone = reg.phone || '';
+  if (isReturning && reg.phone) {
+    const phoneClean = reg.phone.trim().replace(/\s+/g,'');
+    const existing = accounts.find(x => x.phone && x.phone.trim().replace(/\s+/g,'') === phoneClean);
+    if (existing) { prefillName = existing.name; prefillPhone = existing.phone; }
+  }
+
+  document.getElementById('fName').value    = prefillName;
+  document.getElementById('fPhone').value   = prefillPhone;
+  document.getElementById('fUser').value    = reg.username || '';
+  document.getElementById('fPass').value    = '';
+  document.getElementById('fHost').value    = '';
+  document.getElementById('fDate').value    = '';
+  document.getElementById('fExp').value     = '';
+  document.getElementById('fNotes').value   = reg.nationality ? 'الجنسية: ' + reg.nationality : '';
+  document.getElementById('fAmount').value  = '';
+  const durEl = document.getElementById('fDuration');
+  if (durEl) durEl.value = '15';
+  document.getElementById('addAsNewUserBtn').style.display = '';
+  _modalPendingIdx = -1;
+  _modalIsPending  = false;
+  document.getElementById('modalBg').classList.add('active');
+}
+
+// ===== مودال قبول التجديد =====
+function openRenewApprovalModal(reg) {
+  // احذف المودال القديم لو موجود
+  const old = document.getElementById('renewApprovalModal');
+  if (old) old.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'renewApprovalModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+  modal.innerHTML = `
+    <div style="background:var(--card);border-radius:20px;padding:2rem;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+      <div style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:1.2rem;">🔄 قبول طلب تجديد</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:1.2rem;">
+        <b style="color:var(--text)">${reg.name || '—'}</b> &nbsp;|&nbsp; <span style="font-family:monospace">${reg.username || '—'}</span>
+      </div>
+
+      <div style="margin-bottom:1rem;">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">تاريخ الاشتراك</label>
+        <input type="date" id="renewStartDate" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:Cairo,sans-serif;font-size:14px;background:var(--bg);color:var(--text);outline:none;" />
+      </div>
+
+      <div style="margin-bottom:1.2rem;">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">مدة الاشتراك</label>
+        <select id="renewDuration" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:Cairo,sans-serif;font-size:14px;background:var(--bg);color:var(--text);outline:none;">
+          <option value="6">6 شهور</option>
+          <option value="12">سنة (12 شهر)</option>
+          <option value="15" selected>15 شهر</option>
+          <option value="24">سنتين (24 شهر)</option>
+        </select>
+      </div>
+
+      <div id="renewExpPreview" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-radius:10px;padding:8px 14px;font-size:13px;color:#3b82f6;margin-bottom:1.2rem;display:none;">
+        📅 تاريخ الانتهاء: <b id="renewExpDate">—</b>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button onclick="confirmRenewApproval()" style="flex:1;background:#fb923c;color:white;border:none;border-radius:10px;padding:10px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">✓ تأكيد التجديد</button>
+        <button onclick="document.getElementById('renewApprovalModal').remove()" style="flex:1;background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid #ef444430;border-radius:10px;padding:10px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">إلغاء</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // حساب تاريخ الانتهاء تلقائي
+  function calcExp() {
+    const startVal = document.getElementById('renewStartDate').value;
+    const dur      = parseInt(document.getElementById('renewDuration').value) || 15;
+    const preview  = document.getElementById('renewExpPreview');
+    const expEl    = document.getElementById('renewExpDate');
+    if (!startVal) { preview.style.display = 'none'; return; }
+    const s = new Date(startVal);
+    s.setMonth(s.getMonth() + dur);
+    const yyyy = s.getFullYear();
+    const mm   = String(s.getMonth()+1).padStart(2,'0');
+    const dd   = String(s.getDate()).padStart(2,'0');
+    expEl.textContent = `${yyyy}-${mm}-${dd}`;
+    preview.style.display = 'block';
+  }
+  document.getElementById('renewStartDate').addEventListener('input', calcExp);
+  document.getElementById('renewDuration').addEventListener('change', calcExp);
+}
+
+// ===== تأكيد التجديد =====
+function confirmRenewApproval() {
+  const reg       = window._currentFormRegData;
+  const startVal  = document.getElementById('renewStartDate').value;
+  const dur       = parseInt(document.getElementById('renewDuration').value) || 15;
+  if (!startVal) { alert('اختر تاريخ الاشتراك أولاً'); return; }
+
+  // حساب تاريخ الانتهاء
+  const s = new Date(startVal);
+  s.setMonth(s.getMonth() + dur);
+  const yyyy = s.getFullYear();
+  const mm   = String(s.getMonth()+1).padStart(2,'0');
+  const dd   = String(s.getDate()).padStart(2,'0');
+  const newExp = `${yyyy}-${mm}-${dd}`;
+
+  // ابحث عن الكارت بنفس اليوزرنيم وحدّثه
+  const idx = accounts.findIndex(x => x.username && x.username.trim().toLowerCase() === (reg.username||'').trim().toLowerCase());
+  if (idx !== -1) {
+    accounts[idx].startDate = startVal;
+    accounts[idx].expDate   = newExp;
+    accounts[idx].duration  = String(dur);
+    accounts[idx].notes     = 'تجديد';
+    accounts[idx]._expFixed = true;
+    accounts[idx]._datFixed = true;
+    save(); renderAll();
+    showToast('✅ تم تجديد اشتراك ' + (reg.username || ''));
+  } else {
+    showToast('❌ لم يتم إيجاد الأكونت بنفس اليوزرنيم', true);
+  }
+
+  // قبول الطلب في Firebase
+  if (window.approveFormReg) window.approveFormReg(window._currentFormRegId);
+  document.getElementById('renewApprovalModal').remove();
+}
+
+// ===== قبول اشتراك جديد أو عميل قديم =====
+function approveFormRegAction(firestoreId) {
+  const reg = (window._formRegistrations || []).find(r => r._firestoreId === firestoreId);
+  if (!reg) return;
+
+  if (reg.clientType === 'renew') {
+    window._currentFormRegId   = firestoreId;
+    window._currentFormRegData = reg;
+    openRenewApprovalModal(reg);
+    return;
+  }
+
+  // افتح المودال العادي
+  openFormRegModal(firestoreId);
+}
+
+function rejectFormRegAction(firestoreId) {
+  if (window.rejectFormReg) window.rejectFormReg(firestoreId);
 }
 
 function openPendingModal(idx) {
