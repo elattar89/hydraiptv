@@ -192,6 +192,9 @@
     justify-content: flex-end;
     gap: 10px;
     flex-wrap: wrap;
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
   }
   .btn-excel-export {
     background: linear-gradient(135deg, #1d7a40, #22c55e);
@@ -419,7 +422,7 @@
 <div class="toolbar">
   <div class="search-box">
     <span class="search-icon">🔍</span>
-    <input type="text" id="searchInput" placeholder="بحث باسم الحساب أو اليوزرنيم..." oninput="renderAll()" autocomplete="off" value="">
+    <input type="text" id="searchInput" placeholder="بحث باسم الحساب أو اليوزرنيم..." oninput="renderAll()" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
   </div>
   <select id="filterStatus" onchange="renderAll()">
     <option value="all">كل الحسابات</option>
@@ -1856,7 +1859,11 @@ document.getElementById('modalBg').addEventListener('click', e => { if (e.target
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 load();
-document.getElementById('searchInput').value = '';
+// مسح السيرش عند التحميل
+window.addEventListener('load', function() {
+  var s = document.getElementById('searchInput');
+  if (s) { s.value = ''; s.setAttribute('autocomplete', 'new-password'); }
+});
 renderAll();
 
 // ====== تحديث يدوي ======
