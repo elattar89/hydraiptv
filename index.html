@@ -192,10 +192,13 @@
     justify-content: flex-end;
     gap: 10px;
     flex-wrap: wrap;
-    position: sticky;
+    position: fixed;
     bottom: 0;
+    left: 0;
+    right: 0;
     z-index: 50;
   }
+  main { padding-bottom: 70px; }
   .btn-excel-export {
     background: linear-gradient(135deg, #1d7a40, #22c55e);
     color: white;
@@ -267,7 +270,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, onSnapshot, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBxpwm4K9KTVFHV22PD_yxKhvSn5ThJ4sA",
@@ -340,40 +343,6 @@
     });
 
     window._firebaseReady = true;
-
-    // ===== Firebase لطلبات التسجيل من الفورم =====
-    const REG_COLLECTION_NAME = "registration_requests";
-
-    // مراقبة طلبات التسجيل الجديدة (status = pending فقط)
-    const regQuery = query(
-      collection(db, REG_COLLECTION_NAME),
-      where("status", "==", "pending")
-    );
-
-    onSnapshot(regQuery, (snapshot) => {
-      const formRequests = [];
-      snapshot.forEach((docSnap) => {
-        formRequests.push({ _firestoreId: docSnap.id, ...docSnap.data() });
-      });
-      window._formRegistrations = formRequests;
-      if (typeof renderFormRegistrations === 'function') renderFormRegistrations();
-    });
-
-    // دالة لتحويل الطلب لـ approved (بعد ما تضيفه في الموقع)
-    window.approveFormReg = async function(firestoreId) {
-      try {
-        const docRef = doc(db, REG_COLLECTION_NAME, firestoreId);
-        await updateDoc(docRef, { status: "approved" });
-      } catch(e) { console.error("approve error:", e); }
-    };
-
-    // دالة لرفض الطلب
-    window.rejectFormReg = async function(firestoreId) {
-      try {
-        const docRef = doc(db, REG_COLLECTION_NAME, firestoreId);
-        await updateDoc(docRef, { status: "rejected" });
-      } catch(e) { console.error("reject error:", e); }
-    };
 
     // ===== Firebase للطلبات قيد الانتظار =====
     const PENDING_DOC = doc(db, "iptv", "pending_requests");
@@ -1756,12 +1725,6 @@ function _doAdd(a) {
     if (window.savePendingFirebase) window.savePendingFirebase(_pendingRequests);
   }
 
-  // لو الإضافة جاية من فورم التسجيل → approve على Firestore
-  if (window._pendingFormRegId) {
-    if (window.approveFormReg) window.approveFormReg(window._pendingFormRegId);
-    window._pendingFormRegId = null;
-  }
-
   save(); closeModal();
   renderAll(); renderPendingSection();
   showToast(wasEditing ? '✅ تم التعديل' : '✅ تمت الإضافة');
@@ -1883,11 +1846,7 @@ function closeModal() {
   _modalIsPending = false;
   _modalIsAddFromPending = false;
   _modalPendingIdx = null;
-  window._pendingFormRegId = null;
-  window._currentFormRegFirestoreId = null;
   document.getElementById('addAsNewUserBtn').style.display = 'none';
-  const formRegActions = document.getElementById('formRegActions');
-  if (formRegActions) formRegActions.style.display = 'none';
 }
 
 function showToast(msg, err) {
@@ -2783,15 +2742,11 @@ function removePendingRequest(idx) {
 }
 function renderPendingSection() {
   const list = _pendingRequests;
-  const formRegs = window._formRegistrations || [];
-  const totalCount = list.length + formRegs.length;
-
   // تحديث عداد الهيدر
   setTimeout(() => {
     const pillEl = document.getElementById('pendingPillCount');
-    if (pillEl) pillEl.textContent = totalCount;
+    if (pillEl) pillEl.textContent = list.length;
   }, 0);
-
   let container = document.getElementById('pendingRequestsSection');
   if (!container) {
     container = document.createElement('div');
@@ -2800,143 +2755,26 @@ function renderPendingSection() {
     const tables = document.getElementById('tablesContainer');
     main.insertBefore(container, tables);
   }
-  if (!totalCount) { container.innerHTML = ''; return; }
-
-  // بناء كروت طلبات الفورم
-  const formCardsHtml = formRegs.map((req, i) => {
-    const isNew = req.kind === 'اشتراك جديد';
-    const isRenew = req.kind === 'تجديد اشتراك';
-    const color = isNew ? '#22c55e' : '#3b82f6';
-    const bgColor = isNew ? 'rgba(34,197,94,0.08)' : 'rgba(59,130,246,0.08)';
-    const borderColor = isNew ? 'rgba(34,197,94,0.35)' : 'rgba(59,130,246,0.35)';
-    const label = isNew ? '✨ جديد' : '🔄 تجديد';
-    const labelBg = isNew ? 'rgba(34,197,94,0.15)' : 'rgba(59,130,246,0.15)';
-
-    // لو تجديد، نبحث عن الأكونت الموجود
-    const existingAcct = isRenew ? accounts.find(a => a.username && a.username.toLowerCase() === (req.username||'').toLowerCase()) : null;
-
-    return `
-      <div onclick="openFormRegModal(${i})" style="background:${bgColor};border:1px solid ${borderColor};border-radius:14px;padding:12px 16px;min-width:200px;max-width:260px;position:relative;border-top:3px solid ${color};cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='${isNew?'rgba(34,197,94,0.15)':'rgba(59,130,246,0.15)'}'" onmouseout="this.style.background='${bgColor}'">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:${labelBg};color:${color}">${label}</span>
-          <span style="font-size:9px;color:var(--text2);margin-right:auto">من الفورم</span>
-        </div>
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">${req.name || '—'}</div>
-        <div style="font-size:12px;font-family:monospace;color:${color};direction:ltr;margin-bottom:4px">${req.username || '—'}</div>
-        ${req.phone ? `<div style="font-size:11px;color:var(--text2);direction:ltr">${req.phone}</div>` : ''}
-        ${existingAcct ? `<div style="font-size:10px;color:#fbbf24;margin-top:4px;padding:3px 8px;background:rgba(245,158,11,0.1);border-radius:6px">أكونت موجود — ينتهي: ${existingAcct.expDate||'—'}</div>` : ''}
-        <button onclick="event.stopPropagation();rejectFormRegUI('${req._firestoreId}')" title="رفض" style="position:absolute;top:8px;left:10px;background:none;border:none;color:rgba(239,68,68,0.5);font-size:14px;cursor:pointer;line-height:1;padding:0;transition:color 0.2s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='rgba(239,68,68,0.5)'">✕</button>
-      </div>
-    `;
-  }).join('');
-
-  // بناء كروت طلبات التاجر
-  const merchantCardsHtml = list.map((req, i) => `
-    <div onclick="openPendingModal(${i})" style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.35);border-radius:14px;padding:12px 16px;min-width:160px;position:relative;border-top:3px solid #fb923c;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(251,146,60,0.15)'" onmouseout="this.style.background='rgba(251,146,60,0.08)'">
-      <div style="font-size:10px;color:#fb923c;margin-bottom:4px;font-weight:600;letter-spacing:0.5px">⏳ طلب تاجر</div>
-      <div style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace;direction:ltr;margin-bottom:6px">${req.username}</div>
-      <div style="font-size:11px;color:var(--text2)">📅 ${req.date}</div>
-      <button onclick="event.stopPropagation();removePendingRequest(${i})" title="حذف الطلب" style="position:absolute;top:8px;left:10px;background:none;border:none;color:rgba(251,146,60,0.5);font-size:14px;cursor:pointer;line-height:1;padding:0;transition:color 0.2s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='rgba(251,146,60,0.5)'">✕</button>
-    </div>
-  `).join('');
-
+  if (!list.length) { container.innerHTML = ''; return; }
   container.innerHTML = `
     <div style="margin-bottom:18px">
       <div style="font-size:13px;font-weight:700;color:#fb923c;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
         <span style="width:8px;height:8px;border-radius:50%;background:#fb923c;display:inline-block;box-shadow:0 0 6px #fb923c"></span>
-        قيد الانتظار
-        <span style="font-size:11px;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.4);border-radius:20px;padding:1px 10px;color:#fb923c">${totalCount}</span>
-        ${formRegs.length ? `<span style="font-size:11px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:20px;padding:1px 10px;color:#4ade80">${formRegs.length} من الفورم</span>` : ''}
+        قيد الطلب من التاجر
+        <span style="font-size:11px;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.4);border-radius:20px;padding:1px 10px;color:#fb923c">${list.length}</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;">
-        ${formCardsHtml}
-        ${merchantCardsHtml}
+        ${list.map((req, i) => `
+          <div onclick="openPendingModal(${i})" style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.35);border-radius:14px;padding:12px 16px;min-width:160px;position:relative;border-top:3px solid #fb923c;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(251,146,60,0.15)'" onmouseout="this.style.background='rgba(251,146,60,0.08)'">
+            <div style="font-size:10px;color:#fb923c;margin-bottom:4px;font-weight:600;letter-spacing:0.5px">⏳ قيد الطلب</div>
+            <div style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace;direction:ltr;margin-bottom:6px">${req.username}</div>
+            <div style="font-size:11px;color:var(--text2)">📅 ${req.date}</div>
+            <button onclick="event.stopPropagation();removePendingRequest(${i})" title="حذف الطلب" style="position:absolute;top:8px;left:10px;background:none;border:none;color:rgba(251,146,60,0.5);font-size:14px;cursor:pointer;line-height:1;padding:0;transition:color 0.2s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='rgba(251,146,60,0.5)'">✕</button>
+          </div>
+        `).join('')}
       </div>
     </div>
   `;
-}
-
-function renderFormRegistrations() {
-  renderPendingSection();
-}
-
-function rejectFormRegUI(firestoreId) {
-  if (!confirm('رفض هذا الطلب؟')) return;
-  if (window.rejectFormReg) window.rejectFormReg(firestoreId);
-}
-
-function openFormRegModal(idx) {
-  const req = (window._formRegistrations || [])[idx];
-  if (!req) return;
-  const isRenew = req.kind === 'تجديد اشتراك';
-  const existingAcct = isRenew ? accounts.find(a => a.username && a.username.toLowerCase() === (req.username||'').toLowerCase()) : null;
-
-  // مش بنحفظ تلقائي — بنفتح فقط للمراجعة
-  editingId = existingAcct ? existingAcct.id : null;
-  window._pendingFormRegId = null; // مش بنعمل approve تلقائي عند الحفظ
-  window._currentFormRegFirestoreId = req._firestoreId;
-  window._currentFormRegIdx = idx;
-
-  document.getElementById('modalTitle').textContent = isRenew ? '🔄 تجديد اشتراك — من الفورم' : '✨ اشتراك جديد — من الفورم';
-  document.getElementById('fName').value     = req.name         || (existingAcct ? existingAcct.name : '');
-  document.getElementById('fPhone').value    = req.phone        || (existingAcct ? existingAcct.phone : '');
-  document.getElementById('fUser').value     = req.username     || '';
-  document.getElementById('fPass').value     = existingAcct     ? existingAcct.password : '';
-  document.getElementById('fHost').value     = existingAcct     ? existingAcct.host : '';
-  document.getElementById('fDate').value     = '';
-  document.getElementById('fExp').value      = existingAcct     ? existingAcct.expDate : '';
-  document.getElementById('fNotes').value    = isRenew ? 'تجديد' : '';
-  document.getElementById('fAmount').value   = existingAcct     ? (existingAcct.amount || '') : '';
-  const durEl = document.getElementById('fDuration');
-  if (durEl) durEl.value = existingAcct ? (existingAcct.duration || '15') : '15';
-  document.getElementById('fClientPaid').value   = 'paid';
-  document.getElementById('fMerchantPaid').value = 'unpaid';
-
-  document.getElementById('addAsNewUserBtn').style.display = 'none';
-  _modalPendingIdx = null;
-  _modalIsPending  = false;
-  _modalIsAddFromPending = false;
-
-  // إضافة زراريين في أسفل المودال — "تم القبول" و"رفض"
-  let formRegActions = document.getElementById('formRegActions');
-  if (!formRegActions) {
-    formRegActions = document.createElement('div');
-    formRegActions.id = 'formRegActions';
-    formRegActions.style.cssText = 'display:flex;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)';
-    const modalActions = document.querySelector('.modal-actions');
-    if (modalActions) modalActions.parentNode.insertBefore(formRegActions, modalActions);
-  }
-  formRegActions.style.display = 'flex';
-  formRegActions.innerHTML = `
-    <div style="width:100%;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:10px;padding:10px 14px;font-size:12px;color:#4ade80;display:flex;align-items:center;gap:8px">
-      <span style="font-size:16px">${isRenew ? '🔄' : '✨'}</span>
-      <div>
-        <div style="font-weight:700;font-size:13px">${isRenew ? 'طلب تجديد' : 'طلب اشتراك جديد'} — ${req.name || req.username}</div>
-        <div style="color:var(--text2);font-size:11px;margin-top:2px">عدّل البيانات لو محتاج، ثم اضغط "قبول وحفظ" أو "رفض"</div>
-      </div>
-      <div style="margin-right:auto;display:flex;gap:8px">
-        <button onclick="acceptFormReg()" style="background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.5);color:#4ade80;border-radius:8px;padding:6px 14px;cursor:pointer;font-family:Cairo,sans-serif;font-size:12px;font-weight:700">✅ قبول وحفظ</button>
-        <button onclick="rejectFormRegFromModal()" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;padding:6px 14px;cursor:pointer;font-family:Cairo,sans-serif;font-size:12px;font-weight:700">❌ رفض</button>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('modalBg').classList.add('active');
-}
-
-function acceptFormReg() {
-  // نحفظ الحساب + نعمل approve على Firestore
-  window._pendingFormRegId = window._currentFormRegFirestoreId;
-  saveAccount();
-}
-
-function rejectFormRegFromModal() {
-  if (!confirm('رفض هذا الطلب؟')) return;
-  if (window.rejectFormReg && window._currentFormRegFirestoreId) {
-    window.rejectFormReg(window._currentFormRegFirestoreId);
-  }
-  closeModal();
-  showToast('❌ تم رفض الطلب');
 }
 
 function openPendingModal(idx) {
