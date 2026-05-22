@@ -267,7 +267,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBxpwm4K9KTVFHV22PD_yxKhvSn5ThJ4sA",
@@ -382,6 +382,32 @@
       } else { _trashItems = []; }
       if (typeof renderTrashBtn === 'function') renderTrashBtn();
     });
+
+    // ===== Firebase لطلبات التسجيل من الفورم =====
+    const REG_COL = collection(db, "registration_requests");
+    const regQuery = query(REG_COL, where("status", "==", "pending"));
+
+    onSnapshot(regQuery, (snapshot) => {
+      const formRegs = [];
+      snapshot.forEach((docSnap) => {
+        formRegs.push({ _firestoreId: docSnap.id, ...docSnap.data() });
+      });
+      window._formRegistrations = formRegs;
+      if (typeof renderPendingSection === 'function') renderPendingSection();
+    });
+
+    window.approveFormReg = async function(firestoreId) {
+      try {
+        await updateDoc(doc(db, "registration_requests", firestoreId), { status: "approved" });
+      } catch(e) { console.error("approve error:", e); }
+    };
+
+    window.rejectFormReg = async function(firestoreId) {
+      try {
+        await updateDoc(doc(db, "registration_requests", firestoreId), { status: "rejected" });
+      } catch(e) { console.error("reject error:", e); }
+    };
+
   </script>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
