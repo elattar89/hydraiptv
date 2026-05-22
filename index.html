@@ -192,13 +192,7 @@
     justify-content: flex-end;
     gap: 10px;
     flex-wrap: wrap;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 50;
   }
-  main { padding-bottom: 70px; }
   .btn-excel-export {
     background: linear-gradient(135deg, #1d7a40, #22c55e);
     color: white;
@@ -425,7 +419,7 @@
 <div class="toolbar">
   <div class="search-box">
     <span class="search-icon">🔍</span>
-    <input type="text" id="searchInput" placeholder="بحث باسم الحساب أو اليوزرنيم..." oninput="renderAll()" autocomplete="off">
+    <input type="text" id="searchInput" placeholder="بحث باسم الحساب أو اليوزرنيم..." oninput="renderAll()" autocomplete="off" value="">
   </div>
   <select id="filterStatus" onchange="renderAll()">
     <option value="all">كل الحسابات</option>
@@ -1862,6 +1856,7 @@ document.getElementById('modalBg').addEventListener('click', e => { if (e.target
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 load();
+document.getElementById('searchInput').value = '';
 renderAll();
 
 // ====== تحديث يدوي ======
