@@ -539,10 +539,12 @@
       </div>
       <div class="form-group">
         <label>مدة الاشتراك</label>
-        <select id="fDuration" onchange="autoFillExpDate()">
-          <option value="15">15 شهر</option>
-          <option value="12">سنة (12 شهر)</option>
-          <option value="6">6 أشهر</option>
+        <select id="fDuration" onchange="autoFillExpDate();autoFillAmountByDuration()">
+          <option value="6">6 شهور — 6 دينار</option>
+          <option value="12">12 شهر — 10 دينار</option>
+          <option value="15" selected>15 شهر — 12 دينار</option>
+          <option value="24">24 شهر — 18 دينار</option>
+          <option value="30">30 شهر — 24 دينار</option>
         </select>
       </div>
       <div class="form-group" id="fExpGroup" style="display:none">
@@ -574,10 +576,11 @@
         <label>قيمة الاشتراك</label>
         <select id="fAmount">
           <option value="">— اختر القيمة —</option>
-          <option value="5">5 KD</option>
+          <option value="6">6 KD</option>
           <option value="10">10 KD</option>
-          <option value="15">15 KD</option>
-          <option value="20">20 KD</option>
+          <option value="12">12 KD</option>
+          <option value="18">18 KD</option>
+          <option value="24">24 KD</option>
         </select>
       </div>
       <div class="form-group">
@@ -1474,6 +1477,25 @@ function setPaid(id, value) {
   acc.paid = value;
   save(); renderAll();
   showToast(value === 'paid' ? '✅ تم التحويل لمدفوع' : '❌ تم التحويل لغير مدفوع');
+}
+
+// أسعار المدد في الداشبورد
+var DASH_DURATION_PRICES = { '6':6, '12':10, '15':12, '24':18, '30':24 };
+
+function autoFillAmountByDuration() {
+  const durEl    = document.getElementById('fDuration');
+  const amountEl = document.getElementById('fAmount');
+  if (!durEl || !amountEl) return;
+  const price = DASH_DURATION_PRICES[durEl.value];
+  if (price) amountEl.value = String(price);
+}
+
+function updateRenewPrice() {
+  const durEl  = document.getElementById('renewDuration');
+  const priceEl = document.getElementById('renewPriceTag');
+  if (!durEl || !priceEl) return;
+  const price = DASH_DURATION_PRICES[durEl.value] || '—';
+  priceEl.textContent = '💰 المبلغ: ' + price + ' دينار';
 }
 
 function autoFillExpDate() {
@@ -2926,12 +2948,14 @@ function openRenewApprovalModal(reg) {
 
       <div style="margin-bottom:1.2rem;">
         <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">مدة الاشتراك</label>
-        <select id="renewDuration" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:Cairo,sans-serif;font-size:14px;background:var(--bg);color:var(--text);outline:none;">
-          <option value="6">6 شهور</option>
-          <option value="12">سنة (12 شهر)</option>
-          <option value="15" selected>15 شهر</option>
-          <option value="24">سنتين (24 شهر)</option>
+        <select id="renewDuration" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:Cairo,sans-serif;font-size:14px;background:var(--bg);color:var(--text);outline:none;" onchange="updateRenewPrice()">
+          <option value="6">6 شهور — 6 دينار</option>
+          <option value="12">12 شهر — 10 دينار</option>
+          <option value="15" selected>15 شهر — 12 دينار</option>
+          <option value="24">24 شهر — 18 دينار</option>
+          <option value="30">30 شهر — 24 دينار</option>
         </select>
+        <div id="renewPriceTag" style="margin-top:6px;font-size:12px;color:#fb923c;font-weight:600;">💰 المبلغ: 12 دينار</div>
       </div>
 
       <div id="renewExpPreview" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-radius:10px;padding:8px 14px;font-size:13px;color:#3b82f6;margin-bottom:1.2rem;display:none;">
