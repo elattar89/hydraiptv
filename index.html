@@ -3078,11 +3078,12 @@ function openFormRegMerchantMsg(firestoreId) {
   if (!reg) return;
   // افتح مودال الإرسال للتاجر مع بيانات الطلب
   document.getElementById('mrqName').value     = reg.name     || '';
-  document.getElementById('mrqUsername').value = reg.username || '';
+  document.getElementById('merchantReqUsername').value = reg.username || '';
   document.getElementById('mrqPhone').value    = reg.phone    || '';
   document.getElementById('mrqNotes').value    = reg.nationality ? 'الجنسية: ' + reg.nationality : '';
   buildMerchantReqMsg();
-  document.getElementById('requestMerchantModal').classList.add('active');
+  const mrqModal = document.getElementById('requestMerchantModal');
+  mrqModal.style.display = 'flex';
 }
 
 function approveFormRegAction(firestoreId) {
