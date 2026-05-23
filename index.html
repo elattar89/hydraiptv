@@ -604,12 +604,35 @@
       <input type="hidden" id="fAmount" />
       <span id="fAmountDisplay" style="display:none;"></span>
       <div class="form-group">
+        <label>الجنس</label>
+        <select id="fSex" style="width:100%">
+          <option value="">— اختر —</option>
+          <option value="ذكر">ذكر</option>
+          <option value="أنثى">أنثى</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>الجنسية</label>
         <input type="text" id="fNationality" placeholder="اختياري" />
       </div>
       <div class="form-group">
         <label>دولة الاستخدام</label>
-        <input type="text" id="fCountry" placeholder="اختياري" />
+        <select id="fCountry" onchange="toggleDashCountryOther()" style="width:100%">
+          <option value="">— اختر —</option>
+          <option>الكويت</option><option>السعودية</option><option>الإمارات</option>
+          <option>قطر</option><option>سلطنة عمان</option><option>البحرين</option>
+          <option>العراق</option><option>اليمن</option><option>سوريا</option>
+          <option>فلسطين</option><option>لبنان</option><option>الاردن</option>
+          <option>مصر</option><option>المغرب</option><option>تونس</option>
+          <option>ليبيا</option><option>السودان</option><option>تركيا</option>
+          <option>الهند</option><option>باكستان</option><option>فلبين</option>
+          <option>بريطانيا</option><option>فرنسا</option><option>ألمانيا</option>
+          <option>إيطاليا</option><option>إسبانيا</option><option>هولندا</option>
+          <option>السويد</option><option>النرويج</option><option>الدنمارك</option>
+          <option>كندا</option><option>أمريكا</option><option>أستراليا</option>
+          <option value="أخرى">أخرى</option>
+        </select>
+        <input type="text" id="fCountryOther" placeholder="اكتب اسم الدولة" style="display:none;margin-top:6px;width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-family:Cairo,sans-serif;font-size:14px;outline:none;" />
       </div>
       <div class="form-group">
         <label>ملاحظات</label>
@@ -1517,6 +1540,29 @@ function setPaid(id, value) {
 // أسعار المدد في الداشبورد
 var DASH_DURATION_PRICES = { '6':6, '12':10, '15':12, '24':18, '30':24 };
 
+function toggleDashCountryOther() {
+  var sel = document.getElementById('fCountry');
+  var other = document.getElementById('fCountryOther');
+  if (!sel || !other) return;
+  if (sel.value === 'أخرى') {
+    other.style.display = 'block';
+    other.focus();
+  } else {
+    other.style.display = 'none';
+    other.value = '';
+  }
+}
+
+function getDashCountryValue() {
+  var sel = document.getElementById('fCountry');
+  if (!sel) return '';
+  if (sel.value === 'أخرى') {
+    var other = document.getElementById('fCountryOther');
+    return other ? other.value.trim() : '';
+  }
+  return sel.value;
+}
+
 function autoFillAmountByDuration() {
   const durEl     = document.getElementById('fDuration');
   const amountEl  = document.getElementById('fAmount');
@@ -1601,7 +1647,7 @@ function autoFillPhoneByName() {
 function openAddModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'إضافة حساب جديد';
-  ['fName','fPhone','fUser','fPass','fDate','fExp','fNotes','fAmount','fNationality','fCountry'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; }); document.getElementById('fHost').value = ''; const dispEl = document.getElementById('fAmountDisplay'); if(dispEl) dispEl.textContent = '';
+  ['fName','fPhone','fUser','fPass','fDate','fExp','fNotes','fAmount','fNationality','fCountry','fCountryOther','fSex'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; }); document.getElementById('fHost').value = ''; const dispEl = document.getElementById('fAmountDisplay'); if(dispEl) dispEl.textContent = '';
   const durEl = document.getElementById('fDuration'); if (durEl) durEl.value = '15';
   document.getElementById('fClientPaid').value = 'paid';
   document.getElementById('fMerchantPaid').value = 'paid';
@@ -1662,7 +1708,21 @@ function editAccount(id) {
   document.getElementById('fNotes').value = a.notes || '';
   const aEl = document.getElementById('fAmount'); if(aEl) aEl.value = a.amount || '';
   const aDEl = document.getElementById('fAmountDisplay'); if(aDEl) aDEl.textContent = a.amount ? a.amount+' KD' : '';
-  const cntEditEl = document.getElementById('fCountry'); if(cntEditEl) cntEditEl.value = a.country || '';
+  const sexEl = document.getElementById('fSex'); if(sexEl) sexEl.value = a.sex || '';
+  const cntEditEl = document.getElementById('fCountry');
+  const cntOtherEl = document.getElementById('fCountryOther');
+  if (cntEditEl) {
+    const knownCountries = ['الكويت','السعودية','الإمارات','قطر','سلطنة عمان','البحرين','العراق','اليمن','سوريا','فلسطين','لبنان','الاردن','مصر','المغرب','تونس','ليبيا','السودان','تركيا','الهند','باكستان','فلبين','بريطانيا','فرنسا','ألمانيا','إيطاليا','إسبانيا','هولندا','السويد','النرويج','الدنمارك','كندا','أمريكا','أستراليا'];
+    if (a.country && knownCountries.includes(a.country)) {
+      cntEditEl.value = a.country;
+      if (cntOtherEl) { cntOtherEl.style.display = 'none'; cntOtherEl.value = ''; }
+    } else if (a.country) {
+      cntEditEl.value = 'أخرى';
+      if (cntOtherEl) { cntOtherEl.style.display = 'block'; cntOtherEl.value = a.country; }
+    } else {
+      cntEditEl.value = '';
+    }
+  }
   const durEl2 = document.getElementById('fDuration'); if (durEl2) durEl2.value = a.duration || '15';
   document.getElementById('modalBg').classList.add('active');
 }
@@ -1706,8 +1766,9 @@ function saveAccount() {
     amount:       document.getElementById('fAmount').value,
     duration:     (document.getElementById('fDuration') || {value:'15'}).value,
     notes:        document.getElementById('fNotes').value.trim(),
+    sex:          (document.getElementById('fSex') || {value:''}).value,
     nationality:  (document.getElementById('fNationality') || {value:''}).value.trim(),
-    country:      (document.getElementById('fCountry') || {value:''}).value.trim(),
+    country:      getDashCountryValue(),
   };
 
   const isPending        = !!_modalIsPending;
@@ -3045,6 +3106,7 @@ function openFormRegModal(firestoreId) {
   document.getElementById('fHost').value    = '';
   document.getElementById('fDate').value    = '';
   document.getElementById('fExp').value     = '';
+  const sexFormEl = document.getElementById('fSex'); if(sexFormEl) sexFormEl.value = reg.sex || '';
   const natEl = document.getElementById('fNationality'); if(natEl) natEl.value = reg.nationality || '';
   const cntEl = document.getElementById('fCountry'); if(cntEl) cntEl.value = reg.country || '';
   document.getElementById('fNotes').value   = '';
