@@ -415,8 +415,8 @@
         // جيب بيانات الطلب قبل الرفض
         const reg = (window._formRegistrations || []).find(r => r._firestoreId === firestoreId);
 
-        // حدث الـ status في Firebase
-        await updateDoc(doc(db, "registration_requests", firestoreId), { status: "rejected" });
+        // امسح الـ document من Firebase نهائياً
+        await deleteDoc(doc(db, "registration_requests", firestoreId));
 
         // أضفه للمحذوف مع حالة "قيد الطلب"
         if (reg) {
