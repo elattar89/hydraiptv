@@ -574,14 +574,14 @@
       </div>
       <div class="form-group">
         <label>قيمة الاشتراك</label>
-        <select id="fAmount">
-          <option value="">— اختر القيمة —</option>
-          <option value="6">6 KD</option>
-          <option value="10">10 KD</option>
-          <option value="12">12 KD</option>
-          <option value="18">18 KD</option>
-          <option value="24">24 KD</option>
-        </select>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="text" id="fAmount" readonly style="flex:1;background:var(--bg);opacity:0.8;cursor:not-allowed;" placeholder="تتحدد تلقائياً من المدة" />
+          <span style="font-size:13px;color:#fbbf24;font-weight:700;" id="fAmountDisplay"></span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>الجنسية</label>
+        <input type="text" id="fNationality" placeholder="اختياري" />
       </div>
       <div class="form-group">
         <label>ملاحظات</label>
@@ -1296,6 +1296,7 @@ function buildTable(rows) {
           </button>
           ${a.amount ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
           <span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(79,142,247,0.12);color:var(--accent);border:1px solid rgba(79,142,247,0.25)">${dur}</span>
+          ${a.nationality ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.3)">🌍 ${a.nationality}</span>` : ''}
           ${a.notes ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(148,163,184,0.1);color:var(--text2);border:1px solid var(--border)">${a.notes}</span>` : ''}
           <div style="margin-right:auto;display:flex;gap:4px">
             ${window.isGuest ? '' : `
@@ -1483,11 +1484,15 @@ function setPaid(id, value) {
 var DASH_DURATION_PRICES = { '6':6, '12':10, '15':12, '24':18, '30':24 };
 
 function autoFillAmountByDuration() {
-  const durEl    = document.getElementById('fDuration');
-  const amountEl = document.getElementById('fAmount');
+  const durEl     = document.getElementById('fDuration');
+  const amountEl  = document.getElementById('fAmount');
+  const displayEl = document.getElementById('fAmountDisplay');
   if (!durEl || !amountEl) return;
   const price = DASH_DURATION_PRICES[durEl.value];
-  if (price) amountEl.value = String(price);
+  if (price) {
+    amountEl.value = String(price);
+    if (displayEl) displayEl.textContent = price + ' KD';
+  }
 }
 
 function updateRenewPrice() {
@@ -1562,7 +1567,7 @@ function autoFillPhoneByName() {
 function openAddModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'إضافة حساب جديد';
-  ['fName','fPhone','fUser','fPass','fDate','fExp','fNotes','fAmount'].forEach(id => document.getElementById(id).value = ''); document.getElementById('fHost').value = '';
+  ['fName','fPhone','fUser','fPass','fDate','fExp','fNotes','fAmount','fNationality'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; }); document.getElementById('fHost').value = ''; const dispEl = document.getElementById('fAmountDisplay'); if(dispEl) dispEl.textContent = '';
   const durEl = document.getElementById('fDuration'); if (durEl) durEl.value = '15';
   document.getElementById('fClientPaid').value = 'paid';
   document.getElementById('fMerchantPaid').value = 'paid';
@@ -1621,7 +1626,8 @@ function editAccount(id) {
   document.getElementById('fClientPaid').value = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
   document.getElementById('fMerchantPaid').value = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
   document.getElementById('fNotes').value = a.notes || '';
-  document.getElementById('fAmount').value = a.amount || '';
+  const aEl = document.getElementById('fAmount'); if(aEl) aEl.value = a.amount || '';
+  const aDEl = document.getElementById('fAmountDisplay'); if(aDEl) aDEl.textContent = a.amount ? a.amount+' KD' : '';
   const durEl2 = document.getElementById('fDuration'); if (durEl2) durEl2.value = a.duration || '15';
   document.getElementById('modalBg').classList.add('active');
 }
@@ -1665,6 +1671,7 @@ function saveAccount() {
     amount:       document.getElementById('fAmount').value,
     duration:     (document.getElementById('fDuration') || {value:'15'}).value,
     notes:        document.getElementById('fNotes').value.trim(),
+    nationality:  (document.getElementById('fNationality') || {value:''}).value.trim(),
   };
 
   const isPending        = !!_modalIsPending;
@@ -1788,8 +1795,9 @@ function confirmDupSave() {
   editingId = null;
   const a = { ..._pendingDupAccount };
   if (_pendingDupExisting) {
-    if (!a.name)  a.name  = _pendingDupExisting.name;
-    if (!a.phone) a.phone = _pendingDupExisting.phone;
+    // دايماً استخدم اسم وتليفون الشخص الموجود في الداشبورد
+    a.name  = _pendingDupExisting.name;
+    a.phone = _pendingDupExisting.phone;
   }
   closeDupModal();
   _doAdd(a);
@@ -2915,7 +2923,8 @@ function openFormRegModal(firestoreId) {
   document.getElementById('fHost').value    = '';
   document.getElementById('fDate').value    = '';
   document.getElementById('fExp').value     = '';
-  document.getElementById('fNotes').value   = reg.nationality ? 'الجنسية: ' + reg.nationality : '';
+  const natEl = document.getElementById('fNationality'); if(natEl) natEl.value = reg.nationality || '';
+  document.getElementById('fNotes').value   = '';
   document.getElementById('fAmount').value  = '';
   const durEl = document.getElementById('fDuration');
   if (durEl) durEl.value = '15';
@@ -3057,6 +3066,7 @@ function openPendingModal(idx) {
   document.getElementById('fDate').value     = req.startDate|| '';
   document.getElementById('fExp').value      = req.expDate  || '';
   document.getElementById('fNotes').value    = req.notes    || '';
+  const natEl2 = document.getElementById('fNationality'); if(natEl2) natEl2.value = req.nationality || '';
   document.getElementById('fAmount').value   = req.amount   || '';
   const durEl = document.getElementById('fDuration');
   if (durEl) durEl.value = req.duration || '15';
