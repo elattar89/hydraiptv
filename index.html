@@ -267,7 +267,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, onSnapshot, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot, collection, query, where, updateDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBxpwm4K9KTVFHV22PD_yxKhvSn5ThJ4sA",
@@ -1825,7 +1825,7 @@ function renderTrashBtn() {
   }
 }
 
-function deleteAccount(id) {
+async function deleteAccount(id) {
   if (!confirm('هل أنت متأكد من الحذف؟')) return;
   const acc = accounts.find(x => x.id === id);
   if (acc) {
@@ -1840,6 +1840,15 @@ function deleteAccount(id) {
   accounts = accounts.filter(x => x.id !== id);
   save(); renderAll();
   showToast('🗑️ تم الحذف — يمكنك الاسترجاع من السلة');
+
+  // مسح من registration_requests في Firebase
+  if (acc && acc.username) {
+    try {
+      const q = query(collection(db, "registration_requests"), where("username", "==", acc.username));
+      const snap = await getDocs(q);
+      snap.forEach(async (docSnap) => { await deleteDoc(docSnap.ref); });
+    } catch(e) { console.warn("تعذر مسح من registration_requests:", e); }
+  }
 }
 
 function showTrashModal() {
