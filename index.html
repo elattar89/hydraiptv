@@ -398,7 +398,7 @@
 
     window.approveFormReg = async function(firestoreId) {
       try {
-        await updateDoc(doc(db, "registration_requests", firestoreId), { status: "approved" });
+        await deleteDoc(doc(db, "registration_requests", firestoreId));
       } catch(e) { console.error("approve error:", e); }
     };
 
