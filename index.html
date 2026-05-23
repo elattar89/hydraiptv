@@ -601,13 +601,8 @@
           </div>
         </div>
       </div>
-      <div class="form-group">
-        <label>قيمة الاشتراك</label>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input type="text" id="fAmount" readonly style="flex:1;background:var(--bg);opacity:0.8;cursor:not-allowed;" placeholder="تتحدد تلقائياً من المدة" />
-          <span style="font-size:13px;color:#fbbf24;font-weight:700;" id="fAmountDisplay"></span>
-        </div>
-      </div>
+      <input type="hidden" id="fAmount" />
+      <span id="fAmountDisplay" style="display:none;"></span>
       <div class="form-group">
         <label>الجنسية</label>
         <input type="text" id="fNationality" placeholder="اختياري" />
