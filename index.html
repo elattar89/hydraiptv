@@ -2887,14 +2887,20 @@ function sendFormRegToMerchant(firestoreId) {
   const reg = (window._formRegistrations || []).find(r => r._firestoreId === firestoreId);
   if (!reg) return;
 
-  const typeLabel = reg.clientType === 'renew' ? 'تجديد اشتراك' : 'اشتراك جديد';
-  const msg = `طلب ${typeLabel}
-👤 الاسم: ${reg.name || '—'}
-🔑 اليوزرنيم: ${reg.username || '—'}
-📱 الهاتف: ${reg.phone || '—'}
-🌍 الجنسية: ${reg.nationality || '—'}
-⏱ المدة: ${reg.duration ? reg.duration + ' شهر' : '—'}
-💰 السعر: ${reg.price ? reg.price + ' دينار' : '—'}`;
+  let msg = '';
+  if (reg.clientType === 'renew') {
+    msg = `السلام عليكم ,
+الرجاء سرعة تجديد اشتراك المستخدم التالي:
+🔑 اليوزرنيم: ${reg.username || '—'} ⏱ المدة: ${reg.duration ? reg.duration + ' شهر' : '—'}
+
+شكرا...`;
+  } else {
+    msg = `السلام عليكم ,
+يرجي عمل اشتراك جديد للمستخدم التالي:
+🔑 اليوزرنيم: ${reg.username || '—'} ⏱ المدة: ${reg.duration ? reg.duration + ' شهر' : '—'}
+
+شكرا...`;
+  }
 
   const waUrl = 'https://wa.me/' + MERCHANT_WHATSAPP + '?text=' + encodeURIComponent(msg);
   window.open(waUrl, '_blank');
