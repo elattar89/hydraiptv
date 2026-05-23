@@ -192,9 +192,6 @@
     justify-content: flex-end;
     gap: 10px;
     flex-wrap: wrap;
-    position: sticky;
-    bottom: 0;
-    z-index: 50;
   }
   .btn-excel-export {
     background: linear-gradient(135deg, #1d7a40, #22c55e);
@@ -2875,18 +2872,20 @@ function renderPendingSection() {
   const formCards = formList.map((req) => {
     const date = req.createdAt ? new Date(req.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : '—';
     return `
-      <div onclick="openFormRegModal('${req._firestoreId}')"
-        style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.35);border-top:3px solid #fb923c;border-radius:14px;padding:12px 16px;min-width:160px;position:relative;cursor:pointer;transition:all 0.2s"
+      <div
+        style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.35);border-top:3px solid #fb923c;border-radius:14px;padding:12px 16px;min-width:160px;position:relative;transition:all 0.2s"
         onmouseover="this.style.background='rgba(251,146,60,0.15)'"
         onmouseout="this.style.background='rgba(251,146,60,0.08)'"
         id="form-card-${req._firestoreId}">
-        <div style="font-size:10px;color:#fb923c;margin-bottom:6px;font-weight:600;">⏳ قيد الطلب</div>
-        <div style="display:flex;align-items:center;margin-bottom:4px;">
-          <span style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace;direction:ltr;">${req.username || '—'}</span>
-          ${badgeByType(req.clientType)}
+        <div onclick="openFormRegModal('${req._firestoreId}')" style="cursor:pointer;">
+          <div style="font-size:10px;color:#fb923c;margin-bottom:6px;font-weight:600;">⏳ قيد الطلب</div>
+          <div style="display:flex;align-items:center;margin-bottom:4px;">
+            <span style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace;direction:ltr;">${req.username || '—'}</span>
+            ${badgeByType(req.clientType)}
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">👤 ${req.name || '—'}</div>
+          <div style="font-size:11px;color:var(--text2);">📅 ${date}</div>
         </div>
-        <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">👤 ${req.name || '—'}</div>
-        <div style="font-size:11px;color:var(--text2);">📅 ${date}</div>
         <div style="display:flex;gap:6px;margin-top:8px;">
           <button onclick="event.stopPropagation();event.preventDefault();approveFormRegAction('${req._firestoreId}');return false;"
             style="flex:1;background:#fb923c;color:white;border:none;border-radius:8px;padding:4px 0;font-size:11px;font-family:Cairo,sans-serif;cursor:pointer;font-weight:700;position:relative;z-index:10;">✓ قبول</button>
