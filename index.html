@@ -404,7 +404,31 @@
 
     window.rejectFormReg = async function(firestoreId) {
       try {
+        // جيب بيانات الطلب قبل الرفض
+        const reg = (window._formRegistrations || []).find(r => r._firestoreId === firestoreId);
+
+        // حدث الـ status في Firebase
         await updateDoc(doc(db, "registration_requests", firestoreId), { status: "rejected" });
+
+        // أضفه للمحذوف مع حالة "قيد الطلب"
+        if (reg) {
+          const now = new Date();
+          const dd = String(now.getDate()).padStart(2,'0');
+          const mm = String(now.getMonth()+1).padStart(2,'0');
+          const yyyy = now.getFullYear();
+          _trashItems.unshift({
+            id: Date.now(),
+            name: reg.name || '—',
+            username: reg.username || '—',
+            phone: reg.phone || '',
+            notes: 'قيد الطلب — مرفوض',
+            _deletedAt: `${dd}/${mm}/${yyyy}`,
+            _fromForm: true,
+            _firestoreId: firestoreId
+          });
+          if (window.saveTrashFirebase) window.saveTrashFirebase(_trashItems);
+          renderTrashBtn();
+        }
       } catch(e) { console.error("reject error:", e); }
     };
 
