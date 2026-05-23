@@ -1320,6 +1320,7 @@ function buildTable(rows) {
           </button>
           ${a.amount ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
           <span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(79,142,247,0.12);color:var(--accent);border:1px solid rgba(79,142,247,0.25)">${dur}</span>
+          ${a.sex ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.3)">${a.sex === 'ذكر' ? '👨' : '👩'} ${a.sex}</span>` : ''}
           ${a.nationality ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.3)">🌍 ${a.nationality}</span>` : ''}
           ${a.notes ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(148,163,184,0.1);color:var(--text2);border:1px solid var(--border)">${a.notes}</span>` : ''}
           <div style="margin-right:auto;display:flex;gap:4px">
