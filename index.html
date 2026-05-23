@@ -402,6 +402,14 @@
       } catch(e) { console.error("approve error:", e); }
     };
 
+    window.deleteFromRegRequests = async function(username) {
+      try {
+        const q = query(collection(db, "registration_requests"), where("username", "==", username));
+        const snap = await getDocs(q);
+        snap.forEach(async (docSnap) => { await deleteDoc(docSnap.ref); });
+      } catch(e) { console.warn("تعذر مسح من registration_requests:", e); }
+    };
+
     window.rejectFormReg = async function(firestoreId) {
       try {
         // جيب بيانات الطلب قبل الرفض
@@ -1866,12 +1874,8 @@ async function deleteAccount(id) {
   showToast('🗑️ تم الحذف — يمكنك الاسترجاع من السلة');
 
   // مسح من registration_requests في Firebase
-  if (acc && acc.username) {
-    try {
-      const q = query(collection(db, "registration_requests"), where("username", "==", acc.username));
-      const snap = await getDocs(q);
-      snap.forEach(async (docSnap) => { await deleteDoc(docSnap.ref); });
-    } catch(e) { console.warn("تعذر مسح من registration_requests:", e); }
+  if (acc && acc.username && window.deleteFromRegRequests) {
+    window.deleteFromRegRequests(acc.username);
   }
 }
 
