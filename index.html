@@ -604,11 +604,11 @@
       <div class="form-group">
         <label>مدة الاشتراك</label>
         <select id="fDuration" onchange="autoFillExpDate();autoFillAmountByDuration()">
-          <option value="6">6 شهور — 6 دينار</option>
-          <option value="12">12 شهر — 10 دينار</option>
-          <option value="15" selected>15 شهر — 12 دينار</option>
-          <option value="24">24 شهر — 18 دينار</option>
-          <option value="30">30 شهر — 24 دينار</option>
+          <option value="6">6 شهور</option>
+          <option value="12">12 شهر</option>
+          <option value="15" selected>15 شهر</option>
+          <option value="24">24 شهر</option>
+          <option value="30">30 شهر</option>
         </select>
       </div>
       <div class="form-group" id="fExpGroup" style="display:none">
@@ -1586,7 +1586,7 @@ function setPaid(id, value) {
 }
 
 // أسعار المدد في الداشبورد
-var DASH_DURATION_PRICES = { '6':6, '12':10, '15':12, '24':18, '30':24 };
+var DASH_DURATION_PRICES = { '6':6, '12':10, '15':12, '24':18, '30':22 };
 
 function toggleDashCountryOther() {
   var sel = document.getElementById('fCountry');
@@ -1616,10 +1616,26 @@ function autoFillAmountByDuration() {
   const amountEl  = document.getElementById('fAmount');
   const displayEl = document.getElementById('fAmountDisplay');
   if (!durEl || !amountEl) return;
-  const price = DASH_DURATION_PRICES[durEl.value];
+
+  // أسعار حسب الدولة
+  const _country = (document.getElementById('fCountry') || {value:''}).value || '';
+  let price, currency;
+  if (_country === 'مصر') {
+    const egyptPrices = {'6':300,'12':500,'15':600,'24':900,'30':1200};
+    price = egyptPrices[durEl.value];
+    currency = 'جنيه';
+  } else if (!_country || _country === 'الكويت') {
+    price = DASH_DURATION_PRICES[durEl.value];
+    currency = 'دينار';
+  } else {
+    const worldPrices = {'6':20,'12':35,'15':40,'24':60,'30':75};
+    price = worldPrices[durEl.value];
+    currency = '$ USD';
+  }
+
   if (price) {
     amountEl.value = String(price);
-    if (displayEl) displayEl.textContent = price + ' KD';
+    if (displayEl) displayEl.textContent = price + ' ' + currency;
   }
 }
 
@@ -3208,7 +3224,7 @@ function openFormRegDetails(firestoreId) {
           <div>📍 ${reg.country || '—'}</div>
           <div>📅 ${date}</div>
           <div>⏱ ${reg.duration ? reg.duration + ' شهر' : '—'}</div>
-          <div>💰 ${reg.price ? reg.price + ' دينار' : '—'}</div>
+          <div>💰 ${reg.price ? (reg.price + ' ' + (reg.country === 'مصر' ? 'جنيه' : (!reg.country || reg.country === 'الكويت') ? 'دينار' : '$ USD')) : '—'}</div>
         </div>
       </div>
 
@@ -3389,9 +3405,17 @@ function openFormRegModal(firestoreId) {
   const natEl = document.getElementById('fNationality'); if(natEl) natEl.value = reg.nationality || '';
   const cntEl = document.getElementById('fCountry'); if(cntEl) cntEl.value = reg.country || '';
   document.getElementById('fNotes').value   = '';
-  document.getElementById('fAmount').value  = '';
+  // ملء المدة والسعر من بيانات الطلب
   const durEl = document.getElementById('fDuration');
-  if (durEl) durEl.value = '15';
+  if (durEl) durEl.value = reg.duration || '15';
+  const fAmtEl = document.getElementById('fAmount');
+  if (fAmtEl) fAmtEl.value = reg.price || '';
+  // تحديد العملة حسب الدولة
+  const _regCountry = reg.country || '';
+  const _regCurrency = _regCountry === 'مصر' ? 'جنيه' : (!_regCountry || _regCountry === 'الكويت') ? 'دينار' : '$ USD';
+  const _regPrice = reg.price ? (reg.price + ' ' + _regCurrency) : '';
+  // حدث تاريخ الانتهاء تلقائياً
+  if (typeof autoFillExpDate === 'function') autoFillExpDate();
   document.getElementById('addAsNewUserBtn').style.display = '';
   _modalPendingIdx = -1;
   _modalIsPending  = false;
