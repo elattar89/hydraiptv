@@ -507,7 +507,11 @@
     </div>
   </div>
   <button id="refreshBtn" onclick="manualRefresh()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:6px" title="تحديث الصفحة">🔄 تحديث</button>
-  <button id="trashBtn" onclick="showTrashModal()" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;position:relative;display:flex;align-items:center;gap:6px" title="سلة المهملات">
+  <button onclick="showSentMessages()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:8px 14px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">
+  📬 الرسائل
+  <span id="sentMsgCount" style="background:#3b82f6;color:white;border-radius:20px;padding:1px 7px;font-size:11px;display:none">0</span>
+</button>
+<button id="trashBtn" onclick="showTrashModal()" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;position:relative;display:flex;align-items:center;gap:6px" title="سلة المهملات">
     🗑️ محذوف <span id="trashCount" style="display:none;background:#ef4444;color:white;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1"></span>
   </button>
 </div>
@@ -2134,6 +2138,7 @@ New Password : ${a.password}
   const rawPhone = (a.phone || '').replace(/[^0-9+]/g, '');
   window._currentMsgPhone = '';
   window._currentMsgText = text;
+  window._currentMsgMeta = { type, name: a.name, username: a.username };
   if (rawPhone) {
     const phone = rawPhone.startsWith('+') ? rawPhone.replace('+','') : rawPhone.startsWith('00') ? rawPhone.slice(2) : rawPhone;
     window._currentMsgPhone = phone;
@@ -2147,7 +2152,157 @@ New Password : ${a.password}
 function openWa() {
   if (!window._currentMsgPhone) return;
   window.open('https://wa.me/' + window._currentMsgPhone + '?text=' + encodeURIComponent(window._currentMsgText), '_blank');
+  // سجل الرسالة
+  if (window._currentMsgMeta) {
+    logSentMessage(window._currentMsgMeta.type, window._currentMsgMeta.name, window._currentMsgMeta.username, window._currentMsgText);
+  }
 }
+
+// ===== سجل الرسائل =====
+var _sentMessages = JSON.parse(localStorage.getItem('hydra_sent_msgs') || '{"merchant":[],"user":[]}');
+window._currentMsgTab = 'merchant';
+
+function logSentMessage(type, name, username, text) {
+  const isMerchant = ['remindMerchant','changePassMerchant','newSubMerchant'].includes(type);
+  const tab = isMerchant ? 'merchant' : 'user';
+  const labels = {
+    confirm:            '📨 إرسال كود الاشتراك',
+    remind:             '🔔 تذكير بالتجديد',
+    remindMerchant:     '💰 طلب تجديد اشتراك',
+    changePass:         '🔑 إرسال كلمة السر',
+    changePassMerchant: '🔐 طلب تغيير كلمة السر',
+    newSubMerchant:     '🆕 طلب اشتراك جديد'
+  };
+  const entry = {
+    id: Date.now(),
+    type,
+    label: labels[type] || type,
+    name,
+    username,
+    text,
+    time: new Date().toLocaleString('ar-EG')
+  };
+  if (!_sentMessages[tab]) _sentMessages[tab] = [];
+  _sentMessages[tab].unshift(entry);
+  // احتفظ بآخر 100 رسالة لكل تاب
+  _sentMessages[tab] = _sentMessages[tab].slice(0, 100);
+  localStorage.setItem('hydra_sent_msgs', JSON.stringify(_sentMessages));
+  updateSentMsgCount();
+}
+
+function updateSentMsgCount() {
+  const total = (_sentMessages.merchant||[]).length + (_sentMessages.user||[]).length;
+  const badge = document.getElementById('sentMsgCount');
+  if (badge) {
+    badge.textContent = total;
+    badge.style.display = total > 0 ? 'inline-block' : 'none';
+  }
+}
+
+function showSentMessages() {
+  window._currentMsgTab = 'user';
+  switchMsgTab('user');
+  document.getElementById('sentMessagesModal').style.display = 'flex';
+}
+
+function closeSentMessages() {
+  document.getElementById('sentMessagesModal').style.display = 'none';
+}
+
+function switchMsgTab(tab) {
+  window._currentMsgTab = tab;
+  // تحديث ألوان التابات
+  document.getElementById('tabMerchant').style.background = tab === 'merchant' ? 'var(--accent)' : 'var(--bg3)';
+  document.getElementById('tabMerchant').style.color = tab === 'merchant' ? 'white' : 'var(--text2)';
+  document.getElementById('tabUser').style.background = tab === 'user' ? 'var(--accent)' : 'var(--bg3)';
+  document.getElementById('tabUser').style.color = tab === 'user' ? 'white' : 'var(--text2)';
+  // تحديث العدد في التابات
+  const cM = document.getElementById('countMerchant');
+  const cU = document.getElementById('countUser');
+  if (cM) {
+    cM.textContent = (_sentMessages.merchant||[]).length;
+    cM.style.background = tab === 'merchant' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
+  }
+  if (cU) {
+    cU.textContent = (_sentMessages.user||[]).length;
+    cU.style.background = tab === 'user' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
+  }
+  renderSentMessages();
+}
+
+function renderSentMessages() {
+  const list = _sentMessages[window._currentMsgTab] || [];
+  const el = document.getElementById('sentMsgsContent');
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text2)">📭 لا توجد رسائل مرسلة</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  list.forEach(function(m, idx) {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden;cursor:pointer;';
+
+    // الصف المختصر
+    const summary = document.createElement('div');
+    summary.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 14px;';
+    summary.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+        <span style="font-size:13px;flex-shrink:0;">${m.label}</span>
+        <span style="font-size:12px;font-family:monospace;color:var(--accent);font-weight:700;white-space:nowrap;">${m.username || '—'}</span>
+        <span style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">— ${m.name || ''}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <span style="font-size:10px;color:var(--text2);">${m.time}</span>
+        <button onclick="event.stopPropagation();deleteSentMessage(${idx})" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid #ef444430;border-radius:6px;padding:2px 7px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;">✕</button>
+      </div>
+    `;
+
+    // التفاصيل (مخفية)
+    const details = document.createElement('div');
+    details.style.cssText = 'display:none;border-top:1px solid var(--border);padding:12px 14px;background:var(--bg);';
+    const pre = document.createElement('div');
+    pre.style.cssText = 'font-size:12px;color:var(--text);white-space:pre-wrap;direction:ltr;font-family:monospace;max-height:200px;overflow-y:auto;margin-bottom:8px;';
+    pre.textContent = m.text;
+    const copyBtn = document.createElement('button');
+    copyBtn.style.cssText = 'background:rgba(79,142,247,0.12);color:#60a5fa;border:1px solid rgba(79,142,247,0.3);border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;';
+    copyBtn.textContent = '📋 نسخ الرسالة';
+    copyBtn.onclick = function(e) {
+      e.stopPropagation();
+      navigator.clipboard.writeText(m.text).then(function() { showToast('📋 تم نسخ الرسالة'); });
+    };
+    details.appendChild(pre);
+    details.appendChild(copyBtn);
+
+    // toggle
+    summary.onclick = function() {
+      const isOpen = details.style.display !== 'none';
+      details.style.display = isOpen ? 'none' : 'block';
+    };
+
+    card.appendChild(summary);
+    card.appendChild(details);
+    el.appendChild(card);
+  });
+}
+
+function deleteSentMessage(idx) {
+  _sentMessages[window._currentMsgTab].splice(idx, 1);
+  localStorage.setItem('hydra_sent_msgs', JSON.stringify(_sentMessages));
+  updateSentMsgCount();
+  renderSentMessages();
+}
+
+function clearSentMessages(tab) {
+  if (!confirm('هل تريد مسح سجل الرسائل؟')) return;
+  _sentMessages[tab] = [];
+  localStorage.setItem('hydra_sent_msgs', JSON.stringify(_sentMessages));
+  updateSentMsgCount();
+  renderSentMessages();
+}
+
+// تحديث العداد عند التحميل
+updateSentMsgCount();
 
 function copyMsg() {
   const t = document.getElementById('msgText');
@@ -2782,6 +2937,33 @@ if (_auth === 'admin') {
 </div>
 <!-- بوب آب تفاصيل الشخص -->
 <!-- سلة المهملات -->
+<!-- مودال الرسائل المرسلة -->
+<div id="sentMessagesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:800;align-items:center;justify-content:center;backdrop-filter:blur(4px)" onclick="if(event.target===this)closeSentMessages()">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;width:680px;max-width:95vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
+    <!-- هيدر -->
+    <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div style="font-size:16px;font-weight:700;color:var(--text)">📬 الرسائل المرسلة</div>
+      <button onclick="closeSentMessages()" style="background:none;border:none;color:var(--text2);font-size:1.3rem;cursor:pointer">✕</button>
+    </div>
+    <!-- تابات -->
+    <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0">
+      <button id="tabUser" onclick="switchMsgTab('user')" style="flex:1;padding:12px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--accent);color:white;border-radius:0">
+        👤 رسائل المستخدمين <span id="countUser" style="background:rgba(255,255,255,0.25);border-radius:20px;padding:1px 8px;font-size:11px;margin-right:4px;">0</span>
+      </button>
+      <button id="tabMerchant" onclick="switchMsgTab('merchant')" style="flex:1;padding:12px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--bg3);color:var(--text2);border-radius:0">
+        🏪 رسائل التاجر <span id="countMerchant" style="background:rgba(255,255,255,0.1);border-radius:20px;padding:1px 8px;font-size:11px;margin-right:4px;">0</span>
+      </button>
+    </div>
+    <!-- المحتوى -->
+    <div id="sentMsgsContent" style="overflow-y:auto;flex:1;padding:16px"></div>
+    <!-- فوتر -->
+    <div style="padding:12px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0">
+      <button onclick="clearSentMessages(window._currentMsgTab)" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid #ef444430;border-radius:8px;padding:8px 14px;cursor:pointer;font-family:Cairo,sans-serif;font-size:12px">🗑️ مسح السجل</button>
+      <button onclick="closeSentMessages()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 16px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px">إغلاق</button>
+    </div>
+  </div>
+</div>
+
 <div id="trashModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:800;align-items:center;justify-content:center;backdrop-filter:blur(4px)" onclick="if(event.target===this)closeTrashModal()">
   <div style="background:var(--bg2);border:1px solid rgba(239,68,68,0.4);border-radius:20px;width:600px;max-width:94vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
     <div style="background:rgba(239,68,68,0.1);border-bottom:1px solid rgba(239,68,68,0.3);border-radius:20px 20px 0 0;padding:18px 22px;display:flex;align-items:center;justify-content:space-between">
@@ -2997,7 +3179,7 @@ function sendFormRegToMerchant(firestoreId) {
 
   const waUrl = 'https://wa.me/' + MERCHANT_WHATSAPP + '?text=' + encodeURIComponent(msg);
   window.open(waUrl, '_blank');
-
+  logSentMessage('newSubMerchant', reg.name || '—', reg.username || '—', msg);
   showToast('✅ تم إرسال الرسالة للتاجر');
   const popup = document.getElementById('formRegDetailsPopup');
   if (popup) popup.remove();
