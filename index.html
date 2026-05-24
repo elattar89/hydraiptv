@@ -186,13 +186,41 @@
   footer {
     background: var(--bg2);
     border-top: 1px solid var(--border);
-    padding: 12px 24px;
+    padding: 14px 24px;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 10px;
     flex-wrap: wrap;
   }
+  .btn-footer-emergency {
+    padding: 10px 20px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #7f1d1d, #dc2626);
+    border: none;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: Cairo, sans-serif;
+    box-shadow: 0 4px 14px rgba(220,38,38,0.4);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn-footer-emergency:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(220,38,38,0.6); }
+  .btn-footer-action {
+    padding: 10px 20px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0a3d62, #1a6fa8);
+    border: none;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: Cairo, sans-serif;
+    box-shadow: 0 4px 14px rgba(26,111,168,0.3);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn-footer-action:hover { transform: translateY(-2px); }
   .btn-excel-export {
     background: linear-gradient(135deg, #1d7a40, #22c55e);
     color: white;
@@ -264,7 +292,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, onSnapshot, collection, query, where, updateDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, updateDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBxpwm4K9KTVFHV22PD_yxKhvSn5ThJ4sA",
@@ -278,7 +306,45 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const DATA_DOC = doc(db, "iptv", "accounts");
+    const DATA_DOC    = doc(db, "iptv", "accounts");
+    const BACKUP_COL  = "hydra_backups";
+
+    // ===== حفظ نسخة احتياطية يومية =====
+    window.saveBackupToFirebase = async function(accountsData) {
+      try {
+        const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+        const backupDoc = doc(db, BACKUP_COL, today);
+        await setDoc(backupDoc, {
+          data:    JSON.stringify(accountsData),
+          savedAt: Date.now(),
+          count:   accountsData.length
+        });
+        localStorage.setItem('hydra_last_backup_date', today);
+        console.log('✅ Backup saved:', today);
+      } catch(e) { console.warn('Backup error:', e); }
+    };
+
+    // ===== جلب النسخ من Firebase =====
+    window.loadBackupsFromFirebase = async function() {
+      try {
+        const snap = await getDocs(collection(db, BACKUP_COL));
+        const backups = [];
+        snap.forEach(d => {
+          backups.push({ date: d.id, ...d.data() });
+        });
+        return backups.sort((a,b) => b.date.localeCompare(a.date)).slice(0,10);
+      } catch(e) { console.warn('Load backups error:', e); return []; }
+    };
+
+    // ===== استرجاع نسخة معينة =====
+    window.restoreFromFirebaseBackup = async function(date) {
+      try {
+        const backupDoc = doc(db, BACKUP_COL, date);
+        const snap = await getDoc(backupDoc);
+        if (!snap.exists()) return null;
+        return JSON.parse(snap.data().data || '[]');
+      } catch(e) { console.warn('Restore error:', e); return null; }
+    };
 
     // استبدال دالة save لترفع على Firebase
     window.saveToFirebase = async function(data) {
@@ -506,6 +572,7 @@
   📬 الرسائل
   <span id="sentMsgCount" style="background:#3b82f6;color:white;border-radius:20px;padding:1px 7px;font-size:11px;display:none">0</span>
 </button>
+
 <button id="trashBtn" onclick="showTrashModal()" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;position:relative;display:flex;align-items:center;gap:6px" title="سلة المهملات">
     🗑️ محذوف <span id="trashCount" style="display:none;background:#ef4444;color:white;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1"></span>
   </button>
@@ -516,6 +583,13 @@
 </main>
 
 <footer>
+  <button class="btn-footer-emergency" onclick="openEmergencyModal()">🚨 حالات الطوارئ</button>
+  <button class="btn-footer-action" onclick="exportCurrentToCSV()">💾 تصدير CSV</button>
+  <button class="btn-footer-action" style="background:linear-gradient(135deg,#064e3b,#059669);" onclick="exportFullJSON()">🗂️ حفظ JSON</button>
+  <button class="btn-footer-action" style="background:linear-gradient(135deg,#1e1b4b,#4f46e5);" onclick="triggerCsvImport()">📂 استيراد CSV</button>
+  <button class="btn-footer-action" style="background:linear-gradient(135deg,#064e3b,#16a34a);" onclick="triggerJsonImport()">📂 استيراد JSON</button>
+  <input type="file" id="csvImportInput" accept=".csv" style="display:none" onchange="handleCsvImport(event)">
+  <input type="file" id="jsonImportInput" accept=".json" style="display:none" onchange="handleJsonImport(event)">
   <span style="color:var(--text2);font-size:12px">📊 تصدير / استيراد</span>
   <button class="btn-excel-export" onclick="exportToExcel()" id="exportBtn" style="padding:8px 14px;font-size:12px">⬇️ تصدير Excel</button>
   <label class="btn-excel-import" style="cursor:pointer;padding:8px 14px;font-size:12px">
@@ -827,6 +901,12 @@ function save() {
   const data = JSON.stringify(accounts);
   localStorage.setItem(STORAGE_KEY, data);
   if (window.saveToFirebase) window.saveToFirebase(accounts);
+  // نسخة احتياطية يومية
+  const today = new Date().toISOString().slice(0,10);
+  const lastBackup = localStorage.getItem('hydra_last_backup_date');
+  if (lastBackup !== today && window.saveBackupToFirebase) {
+    window.saveBackupToFirebase(accounts);
+  }
 }
 
 function daysLeft(expDate) {
@@ -3909,6 +3989,177 @@ function openRequestMerchantModal() {
 }
 function closeRequestMerchantModal() {
   document.getElementById('requestMerchantModal').style.display = 'none';
+}
+
+// ===== تصدير CSV =====
+function exportCurrentToCSV() {
+  const today = new Date().toISOString().slice(0,10);
+  const headers = ['الاسم','اليوزرنيم','الباسورد','الهوست','الهاتف','الجنس','الجنسية','دولة الاستخدام','تاريخ الاشتراك','تاريخ الانتهاء','المدة','القيمة','الدفع','ملاحظات'];
+  const rows = accounts.map(a => [
+    a.name||'', a.username||'', a.password||'', a.host||'', a.phone||'',
+    a.sex||'', a.nationality||'', a.country||'',
+    a.startDate||'', a.expDate||'', a.duration||'', a.amount||'',
+    a.paid||'', a.notes||''
+  ].map(v => '"' + String(v).replace(/"/g,'""') + '"').join(','));
+  const csv = '\uFEFF' + headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `hydra-accounts-${today}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ تم تصدير ' + accounts.length + ' أكونت CSV');
+}
+
+// ===== حفظ JSON =====
+function exportFullJSON() {
+  const today = new Date().toISOString().slice(0,10);
+  const time  = new Date().toLocaleTimeString('ar-KW', {hour:'2-digit',minute:'2-digit'}).replace(':','-');
+  const fname = `hydra-backup-${today}_${time}-(${accounts.length}-accounts).json`;
+  const json  = JSON.stringify({ exportedAt: new Date().toISOString(), count: accounts.length, data: accounts }, null, 2);
+  const blob  = new Blob([json], { type: 'application/json' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  a.href = url; a.download = fname; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ تم حفظ ' + accounts.length + ' أكونت JSON');
+}
+
+// ===== استيراد CSV =====
+function triggerCsvImport() { document.getElementById('csvImportInput').click(); }
+function triggerJsonImport() { document.getElementById('jsonImportInput').click(); }
+
+function handleCsvImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      if (lines.length < 2) { showToast('❌ الملف فارغ', true); return; }
+      const imported = [];
+      const maxId = accounts.reduce((m,x) => Math.max(m, x.id||0), 0);
+      lines.slice(1).forEach((line, idx) => {
+        const cols = line.split(',').map(c => c.replace(/^"|"$/g,'').replace(/""/g,'"'));
+        if (cols.length < 2) return;
+        imported.push({
+          id: maxId + idx + 1,
+          name: cols[0]||'', username: cols[1]||'', password: cols[2]||'',
+          host: cols[3]||'', phone: cols[4]||'', sex: cols[5]||'',
+          nationality: cols[6]||'', country: cols[7]||'',
+          startDate: cols[8]||'', expDate: cols[9]||'',
+          duration: cols[10]||'15', amount: cols[11]||'',
+          paid: cols[12]||'debt', notes: cols[13]||''
+        });
+      });
+      if (!confirm('هتستورد ' + imported.length + ' أكونت من CSV — هيتضافوا للموجودين. متأكد؟')) return;
+      accounts = [...accounts, ...imported];
+      save(); renderAll();
+      showToast('✅ تم استيراد ' + imported.length + ' أكونت');
+      event.target.value = '';
+    } catch(e) { showToast('❌ خطأ: ' + e.message, true); }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function handleJsonImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const json = JSON.parse(e.target.result);
+      let list = Array.isArray(json) ? json : (json.data && Array.isArray(json.data) ? json.data : null);
+      if (!list || !list.length) { showToast('❌ ملف JSON غلط أو فارغ', true); return; }
+      if (!confirm('هتستورد ' + list.length + ' أكونت من JSON — هيستبدل البيانات الحالية. متأكد؟')) return;
+      accounts = list;
+      save(); renderAll();
+      showToast('✅ تم استيراد ' + list.length + ' أكونت JSON');
+      event.target.value = '';
+    } catch(e) { showToast('❌ خطأ: ' + e.message, true); }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// ===== مودال الطوارئ =====
+async function openEmergencyModal() {
+  const old = document.getElementById('emergencyModal');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'emergencyModal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;padding:1rem;';
+  overlay.innerHTML = `
+    <div style="background:#0d1117;border:2px solid #dc2626;border-radius:18px;padding:1.5rem;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;font-family:Cairo,sans-serif;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <div style="color:#f87171;font-size:16px;font-weight:700;">🚨 حالات الطوارئ — النسخ الاحتياطية</div>
+        <button onclick="document.getElementById('emergencyModal').remove()" style="background:none;border:none;color:#8b949e;font-size:1.3rem;cursor:pointer;">✕</button>
+      </div>
+      <p style="font-size:12px;color:#8b949e;margin-bottom:1rem;">النسخ المحفوظة في Firebase — مرتبة من الأحدث للأقدم</p>
+
+      <div id="firebaseBackupsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.2rem;">
+        <div style="color:#484f58;font-size:13px;text-align:center;padding:1rem;">⏳ جاري تحميل النسخ...</div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="manualBackupNow()" style="flex:1;min-width:140px;padding:10px;border-radius:9px;border:1px solid #16a34a;background:#0d1f14;color:#4ade80;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif;">☁️ حفظ نسخة الآن</button>
+        <button onclick="document.getElementById('emergencyModal').remove()" style="flex:1;min-width:100px;padding:10px;border-radius:9px;border:1px solid #30363d;background:#21262d;color:#8b949e;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;">إغلاق</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // تحميل النسخ
+  const container = document.getElementById('firebaseBackupsList');
+  if (!window.loadBackupsFromFirebase) {
+    container.innerHTML = '<div style="color:#f87171;font-size:13px;text-align:center;padding:1rem;">Firebase غير متصل</div>';
+    return;
+  }
+
+  const backups = await window.loadBackupsFromFirebase();
+  if (!backups.length) {
+    container.innerHTML = '<div style="color:#484f58;font-size:13px;text-align:center;padding:1rem;">لا توجد نسخ احتياطية بعد — ستُحفظ تلقائياً عند أول تعديل</div>';
+    return;
+  }
+
+  const days    = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const months  = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+  container.innerHTML = backups.map((b, i) => {
+    const d = new Date(b.savedAt);
+    const label = `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    const time  = d.toLocaleTimeString('ar-EG', {hour:'2-digit',minute:'2-digit'});
+    const isNewest = i === 0;
+    return `
+      <div style="background:${isNewest?'rgba(22,163,74,0.08)':'rgba(255,255,255,0.03)'};border:1px solid ${isNewest?'#16a34a':'#30363d'};border-radius:10px;padding:.9rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div>
+          ${isNewest ? '<span style="background:#14532d;color:#4ade80;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:6px;">⭐ الأحدث</span>' : ''}
+          <div style="color:#e2e8f0;font-size:13px;font-weight:700;">${label} — ${time}</div>
+          <div style="color:#4ade80;font-size:12px;margin-top:2px;">📦 ${b.count} أكونت</div>
+        </div>
+        <button data-date="${b.date}" onclick="confirmRestore(this.getAttribute('data-date'))" style="background:#14532d;color:#4ade80;border:1px solid #16a34a;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif;white-space:nowrap;">↩ استرجاع</button>
+      </div>`;
+  }).join('');
+}
+
+async function confirmRestore(date) {
+  if (!confirm('⚠️ هتسترجع نسخة ' + date + '؟ البيانات الحالية هتتبدل — تأكد إنك عايز كده!')) return;
+  showToast('⏳ جاري الاسترجاع...');
+  const data = await window.restoreFromFirebaseBackup(date);
+  if (!data) { showToast('❌ فشل الاسترجاع', true); return; }
+  accounts = data;
+  save();
+  renderAll();
+  document.getElementById('emergencyModal').remove();
+  showToast('✅ تم الاسترجاع بنجاح — ' + data.length + ' أكونت');
+}
+
+async function manualBackupNow() {
+  if (!window.saveBackupToFirebase) { showToast('❌ Firebase غير متصل', true); return; }
+  showToast('⏳ جاري الحفظ...');
+  await window.saveBackupToFirebase(accounts);
+  showToast('✅ تم حفظ نسخة احتياطية الآن');
+  document.getElementById('emergencyModal').remove();
+  setTimeout(openEmergencyModal, 500);
 }
 function updateMerchantReqMsg() {
   const user = document.getElementById('merchantReqUsername').value.trim();
