@@ -1377,6 +1377,13 @@ function renderAll() {
     else groups.active.items.push(a);
   });
 
+  // ترتيب النشطة من أكثر أيام للأقل
+  groups.active.items.sort((a, b) => {
+    const dA = daysLeft(a.expDate) ?? -9999;
+    const dB = daysLeft(b.expDate) ?? -9999;
+    return dB - dA;
+  });
+
   let html = '';
 
   ['expiring','active','expired'].forEach(key => {
