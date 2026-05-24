@@ -2180,7 +2180,7 @@ window.addEventListener('load', function() {
   var s = document.getElementById('searchInput');
   if (s) { s.value = ''; s.setAttribute('autocomplete', 'new-password'); }
 });
-setTimeout(function() { renderAll(); }, 200);
+// renderAll بتشتغل بعد الـ auth مباشرة
 
 // ====== تحديث يدوي ======
 function manualRefresh() {
@@ -2748,6 +2748,7 @@ if (_auth === 'admin') {
   window.isGuest = false;
   document.getElementById('loginScreen').style.display = 'none';
   sessionStorage.setItem('hydra_auth', 'admin');
+  if (typeof renderAll === 'function') renderAll();
 } else if (_auth === 'guest') {
   window.isGuest = true;
   document.getElementById('loginScreen').style.display = 'none';
