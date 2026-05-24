@@ -323,7 +323,8 @@
         // تحديث الداتا المحلية
         accounts = remote;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
-        renderAll();
+        // نستنى الـ auth script ينتهي قبل ما نعمل render
+        setTimeout(function() { renderAll(); }, 300);
         // حفظ التصحيحات على Firebase مرة واحدة فقط
         if (needsSave) {
           setTimeout(() => {
