@@ -1418,6 +1418,9 @@ function openPersonEdit(name) {
   const a = accounts.find(x => x.name === name);
   document.getElementById('personName').value = name;
   document.getElementById('personPhone').value = a ? (a.phone || '') : '';
+  document.getElementById('personSex').value = a ? (a.sex || '') : '';
+  document.getElementById('personNationality').value = a ? (a.nationality || '') : '';
+  document.getElementById('personCountry').value = a ? (a.country || '') : '';
   document.getElementById('personModal').style.display = 'flex';
 }
 
@@ -1431,10 +1434,16 @@ function savePersonEdit() {
   const newPhone = document.getElementById('personPhone').value.trim();
   if (!newName) { showToast('❌ الاسم مطلوب', true); return; }
   // تحديث كل الأكونتات بنفس الاسم
+  const newSex         = document.getElementById('personSex').value;
+  const newNationality = document.getElementById('personNationality').value.trim();
+  const newCountry     = document.getElementById('personCountry').value.trim();
   accounts.forEach(a => {
     if (a.name === _editingPersonName) {
-      a.name = newName;
-      a.phone = newPhone;
+      a.name        = newName;
+      a.phone       = newPhone;
+      a.sex         = newSex;
+      a.nationality = newNationality;
+      a.country     = newCountry;
     }
   });
   save();
@@ -2029,7 +2038,7 @@ window.addEventListener('load', function() {
   var s = document.getElementById('searchInput');
   if (s) { s.value = ''; s.setAttribute('autocomplete', 'new-password'); }
 });
-renderAll();
+setTimeout(function() { renderAll(); }, 200);
 
 // ====== تحديث يدوي ======
 function manualRefresh() {
@@ -2745,9 +2754,25 @@ if (_auth === 'admin') {
       <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">الاسم</label>
       <input id="personName" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px">
     </div>
-    <div style="margin-bottom:20px">
+    <div style="margin-bottom:14px">
       <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">رقم الموبايل</label>
       <input id="personPhone" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px;direction:ltr">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">الجنس</label>
+      <select id="personSex" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px">
+        <option value="">— اختر —</option>
+        <option value="ذكر">ذكر</option>
+        <option value="أنثى">أنثى</option>
+      </select>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">الجنسية</label>
+      <input id="personNationality" type="text" placeholder="اختياري" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">دولة الاستخدام</label>
+      <input id="personCountry" type="text" placeholder="اختياري" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px">
     </div>
     <div style="display:flex;gap:10px">
       <button onclick="savePersonEdit()" class="btn btn-primary" style="flex:1">💾 حفظ</button>
@@ -3464,6 +3489,7 @@ function copyMerchantReqMsg() {
 
 <script>
 function showPersonDetails(name) {
+  window._detailsName = name;
   const accs = accounts.filter(a => a.name === name);
   if (!accs.length) return;
   const first = accs[0];
@@ -3537,6 +3563,11 @@ function showPersonDetails(name) {
         <div style="flex:1">
           <div style="font-size:18px;font-weight:700;color:var(--text)">${name}</div>
           ${first.phone ? `<div style="font-size:13px;color:var(--text2);margin-top:2px;direction:ltr">${first.phone}</div>` : ''}
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+            ${first.sex ? `<span style="font-size:11px;padding:1px 8px;border-radius:20px;background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.3)">${first.sex === 'ذكر' ? '👨' : '👩'} ${first.sex}</span>` : ''}
+            ${first.nationality ? `<span style="font-size:11px;padding:1px 8px;border-radius:20px;background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.3)">🌍 ${first.nationality}</span>` : ''}
+            ${first.country ? `<span style="font-size:11px;padding:1px 8px;border-radius:20px;background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.3)">📍 ${first.country}</span>` : ''}
+          </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
           <span style="font-size:12px;padding:3px 10px;border-radius:20px;${statusBadgeStyle}">${statusLabel}</span>
@@ -3547,7 +3578,10 @@ function showPersonDetails(name) {
     <!-- البيانات -->
     <div style="padding:16px 22px 22px">
       ${accsHtml}
-      <button onclick="closePersonDetails()" style="width:100%;margin-top:16px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:10px;padding:10px;cursor:pointer;font-family:Cairo,sans-serif;font-size:14px">إغلاق</button>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        ${!window.isGuest ? `<button onclick="closePersonDetails();openPersonEdit(window._detailsName);" style="flex:1;background:var(--accent);color:white;border:none;border-radius:10px;padding:10px;cursor:pointer;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;">✏️ تعديل بيانات الشخص</button>` : ''}
+        <button onclick="closePersonDetails()" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:10px;padding:10px;cursor:pointer;font-family:Cairo,sans-serif;font-size:14px">إغلاق</button>
+      </div>
     </div>
   `;
 
