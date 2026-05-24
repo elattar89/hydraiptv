@@ -323,8 +323,7 @@
         // تحديث الداتا المحلية
         accounts = remote;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
-        // نستنى الـ auth script ينتهي قبل ما نعمل render
-        setTimeout(function() { renderAll(); }, 300);
+        renderAll();
         // حفظ التصحيحات على Firebase مرة واحدة فقط
         if (needsSave) {
           setTimeout(() => {
@@ -498,14 +497,9 @@
   <button id="expiredListBtn" onclick="showExpiredListModal()" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">📋 كشف المنتهين</button>
   <button id="totalListBtn" onclick="showTotalListModal()" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(99,102,241,0.25)'" onmouseout="this.style.background='rgba(99,102,241,0.15)'">📊 الكشف الإجمالي</button>
   <button id="debtListBtn" onclick="showDebtListModal()" style="display:none;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#c084fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(168,85,247,0.25)'" onmouseout="this.style.background='rgba(168,85,247,0.15)'">📋 كشف الديون</button>
-  <!-- زر إضافة حساب مع قائمة منسدلة -->
-  <div style="position:relative;display:inline-block" id="addBtnWrapper">
-    <button class="btn btn-primary" onclick="toggleAddMenu()" id="addMainBtn">+ إضافة حساب ▾</button>
-    <div id="addDropMenu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--bg2);border:1px solid var(--border);border-radius:12px;min-width:200px;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden">
-      <button onclick="closeAddMenu();openAddModal()" style="width:100%;background:none;border:none;color:var(--text);padding:12px 16px;text-align:right;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='none'">➕ إضافة حساب جديد</button>
-      <div style="height:1px;background:var(--border);margin:0 12px"></div>
-      <button onclick="closeAddMenu();openRequestMerchantModal()" style="width:100%;background:none;border:none;color:#60a5fa;padding:12px 16px;text-align:right;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.15s" onmouseover="this.style.background='rgba(79,142,247,0.1)'" onmouseout="this.style.background='none'">📨 طلب إضافة للتاجر</button>
-    </div>
+  <!-- زر إضافة حساب -->
+  <div style="display:inline-block" id="addBtnWrapper">
+    <button class="btn btn-primary" onclick="openAddModal()" id="addMainBtn">+ إضافة حساب</button>
   </div>
   <button id="refreshBtn" onclick="manualRefresh()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:6px" title="تحديث الصفحة">🔄 تحديث</button>
   <button onclick="showSentMessages()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:8px 14px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">
@@ -533,16 +527,17 @@
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <h2 id="modalTitle">إضافة حساب جديد</h2>
-    <div class="form-row">
-      <div class="form-group" style="position:relative">
-        <label>اسم الحساب</label>
+    <!-- اسم الحساب كامل -->
+    <div class="form-group" style="position:relative">
+      <label>اسم الحساب</label>
         <div style="position:relative">
           <input type="text" id="fName" placeholder="مثال: أحمد علي" autocomplete="off" style="padding-left:36px;width:100%">
           <button type="button" id="nameArrowBtn" onclick="toggleNameDropdown()" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:2px 4px;line-height:1" title="اختر من القائمة">▾</button>
         </div>
         <div id="nameDropdown" style="display:none;position:absolute;top:100%;right:0;left:0;background:var(--bg2);border:1px solid var(--accent);border-radius:10px;z-index:999;max-height:210px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:4px"></div>
-      </div>
-      <div class="form-group">
+    </div>
+    <!-- رقم الهاتف كاملة -->
+    <div class="form-group">
         <label>رقم الهاتف <span style="color:var(--text2);font-size:11px;font-weight:400">(اختياري)</span></label>
         <div style="display:flex;gap:6px;">
         <select id="fPhoneDial" style="width:135px;flex-shrink:0;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:8px 6px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none;">
@@ -640,7 +635,6 @@
         </select>
         <input type="text" id="fPhone" placeholder="رقم الهاتف" style="flex:1;min-width:0;" oninput="applyEnglishNums(this)">
       </div>
-      </div>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -717,7 +711,7 @@
       </div>
       <div class="form-group">
         <label>دولة الاستخدام</label>
-        <select id="fCountry" onchange="toggleDashCountryOther()" style="width:100%">
+        <select id="fCountry" onchange="toggleDashCountryOther();autoFillAmountByDuration()" style="width:100%">
           <option value="">— اختر —</option>
           <option>الكويت</option><option>السعودية</option><option>الإمارات</option>
           <option>قطر</option><option>سلطنة عمان</option><option>البحرين</option>
@@ -1328,6 +1322,11 @@ function filtered() {
 }
 
 function renderAll() {
+  // تأكد من الـ auth قبل الرسم
+  const _authCheck = sessionStorage.getItem('hydra_auth') || localStorage.getItem('hydra_auth_persist');
+  if (_authCheck === 'admin') window.isGuest = false;
+  else if (_authCheck === 'guest') window.isGuest = true;
+
   renderStats();
   const data = filtered();
   const container = document.getElementById('tablesContainer');
@@ -1941,18 +1940,7 @@ function saveAccount() {
 
   // فحص الإلزامية عند الإضافة العادية أو إضافة كمستخدم جديد
   if (!editingId) {
-    const required = [
-      { val: a.name,      label: 'اسم الحساب' },
-      { val: a.username,  label: 'اليوزرنيم' },
-      { val: a.password,  label: 'الباسورد' },
-      { val: a.host,      label: 'الهوست' },
-      { val: a.startDate, label: 'تاريخ الاشتراك' },
-    ];
-    const missing = required.filter(r => !r.val);
-    if (missing.length > 0) {
-      showToast('❌ الحقول التالية مطلوبة: ' + missing.map(r => r.label).join('، '), true);
-      return;
-    }
+    // كل الحقول اختيارية
   }
 
   // فحص تكرار username
@@ -2052,7 +2040,7 @@ function confirmDupSave() {
 }
 
 function addAsNewUser() {
-  if (!document.getElementById('fUser').value.trim()) { showToast('❌ اليوزرنيم مطلوب', true); return; }
+  // لا يوجد حقول إلزامية
   _modalIsPending = false;
   _modalIsAddFromPending = true;
   saveAccount();
