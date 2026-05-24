@@ -660,16 +660,6 @@
         <label>تاريخ الاشتراك</label>
         <input type="date" id="fDate" onchange="autoFillExpDate()">
       </div>
-      <div class="form-group">
-        <label>مدة الاشتراك</label>
-        <select id="fDuration" onchange="autoFillExpDate();autoFillAmountByDuration()">
-          <option value="6">6 شهور</option>
-          <option value="12">12 شهر</option>
-          <option value="15" selected>15 شهر</option>
-          <option value="24">24 شهر</option>
-          <option value="30">30 شهر</option>
-        </select>
-      </div>
       <div class="form-group" id="fExpGroup" style="display:none">
         <label>تاريخ الانتهاء (محسوب تلقائياً)</label>
         <input type="date" id="fExp" readonly style="opacity:0.5;cursor:not-allowed">
@@ -709,29 +699,72 @@
         <label>الجنسية</label>
         <input type="text" id="fNationality" placeholder="اختياري" />
       </div>
-      <div class="form-group">
-        <label>دولة الاستخدام</label>
-        <select id="fCountry" onchange="toggleDashCountryOther();autoFillAmountByDuration()" style="width:100%">
-          <option value="">— اختر —</option>
-          <option>الكويت</option><option>السعودية</option><option>الإمارات</option>
-          <option>قطر</option><option>سلطنة عمان</option><option>البحرين</option>
-          <option>العراق</option><option>اليمن</option><option>سوريا</option>
-          <option>فلسطين</option><option>لبنان</option><option>الاردن</option>
-          <option>مصر</option><option>المغرب</option><option>تونس</option>
-          <option>ليبيا</option><option>السودان</option><option>تركيا</option>
-          <option>الهند</option><option>باكستان</option><option>فلبين</option>
-          <option>بريطانيا</option><option>فرنسا</option><option>ألمانيا</option>
-          <option>إيطاليا</option><option>إسبانيا</option><option>هولندا</option>
-          <option>السويد</option><option>النرويج</option><option>الدنمارك</option>
-          <option>كندا</option><option>أمريكا</option><option>أستراليا</option>
-          <option value="أخرى">أخرى</option>
-        </select>
-        <input type="text" id="fCountryOther" placeholder="اكتب اسم الدولة" style="display:none;margin-top:6px;width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-family:Cairo,sans-serif;font-size:14px;outline:none;" />
+    </div>
+
+    <!-- دولة الاستخدام أولاً -->
+    <div class="form-group">
+      <label>دولة الاستخدام</label>
+      <select id="fCountry" onchange="toggleDashCountryOther();showDashDurationField()" style="width:100%">
+        <option value="">— اختر —</option>
+        <option>الكويت</option><option>السعودية</option><option>الإمارات</option>
+        <option>قطر</option><option>سلطنة عمان</option><option>البحرين</option>
+        <option>العراق</option><option>اليمن</option><option>سوريا</option>
+        <option>فلسطين</option><option>لبنان</option><option>الاردن</option>
+        <option>مصر</option><option>المغرب</option><option>تونس</option>
+        <option>ليبيا</option><option>السودان</option><option>تركيا</option>
+        <option>الهند</option><option>باكستان</option><option>فلبين</option>
+        <option>بريطانيا</option><option>فرنسا</option><option>ألمانيا</option>
+        <option>إيطاليا</option><option>إسبانيا</option><option>هولندا</option>
+        <option>السويد</option><option>النرويج</option><option>الدنمارك</option>
+        <option>كندا</option><option>أمريكا</option><option>أستراليا</option>
+        <option value="أخرى">أخرى</option>
+      </select>
+      <input type="text" id="fCountryOther" placeholder="اكتب اسم الدولة" style="display:none;margin-top:6px;width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-family:Cairo,sans-serif;font-size:14px;outline:none;" />
+    </div>
+
+    <!-- مدة الاشتراك مخفية حتى اختيار الدولة -->
+    <div class="form-group" id="fDurationField" style="display:none">
+      <label>مدة الاشتراك</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;" id="fDurationGrid">
+        <label id="fd-6" style="border:1.5px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;text-align:center;transition:all 0.2s">
+          <input type="radio" name="fDurationRadio" value="6" style="display:none" onchange="onDashDurChange(this)" />
+          <div style="font-size:13px;font-weight:700;" id="fd-label-6">6 شهور</div>
+          <div style="font-size:11px;color:var(--text2);" id="fd-price-6">6 دينار</div>
+        </label>
+        <label id="fd-12" style="border:1.5px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;text-align:center;transition:all 0.2s">
+          <input type="radio" name="fDurationRadio" value="12" style="display:none" onchange="onDashDurChange(this)" />
+          <div style="font-size:13px;font-weight:700;" id="fd-label-12">12 شهر</div>
+          <div style="font-size:11px;color:var(--text2);" id="fd-price-12">10 دينار</div>
+        </label>
+        <label id="fd-15" style="border:1.5px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;text-align:center;transition:all 0.2s">
+          <input type="radio" name="fDurationRadio" value="15" style="display:none" onchange="onDashDurChange(this)" />
+          <div style="font-size:13px;font-weight:700;" id="fd-label-15">15 شهر</div>
+          <div style="font-size:11px;color:var(--text2);" id="fd-price-15">12 دينار</div>
+        </label>
+        <label id="fd-24" style="border:1.5px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;text-align:center;transition:all 0.2s">
+          <input type="radio" name="fDurationRadio" value="24" style="display:none" onchange="onDashDurChange(this)" />
+          <div style="font-size:13px;font-weight:700;" id="fd-label-24">24 شهر</div>
+          <div style="font-size:11px;color:var(--text2);" id="fd-price-24">18 دينار</div>
+        </label>
+        <label id="fd-30" style="grid-column:span 2;border:1.5px solid var(--border);border-radius:10px;padding:8px;cursor:pointer;text-align:center;transition:all 0.2s">
+          <input type="radio" name="fDurationRadio" value="30" style="display:none" onchange="onDashDurChange(this)" />
+          <div style="font-size:13px;font-weight:700;" id="fd-label-30">30 شهر</div>
+          <div style="font-size:11px;color:var(--text2);" id="fd-price-30">22 دينار</div>
+        </label>
       </div>
-      <div class="form-group">
-        <label>ملاحظات</label>
-        <input type="text" id="fNotes" placeholder="اختياري">
+      <!-- السعر المختار -->
+      <div id="fDurPricePreview" style="display:none;background:linear-gradient(135deg,#1a1a2e,#0f3460);border-radius:10px;padding:10px 14px;margin-top:8px;display:flex;align-items:center;justify-content:space-between;color:white;">
+        <span style="font-size:12px;opacity:0.8;">المبلغ المطلوب</span>
+        <span style="font-size:1.2rem;font-weight:700;color:#f6c90e;" id="fDurPriceAmount">—</span>
       </div>
+    </div>
+
+    <!-- hidden fDuration للتوافق مع باقي الكود -->
+    <input type="hidden" id="fDuration" value="15" />
+
+    <div class="form-group">
+      <label>ملاحظات</label>
+      <input type="text" id="fNotes" placeholder="اختياري">
     </div>
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal()">إلغاء</button>
@@ -1669,6 +1702,59 @@ function applyEnglishNums(el) {
   }
 }
 
+var DASH_COUNTRY_PRICES = {
+  'الكويت':  { '6':6,   '12':10,  '15':12,  '24':18,  '30':22,  currency:'دينار' },
+  'مصر':     { '6':300, '12':500, '15':600, '24':900, '30':1200, currency:'جنيه'  },
+  'default': { '6':20,  '12':35,  '15':40,  '24':60,  '30':75,  currency:'$ USD' }
+};
+
+function showDashDurationField() {
+  var country = getDashCountryValue();
+  var field = document.getElementById('fDurationField');
+  if (!field) return;
+  if (country) {
+    field.style.display = 'block';
+    updateDashDurationPrices(country);
+  } else {
+    field.style.display = 'none';
+  }
+}
+
+function updateDashDurationPrices(country) {
+  var cfg = DASH_COUNTRY_PRICES[country] || DASH_COUNTRY_PRICES['default'];
+  ['6','12','15','24','30'].forEach(function(d) {
+    var priceEl = document.getElementById('fd-price-' + d);
+    if (priceEl) priceEl.textContent = cfg[d] + ' ' + cfg.currency;
+  });
+  // تحديث السعر المختار لو موجود
+  var checked = document.querySelector('input[name="fDurationRadio"]:checked');
+  if (checked) {
+    document.getElementById('fDurPriceAmount').textContent = cfg[checked.value] + ' ' + cfg.currency;
+    document.getElementById('fDurPricePreview').style.display = 'flex';
+    document.getElementById('fAmount').value = cfg[checked.value];
+  }
+}
+
+function onDashDurChange(radio) {
+  var country = getDashCountryValue();
+  var cfg = DASH_COUNTRY_PRICES[country] || DASH_COUNTRY_PRICES['default'];
+  // تحديث hidden fDuration
+  document.getElementById('fDuration').value = radio.value;
+  document.getElementById('fAmount').value = cfg[radio.value];
+  document.getElementById('fDurPriceAmount').textContent = cfg[radio.value] + ' ' + cfg.currency;
+  document.getElementById('fDurPricePreview').style.display = 'flex';
+  // تلوين الكارت المختار
+  ['6','12','15','24','30'].forEach(function(d) {
+    var lbl = document.getElementById('fd-' + d);
+    if (lbl) {
+      lbl.style.borderColor = d === radio.value ? 'var(--accent)' : 'var(--border)';
+      lbl.style.background = d === radio.value ? 'rgba(79,142,247,0.1)' : '';
+    }
+  });
+  // حساب تاريخ الانتهاء
+  autoFillExpDate();
+}
+
 function toggleDashCountryOther() {
   var sel = document.getElementById('fCountry');
   var other = document.getElementById('fCountryOther');
@@ -1693,31 +1779,9 @@ function getDashCountryValue() {
 }
 
 function autoFillAmountByDuration() {
-  const durEl     = document.getElementById('fDuration');
-  const amountEl  = document.getElementById('fAmount');
-  const displayEl = document.getElementById('fAmountDisplay');
-  if (!durEl || !amountEl) return;
-
-  // أسعار حسب الدولة
-  const _country = (document.getElementById('fCountry') || {value:''}).value || '';
-  let price, currency;
-  if (_country === 'مصر') {
-    const egyptPrices = {'6':300,'12':500,'15':600,'24':900,'30':1200};
-    price = egyptPrices[durEl.value];
-    currency = 'جنيه';
-  } else if (!_country || _country === 'الكويت') {
-    price = DASH_DURATION_PRICES[durEl.value];
-    currency = 'دينار';
-  } else {
-    const worldPrices = {'6':20,'12':35,'15':40,'24':60,'30':75};
-    price = worldPrices[durEl.value];
-    currency = '$ USD';
-  }
-
-  if (price) {
-    amountEl.value = String(price);
-    if (displayEl) displayEl.textContent = price + ' ' + currency;
-  }
+  // الآن بيشتغل عبر onDashDurChange
+  var checked = document.querySelector('input[name="fDurationRadio"]:checked');
+  if (checked) onDashDurChange(checked);
 }
 
 function updateRenewPrice() {
@@ -1793,6 +1857,11 @@ function openAddModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'إضافة حساب جديد';
   const fpd = document.getElementById('fPhoneDial'); if(fpd) fpd.value = '';
+  // reset duration field
+  const fDurField = document.getElementById('fDurationField'); if(fDurField) fDurField.style.display = 'none';
+  const fDurPrev = document.getElementById('fDurPricePreview'); if(fDurPrev) fDurPrev.style.display = 'none';
+  document.querySelectorAll('input[name="fDurationRadio"]').forEach(function(r){ r.checked = false; });
+  ['6','12','15','24','30'].forEach(function(d){ var l = document.getElementById('fd-'+d); if(l){ l.style.borderColor=''; l.style.background=''; } });
   ['fName','fPhone','fUser','fPass','fDate','fExp','fNotes','fAmount','fNationality','fCountry','fCountryOther','fSex'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; }); document.getElementById('fHost').value = ''; const dispEl = document.getElementById('fAmountDisplay'); if(dispEl) dispEl.textContent = '';
   const durEl = document.getElementById('fDuration'); if (durEl) durEl.value = '15';
   document.getElementById('fClientPaid').value = 'paid';
