@@ -601,6 +601,9 @@
   <div style="display:inline-block" id="addBtnWrapper">
     <button class="btn btn-primary" onclick="openAddModal()" id="addMainBtn">+ إضافة حساب</button>
   </div>
+  <button onclick="openSendRegLinkModal()" style="background:linear-gradient(135deg,#065f46,#059669);border:none;color:white;border-radius:10px;padding:8px 14px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;">
+    📤 إرسال طلب تسجيل
+  </button>
   <button id="refreshBtn" onclick="manualRefresh()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:6px" title="تحديث الصفحة">🔄 تحديث</button>
   <button onclick="showSentMessages()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:8px 14px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">
   📬 الرسائل
@@ -2403,12 +2406,12 @@ Apps:
 https://apps.apple.com/us/app/hydra-tv/id6443712530
 http://www.iptvsmarters.com/smarters4-0.apk
 https://hydratv.app/`;
-    document.getElementById('msgModalTitle').textContent = '📨 رسالة التأكيد — ' + a.name;
+    document.getElementById('msgModalTitle').textContent = 'رسالة التأكيد - ' + a.name;
   } else if (type === 'remind') {
-    const exp = a.expDate ? formatDate(a.expDate) : '—';
+    const exp = a.expDate ? formatDate(a.expDate) : '-';
     const d = daysLeft(a.expDate);
-    const dText = d !== null ? (d < 0 ? `(منتهي منذ ${Math.abs(d)} يوم)` : `(متبقي ${d} يوم)`) : '';
-    text = `تذكير تجديد اشتراك Hydra IPTV 📺
+    const dText = d !== null ? (d < 0 ? '(منتهي منذ ' + Math.abs(d) + ' يوم)' : '(متبقي ' + d + ' يوم)') : '';
+    text = `تذكير تجديد اشتراك Hydra IPTV
 
 عزيزي ${a.name}،
 اشتراكك سينتهي بتاريخ ${exp} ${dText}
@@ -2416,45 +2419,43 @@ https://hydratv.app/`;
 Username : ${a.username}
 Password: ${a.password}
 
-للتجديد تواصل معنا في أقرب وقت حتى لا تنقطع الخدمة عنك. 🙏`;
-    document.getElementById('msgModalTitle').textContent = '🔔 تذكير المستخدم بالتجديد — ' + a.name;
+للتجديد تواصل معنا في اقرب وقت حتى لا تنقطع الخدمة عنك.`;
+    document.getElementById('msgModalTitle').textContent = 'تذكير التجديد - ' + a.name;
   } else if (type === 'remindMerchant') {
-    const exp = a.expDate ? formatDate(a.expDate) : '—';
+    const exp = a.expDate ? formatDate(a.expDate) : '-';
     const d = daysLeft(a.expDate);
-    const dText = d !== null ? (d < 0 ? `(منتهي منذ ${Math.abs(d)} يوم)` : `(متبقي ${d} يوم)`) : '';
-    text = `تجديد اشتراك — ${a.name} 🔄
+    const dText = d !== null ? (d < 0 ? '(منتهي منذ ' + Math.abs(d) + ' يوم)' : '(متبقي ' + d + ' يوم)') : '';
+    text = `تجديد اشتراك - ${a.name}
 
 السلام عليكم،
 يرجى تجديد اشتراك العميل
 
-▪️ Username: ${a.username}
-▪️ Password: ${a.password}
-▪️ تاريخ الانتهاء: ${exp} ${dText}
+Username: ${a.username}
+Password: ${a.password}
+تاريخ الانتهاء: ${exp} ${dText}
 
-شكراً 🙏`;
-    document.getElementById('msgModalTitle').textContent = '💰 طلب تجديد اشتراك — ' + a.name;
+شكرا`;
+    document.getElementById('msgModalTitle').textContent = 'طلب تجديد اشتراك - ' + a.name;
   } else if (type === 'changePassMerchant') {
-    text = `طلب تغيير كلمة السر — ${a.name} 🔑
+    text = `طلب تغيير كلمة السر - ${a.name}
 
 السلام عليكم،
 يرجى تغيير كلمة السر للعميل
 
-▪️ Username: ${a.username}
-▪️ Password الحالية: ${a.password}
+Username: ${a.username}
+Password الحالية: ${a.password}
 
-شكراً 🙏`;
-    document.getElementById('msgModalTitle').textContent = '🔐 طلب تغيير كلمة السر — ' + a.name;
+شكرا`;
+    document.getElementById('msgModalTitle').textContent = 'طلب تغيير كلمة السر - ' + a.name;
   } else if (type === 'changePass') {
-    text = `إرسال كلمة السر للمستخدم 🔑
-
-عزيزي ${a.name}،
+    text = `عزيزي ${a.name}،
 تم تغيير كلمة السر الخاصة باشتراكك.
 
 Username : ${a.username}
 New Password : ${a.password}
 
-يرجى تحديث التطبيق بكلمة السر الجديدة. 🙏`;
-    document.getElementById('msgModalTitle').textContent = '🔑 إرسال كلمة السر للمستخدم — ' + a.name;
+يرجى تحديث التطبيق بكلمة السر الجديدة.`;
+    document.getElementById('msgModalTitle').textContent = 'ارسال كلمة السر - ' + a.name;
   }
   document.getElementById('msgText').value = text;
 
@@ -3585,13 +3586,13 @@ function sendFormRegToMerchant(firestoreId) {
   if (reg.clientType === 'renew') {
     msg = `السلام عليكم ,
 الرجاء سرعة تجديد اشتراك المستخدم التالي:
-🔑 اليوزرنيم: ${reg.username || '—'} ⏱ المدة: ${reg.duration ? reg.duration + ' شهر' : '—'}
+اليوزرنيم: ${reg.username || '-'} - المدة: ${reg.duration ? reg.duration + ' شهر' : '-'}
 
 شكرا...`;
   } else {
     msg = `السلام عليكم ,
 يرجي عمل اشتراك جديد للمستخدم التالي:
-🔑 اليوزرنيم: ${reg.username || '—'} ⏱ المدة: ${reg.duration ? reg.duration + ' شهر' : '—'}
+اليوزرنيم: ${reg.username || '-'} - المدة: ${reg.duration ? reg.duration + ' شهر' : '-'}
 
 شكرا...`;
   }
@@ -4046,6 +4047,63 @@ function openRequestMerchantModal() {
 }
 function closeRequestMerchantModal() {
   document.getElementById('requestMerchantModal').style.display = 'none';
+}
+
+// ===== إرسال طلب التسجيل =====
+function openSendRegLinkModal() {
+  const old = document.getElementById('sendRegLinkModal');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'sendRegLinkModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+
+  // بناء options المفاتيح
+  const dialOptions = document.getElementById('fPhoneDial') ? document.getElementById('fPhoneDial').innerHTML : '<option value="+965">🇰🇼 الكويت +965</option>';
+
+  overlay.innerHTML = `
+    <div style="background:var(--card);border-radius:18px;padding:1.5rem;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;">
+        <div style="font-size:15px;font-weight:700;color:var(--text);">📤 إرسال طلب تسجيل</div>
+        <button onclick="document.getElementById('sendRegLinkModal').remove()" style="background:none;border:none;color:var(--text2);font-size:1.3rem;cursor:pointer;">✕</button>
+      </div>
+
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">رقم الواتساب</label>
+      <div style="display:flex;gap:6px;margin-bottom:1.2rem;">
+        <select id="regLinkDial" style="width:140px;flex-shrink:0;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:8px 6px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none;">
+          ${dialOptions}
+        </select>
+        <input id="regLinkPhone" type="tel" placeholder="رقم الهاتف" oninput="applyEnglishNums(this)" style="flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px;outline:none;direction:ltr;" />
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button onclick="sendRegLink()" style="flex:1;background:linear-gradient(135deg,#065f46,#059669);color:white;border:none;border-radius:10px;padding:10px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">📤 إرسال</button>
+        <button onclick="document.getElementById('sendRegLinkModal').remove()" style="flex:1;background:var(--bg);color:var(--text2);border:1px solid var(--border);border-radius:10px;padding:10px;font-family:Cairo,sans-serif;font-size:14px;cursor:pointer;">إغلاق</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(function() { document.getElementById('regLinkPhone').focus(); }, 100);
+}
+
+function sendRegLink() {
+  const dial  = document.getElementById('regLinkDial').value || '';
+  const phone = document.getElementById('regLinkPhone').value.trim();
+  if (!phone) { showToast('❌ أدخل رقم الهاتف', true); return; }
+  const fullPhone = (dial + phone).replace(/[^0-9+]/g, '');
+  const msg = `يسعدنا انضمامك الى Hydra IPTV
+
+لاتمام طلب اشتراكك، يرجى تسجيل بياناتك عبر الرابط التالي:
+
+https://elattar89.github.io/hydra-iptv-form/
+
+سيتم التواصل معك في اقرب وقت ممكن لاتمام الاشتراك
+
+شكرا لك`;
+  const waUrl = 'https://wa.me/' + fullPhone.replace('+','') + '?text=' + encodeURIComponent(msg);
+  window.open(waUrl, '_blank');
+  document.getElementById('sendRegLinkModal').remove();
+  showToast('✅ تم فتح واتساب');
 }
 
 // ===== تصدير CSV =====
