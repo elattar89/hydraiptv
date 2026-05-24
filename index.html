@@ -3698,6 +3698,14 @@ function renderPendingSection() {
 }
 
 // ===== فتح مودال طلب الفورم =====
+
+function splitPhoneAndDial(fullPhone) {
+  const dials = ["+965", "+966", "+971", "+974", "+968", "+973", "+964", "+967", "+963", "+961", "+962", "+970", "+20", "+212", "+216", "+218", "+249", "+90", "+91", "+92", "+63", "+44", "+33", "+49", "+1", "+61", "+7", "+52", "+55", "+54", "+57", "+56", "+27", "+234", "+61", "+64", "+998", "+994", "+995", "+374", "+380", "+48", "+40", "+36", "+30", "+351", "+34", "+39", "+31", "+32", "+41", "+43", "+46", "+47", "+45", "+358", "+65", "+60", "+66", "+84", "+62", "+86", "+81", "+82", "+852", "+886", "+93", "+880", "+94", "+977", "+63", "+253", "+252", "+222", "+213", "+237", "+243", "+225", "+255", "+256", "+254", "+251", "+233"];
+  const clean = (fullPhone || '').trim();
+  const dial = dials.find(d => clean.startsWith(d)) || '';
+  return { dial, number: dial ? clean.slice(dial.length) : clean };
+}
+
 function openFormRegModal(firestoreId) {
   const reg = (window._formRegistrations || []).find(r => r._firestoreId === firestoreId);
   if (!reg) return;
@@ -3726,7 +3734,10 @@ function openFormRegModal(firestoreId) {
   }
 
   document.getElementById('fName').value    = prefillName;
-  document.getElementById('fPhone').value   = prefillPhone;
+  // فصل مفتاح الدولة عن الرقم
+  const _sp = splitPhoneAndDial(prefillPhone);
+  const fPDial = document.getElementById('fPhoneDial'); if(fPDial) fPDial.value = _sp.dial;
+  document.getElementById('fPhone').value   = _sp.number;
   document.getElementById('fUser').value    = reg.username || '';
   document.getElementById('fPass').value    = '';
   document.getElementById('fHost').value    = '';
@@ -3734,17 +3745,25 @@ function openFormRegModal(firestoreId) {
   document.getElementById('fExp').value     = '';
   const sexFormEl = document.getElementById('fSex'); if(sexFormEl) sexFormEl.value = reg.sex || '';
   const natEl = document.getElementById('fNationality'); if(natEl) natEl.value = reg.nationality || '';
-  const cntEl = document.getElementById('fCountry'); if(cntEl) cntEl.value = reg.country || '';
+  const cntEl = document.getElementById('fCountry');
+  if(cntEl) {
+    cntEl.value = reg.country || '';
+    // إظهار قسم المدة وتحديث الأسعار
+    if (reg.country && typeof showDashDurationField === 'function') showDashDurationField();
+  }
   document.getElementById('fNotes').value   = '';
-  // ملء المدة والسعر من بيانات الطلب
+  // ملء المدة من الطلب
   const durEl = document.getElementById('fDuration');
   if (durEl) durEl.value = reg.duration || '15';
-  const fAmtEl = document.getElementById('fAmount');
-  if (fAmtEl) fAmtEl.value = reg.price || '';
-  // تحديد العملة حسب الدولة
-  const _regCountry = reg.country || '';
-  const _regCurrency = _regCountry === 'مصر' ? 'جنيه' : (!_regCountry || _regCountry === 'الكويت') ? 'دينار' : '$ USD';
-  const _regPrice = reg.price ? (reg.price + ' ' + _regCurrency) : '';
+  // تحديد الكارت المناسب في الـ grid
+  if (reg.duration) {
+    document.querySelectorAll('input[name="fDurationRadio"]').forEach(function(r) {
+      if (r.value === String(reg.duration)) {
+        r.checked = true;
+        if (typeof onDashDurChange === 'function') onDashDurChange(r);
+      }
+    });
+  }
   // حدث تاريخ الانتهاء تلقائياً
   if (typeof autoFillExpDate === 'function') autoFillExpDate();
   document.getElementById('addAsNewUserBtn').style.display = '';
@@ -3891,7 +3910,10 @@ function openPendingModal(idx) {
   editingId = null;
   document.getElementById('modalTitle').textContent = '⏳ طلب قيد الانتظار';
   document.getElementById('fName').value     = req.name     || '';
-  document.getElementById('fPhone').value    = req.phone    || '';
+  // فصل مفتاح الدولة في openPendingModal
+  const _spP = splitPhoneAndDial(req.phone || '');
+  const fPDialP = document.getElementById('fPhoneDial'); if(fPDialP) fPDialP.value = _spP.dial;
+  document.getElementById('fPhone').value    = _spP.number;
   document.getElementById('fUser').value     = req.username || '';
   document.getElementById('fPass').value     = req.password || '';
   document.getElementById('fHost').value     = req.host     || '';
