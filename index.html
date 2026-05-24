@@ -543,7 +543,38 @@
       </div>
       <div class="form-group">
         <label>رقم الهاتف <span style="color:var(--text2);font-size:11px;font-weight:400">(اختياري)</span></label>
-        <input type="text" id="fPhone" placeholder="اختياري">
+        <div style="display:flex;gap:6px;">
+        <select id="fPhoneDial" style="width:135px;flex-shrink:0;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:8px 6px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none;">
+<option value="">—</option>
+<option value="+965">🇰🇼 +965 الكويت</option>
+<option value="+966">🇸🇦 +966 السعودية</option>
+<option value="+971">🇦🇪 +971 الإمارات</option>
+<option value="+974">🇶🇦 +974 قطر</option>
+<option value="+968">🇴🇲 +968 عمان</option>
+<option value="+973">🇧🇭 +973 البحرين</option>
+<option value="+964">🇮🇶 +964 العراق</option>
+<option value="+967">🇾🇪 +967 اليمن</option>
+<option value="+963">🇸🇾 +963 سوريا</option>
+<option value="+961">🇱🇧 +961 لبنان</option>
+<option value="+962">🇯🇴 +962 الأردن</option>
+<option value="+970">🇵🇸 +970 فلسطين</option>
+<option value="+20">🇪🇬 +20 مصر</option>
+<option value="+212">🇲🇦 +212 المغرب</option>
+<option value="+216">🇹🇳 +216 تونس</option>
+<option value="+218">🇱🇾 +218 ليبيا</option>
+<option value="+249">🇸🇩 +249 السودان</option>
+<option value="+90">🇹🇷 +90 تركيا</option>
+<option value="+91">🇮🇳 +91 الهند</option>
+<option value="+92">🇵🇰 +92 باكستان</option>
+<option value="+63">🇵🇭 +63 فلبين</option>
+<option value="+44">🇬🇧 +44 بريطانيا</option>
+<option value="+33">🇫🇷 +33 فرنسا</option>
+<option value="+49">🇩🇪 +49 ألمانيا</option>
+<option value="+1">🇺🇸 +1 أمريكا/كندا</option>
+<option value="+61">🇦🇺 +61 أستراليا</option>
+        </select>
+        <input type="text" id="fPhone" placeholder="رقم الهاتف" style="flex:1;min-width:0;">
+      </div>
       </div>
     </div>
     <div class="form-row">
@@ -1421,7 +1452,11 @@ function openPersonEdit(name) {
   _editingPersonName = name;
   const a = accounts.find(x => x.name === name);
   document.getElementById('personName').value = name;
-  document.getElementById('personPhone').value = a ? (a.phone || '') : '';
+  // فصل المفتاح عن الرقم
+  const _pPhone = a ? (a.phone || '') : '';
+  const _pDial = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'].find(d => _pPhone.startsWith(d)) || '';
+  document.getElementById('personPhoneDial').value = _pDial;
+  document.getElementById('personPhone').value = _pDial ? _pPhone.slice(_pDial.length) : _pPhone;
   document.getElementById('personSex').value = a ? (a.sex || '') : '';
   document.getElementById('personNationality').value = a ? (a.nationality || '') : '';
   document.getElementById('personCountry').value = a ? (a.country || '') : '';
@@ -1435,7 +1470,7 @@ function closePersonModal() {
 
 function savePersonEdit() {
   const newName = document.getElementById('personName').value.trim();
-  const newPhone = document.getElementById('personPhone').value.trim();
+  const newPhone = ((document.getElementById('personPhoneDial').value||'') + document.getElementById('personPhone').value.trim()).trim();
   if (!newName) { showToast('❌ الاسم مطلوب', true); return; }
   // تحديث كل الأكونتات بنفس الاسم
   const newSex         = document.getElementById('personSex').value;
@@ -1660,6 +1695,7 @@ function autoFillPhoneByName() {
 function openAddModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'إضافة حساب جديد';
+  const fpd = document.getElementById('fPhoneDial'); if(fpd) fpd.value = '';
   ['fName','fPhone','fUser','fPass','fDate','fExp','fNotes','fAmount','fNationality','fCountry','fCountryOther','fSex'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; }); document.getElementById('fHost').value = ''; const dispEl = document.getElementById('fAmountDisplay'); if(dispEl) dispEl.textContent = '';
   const durEl = document.getElementById('fDuration'); if (durEl) durEl.value = '15';
   document.getElementById('fClientPaid').value = 'paid';
@@ -1720,6 +1756,11 @@ function editAccount(id) {
   document.getElementById('fMerchantPaid').value = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
   document.getElementById('fNotes').value = a.notes || '';
   const aEl = document.getElementById('fAmount'); if(aEl) aEl.value = a.amount || '';
+  const _eDial = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'].find(d => (a.phone||'').startsWith(d)) || '';
+  const fPhoneDialEl = document.getElementById('fPhoneDial');
+  const fPhoneEl = document.getElementById('fPhone');
+  if (fPhoneDialEl) fPhoneDialEl.value = _eDial;
+  if (fPhoneEl) fPhoneEl.value = _eDial ? (a.phone||'').slice(_eDial.length) : (a.phone||'');
   const aDEl = document.getElementById('fAmountDisplay'); if(aDEl) aDEl.textContent = a.amount ? a.amount+' KD' : '';
   const sexEl = document.getElementById('fSex'); if(sexEl) sexEl.value = a.sex || '';
   const cntEditEl = document.getElementById('fCountry');
@@ -1767,7 +1808,7 @@ function showDupModal(title, desc, accountData, existingPerson) {
 function saveAccount() {
   const a = {
     name:         document.getElementById('fName').value.trim(),
-    phone:        document.getElementById('fPhone').value.trim(),
+    phone:        ((document.getElementById('fPhoneDial').value||'') + document.getElementById('fPhone').value.trim()).trim(),
     username:     document.getElementById('fUser').value.trim(),
     password:     document.getElementById('fPass').value.trim(),
     host:         document.getElementById('fHost').value.trim(),
@@ -2911,7 +2952,38 @@ if (_auth === 'admin') {
     </div>
     <div style="margin-bottom:14px">
       <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">رقم الموبايل</label>
-      <input id="personPhone" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px;direction:ltr">
+      <div style="display:flex;gap:6px;">
+        <select id="personPhoneDial" style="width:135px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 8px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none;">
+<option value="">—</option>
+<option value="+965">🇰🇼 +965 الكويت</option>
+<option value="+966">🇸🇦 +966 السعودية</option>
+<option value="+971">🇦🇪 +971 الإمارات</option>
+<option value="+974">🇶🇦 +974 قطر</option>
+<option value="+968">🇴🇲 +968 عمان</option>
+<option value="+973">🇧🇭 +973 البحرين</option>
+<option value="+964">🇮🇶 +964 العراق</option>
+<option value="+967">🇾🇪 +967 اليمن</option>
+<option value="+963">🇸🇾 +963 سوريا</option>
+<option value="+961">🇱🇧 +961 لبنان</option>
+<option value="+962">🇯🇴 +962 الأردن</option>
+<option value="+970">🇵🇸 +970 فلسطين</option>
+<option value="+20">🇪🇬 +20 مصر</option>
+<option value="+212">🇲🇦 +212 المغرب</option>
+<option value="+216">🇹🇳 +216 تونس</option>
+<option value="+218">🇱🇾 +218 ليبيا</option>
+<option value="+249">🇸🇩 +249 السودان</option>
+<option value="+90">🇹🇷 +90 تركيا</option>
+<option value="+91">🇮🇳 +91 الهند</option>
+<option value="+92">🇵🇰 +92 باكستان</option>
+<option value="+63">🇵🇭 +63 فلبين</option>
+<option value="+44">🇬🇧 +44 بريطانيا</option>
+<option value="+33">🇫🇷 +33 فرنسا</option>
+<option value="+49">🇩🇪 +49 ألمانيا</option>
+<option value="+1">🇺🇸 +1 أمريكا/كندا</option>
+<option value="+61">🇦🇺 +61 أستراليا</option>
+        </select>
+        <input id="personPhone" type="text" style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px;direction:ltr" placeholder="رقم الهاتف">
+      </div>
     </div>
     <div style="margin-bottom:14px">
       <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">الجنس</label>
