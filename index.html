@@ -639,7 +639,7 @@
     <div class="form-row">
       <div class="form-group">
         <label>اليوزرنيم</label>
-        <input type="text" id="fUser" placeholder="username">
+        <input type="text" id="fUser" placeholder="username" oninput="this.value=this.value.replace(/[^a-zA-Z0-9_.-]/g,'')">
       </div>
       <div class="form-group">
         <label>الباسورد</label>
