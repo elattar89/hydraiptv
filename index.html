@@ -764,6 +764,14 @@
         <label>تاريخ الاشتراك</label>
         <input type="date" id="fDate" onchange="autoFillExpDate()">
       </div>
+      <div class="form-group">
+        <label>الجنس</label>
+        <select id="fSex" style="width:100%">
+          <option value="">— اختر —</option>
+          <option value="ذكر">ذكر</option>
+          <option value="أنثى">أنثى</option>
+        </select>
+      </div>
       <div class="form-group" id="fExpGroup" style="display:none">
         <label>تاريخ الانتهاء (محسوب تلقائياً)</label>
         <input type="date" id="fExp" readonly style="opacity:0.5;cursor:not-allowed">
@@ -791,14 +799,6 @@
       </div>
       <input type="hidden" id="fAmount" />
       <span id="fAmountDisplay" style="display:none;"></span>
-      <div class="form-group">
-        <label>الجنس</label>
-        <select id="fSex" style="width:100%">
-          <option value="">— اختر —</option>
-          <option value="ذكر">ذكر</option>
-          <option value="أنثى">أنثى</option>
-        </select>
-      </div>
       <div class="form-group">
         <label>الجنسية</label>
         <input type="text" id="fNationality" placeholder="اختياري" />
