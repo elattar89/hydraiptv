@@ -1589,6 +1589,7 @@ function savePersonEdit() {
 }
 
 function showPhoneMenu(e, phone) {
+  if (window.isGuest) return;
   e.stopPropagation();
   document.querySelectorAll('.phone-menu').forEach(m => m.remove());
   const phoneNum = phone.replace(/[^0-9]/g, '');
@@ -1615,6 +1616,7 @@ function showPhoneMenu(e, phone) {
 }
 
 function showPaidMenu(e, id) {
+  if (window.isGuest) return;
   e.stopPropagation();
   document.querySelectorAll('.paid-menu').forEach(m => m.remove());
   const a = accounts.find(x => x.id === id);
@@ -1887,6 +1889,7 @@ function openAddModal() {
 }
 
 function editAccount(id) {
+  if (window.isGuest) { showToast('❌ لا تملك صلاحية', true); return; }
   const a = accounts.find(x => x.id === id);
   if (!a) return;
   editingId = id;
@@ -2131,6 +2134,7 @@ function renderTrashBtn() {
 }
 
 async function deleteAccount(id) {
+  if (window.isGuest) { showToast('❌ لا تملك صلاحية', true); return; }
   if (!confirm('هل أنت متأكد من الحذف؟')) return;
   const acc = accounts.find(x => x.id === id);
   if (acc) {
@@ -2246,6 +2250,7 @@ function manualRefresh() {
 }
 
 function showMsg(id, type) {
+  if (window.isGuest) return;
   const a = accounts.find(x => x.id === id);
   if (!a) return;
   let text = '';
