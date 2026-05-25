@@ -2579,6 +2579,7 @@ function openWa() {
 
 // ===== سجل الرسائل =====
 var _sentMessages = JSON.parse(localStorage.getItem('hydra_sent_msgs') || '{"merchant":[],"user":[]}');
+var _sentRegRequests = JSON.parse(localStorage.getItem('hydra_sent_reg_requests') || '[]');
 window._currentMsgTab = 'merchant';
 
 function logSentMessage(type, name, username, text) {
@@ -2610,7 +2611,7 @@ function logSentMessage(type, name, username, text) {
 }
 
 function updateSentMsgCount() {
-  const total = (_sentMessages.merchant||[]).length + (_sentMessages.user||[]).length;
+  const total = (_sentMessages.merchant||[]).length + (_sentMessages.user||[]).length + (_sentRegRequests||[]).length;
   const badge = document.getElementById('sentMsgCount');
   if (badge) {
     badge.textContent = total;
@@ -2619,8 +2620,8 @@ function updateSentMsgCount() {
 }
 
 function showSentMessages() {
-  window._currentMsgTab = 'user';
-  switchMsgTab('user');
+  window._currentMsgTab = 'regReq';
+  switchMsgTab('regReq');
   document.getElementById('sentMessagesModal').style.display = 'flex';
 }
 
@@ -2630,28 +2631,52 @@ function closeSentMessages() {
 
 function switchMsgTab(tab) {
   window._currentMsgTab = tab;
-  // تحديث ألوان التابات
-  document.getElementById('tabMerchant').style.background = tab === 'merchant' ? 'var(--accent)' : 'var(--bg3)';
-  document.getElementById('tabMerchant').style.color = tab === 'merchant' ? 'white' : 'var(--text2)';
-  document.getElementById('tabUser').style.background = tab === 'user' ? 'var(--accent)' : 'var(--bg3)';
-  document.getElementById('tabUser').style.color = tab === 'user' ? 'white' : 'var(--text2)';
-  // تحديث العدد في التابات
-  const cM = document.getElementById('countMerchant');
-  const cU = document.getElementById('countUser');
-  if (cM) {
-    cM.textContent = (_sentMessages.merchant||[]).length;
-    cM.style.background = tab === 'merchant' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
-  }
-  if (cU) {
-    cU.textContent = (_sentMessages.user||[]).length;
-    cU.style.background = tab === 'user' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
-  }
+  const tabs = ['regReq', 'user', 'merchant'];
+  tabs.forEach(function(t) {
+    const btn = document.getElementById(t === 'regReq' ? 'tabRegReq' : t === 'user' ? 'tabUser' : 'tabMerchant');
+    const cnt = document.getElementById(t === 'regReq' ? 'countRegReq' : t === 'user' ? 'countUser' : 'countMerchant');
+    const active = t === tab;
+    if (btn) { btn.style.background = active ? 'var(--accent)' : 'var(--bg3)'; btn.style.color = active ? 'white' : 'var(--text2)'; }
+    if (cnt) {
+      const list = t === 'regReq' ? (_sentRegRequests||[]) : (_sentMessages[t]||[]);
+      cnt.textContent = list.length;
+      cnt.style.background = active ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
+    }
+  });
   renderSentMessages();
 }
 
 function renderSentMessages() {
-  const list = _sentMessages[window._currentMsgTab] || [];
   const el = document.getElementById('sentMsgsContent');
+
+  // تاب طلبات التسجيل
+  if (window._currentMsgTab === 'regReq') {
+    const list = _sentRegRequests || [];
+    if (!list.length) {
+      el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text2)">📭 لم يتم إرسال أي طلبات تسجيل بعد</div>';
+      return;
+    }
+    el.innerHTML = '';
+    list.slice().reverse().forEach(function(r, idx) {
+      const realIdx = list.length - 1 - idx;
+      const card = document.createElement('div');
+      card.style.cssText = 'background:var(--card);border:1px solid rgba(5,150,105,0.3);border-radius:12px;margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;';
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(5,150,105,0.15);border:1px solid rgba(5,150,105,0.35);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">📤</div>
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);direction:ltr;">${r.phone}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px;">${r.time}</div>
+          </div>
+        </div>
+        <button onclick="deleteSentRegRequest(${realIdx})" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid #ef444430;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;flex-shrink:0;">✕</button>
+      `;
+      el.appendChild(card);
+    });
+    return;
+  }
+
+  const list = _sentMessages[window._currentMsgTab] || [];
   if (!list.length) {
     el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text2)">📭 لا توجد رسائل مرسلة</div>';
     return;
@@ -2712,10 +2737,22 @@ function deleteSentMessage(idx) {
   renderSentMessages();
 }
 
+function deleteSentRegRequest(idx) {
+  _sentRegRequests.splice(idx, 1);
+  localStorage.setItem('hydra_sent_reg_requests', JSON.stringify(_sentRegRequests));
+  updateSentMsgCount();
+  renderSentMessages();
+}
+
 function clearSentMessages(tab) {
   if (!confirm('هل تريد مسح سجل الرسائل؟')) return;
-  _sentMessages[tab] = [];
-  localStorage.setItem('hydra_sent_msgs', JSON.stringify(_sentMessages));
+  if (tab === 'regReq') {
+    _sentRegRequests = [];
+    localStorage.setItem('hydra_sent_reg_requests', JSON.stringify(_sentRegRequests));
+  } else {
+    _sentMessages[tab] = [];
+    localStorage.setItem('hydra_sent_msgs', JSON.stringify(_sentMessages));
+  }
   updateSentMsgCount();
   renderSentMessages();
 }
@@ -3477,8 +3514,11 @@ if (_auth === 'admin') {
     </div>
     <!-- تابات -->
     <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0">
-      <button id="tabUser" onclick="switchMsgTab('user')" style="flex:1;padding:12px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--accent);color:white;border-radius:0">
-        👤 رسائل المستخدمين <span id="countUser" style="background:rgba(255,255,255,0.25);border-radius:20px;padding:1px 8px;font-size:11px;margin-right:4px;">0</span>
+      <button id="tabRegReq" onclick="switchMsgTab('regReq')" style="flex:1;padding:12px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--accent);color:white;border-radius:0;border-left:1px solid var(--border)">
+        📤 طلبات التسجيل <span id="countRegReq" style="background:rgba(255,255,255,0.25);border-radius:20px;padding:1px 8px;font-size:11px;margin-right:4px;">0</span>
+      </button>
+      <button id="tabUser" onclick="switchMsgTab('user')" style="flex:1;padding:12px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--bg3);color:var(--text2);border-radius:0;border-left:1px solid var(--border)">
+        👤 رسائل المستخدمين <span id="countUser" style="background:rgba(255,255,255,0.1);border-radius:20px;padding:1px 8px;font-size:11px;margin-right:4px;">0</span>
       </button>
       <button id="tabMerchant" onclick="switchMsgTab('merchant')" style="flex:1;padding:12px;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--bg3);color:var(--text2);border-radius:0">
         🏪 رسائل التاجر <span id="countMerchant" style="background:rgba(255,255,255,0.1);border-radius:20px;padding:1px 8px;font-size:11px;margin-right:4px;">0</span>
@@ -4378,6 +4418,13 @@ https://elattar89.github.io/hydra-iptv-form/
 شكرا`;
   const waUrl = 'https://wa.me/' + fullPhone.replace('+','') + '?text=' + encodeURIComponent(msg);
   window.open(waUrl, '_blank');
+  // حفظ في سجل طلبات التسجيل
+  _sentRegRequests.push({
+    phone: fullPhone,
+    time: new Date().toLocaleString('ar-KW', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+  });
+  localStorage.setItem('hydra_sent_reg_requests', JSON.stringify(_sentRegRequests));
+  updateSentMsgCount();
   document.getElementById('sendRegLinkModal').remove();
   showToast('✅ تم فتح واتساب');
 }
