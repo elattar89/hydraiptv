@@ -679,6 +679,7 @@
   <button id="totalListBtn" onclick="showTotalListModal()" style="display:none;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(99,102,241,0.25)'" onmouseout="this.style.background='rgba(99,102,241,0.15)'">📊 الكشف الإجمالي</button>
   <button id="pendingListBtn" onclick="showPendingListModal()" style="display:none;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.4);color:#fb923c;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s">📋 كشف قيد الطلب</button>
   <button id="debtListBtn" onclick="showDebtListModal()" style="display:none;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#c084fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(168,85,247,0.25)'" onmouseout="this.style.background='rgba(168,85,247,0.15)'">📋 كشف الديون</button>
+  <button id="merchantPayBtn" onclick="openMerchantPayModal()" style="display:none;background:linear-gradient(135deg,rgba(168,85,247,0.3),rgba(124,58,237,0.3));border:1px solid rgba(168,85,247,0.6);color:#e9d5ff;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:700;transition:all 0.2s;box-shadow:0 2px 10px rgba(168,85,247,0.2)" onmouseover="this.style.background='linear-gradient(135deg,rgba(168,85,247,0.5),rgba(124,58,237,0.5))'" onmouseout="this.style.background='linear-gradient(135deg,rgba(168,85,247,0.3),rgba(124,58,237,0.3))'">💜 سداد للتاجر</button>
   <!-- زر إضافة حساب (dropdown) -->
   <div style="position:relative;display:inline-block" id="addBtnWrapper">
     <button class="btn btn-primary" onclick="toggleAddMenu(event)" id="addMainBtn" style="display:flex;align-items:center;gap:6px;">
@@ -1031,8 +1032,7 @@ function save() {
   if (credit > 0) {
     const toSettle = accounts.filter(a => isMerchantUnpaid(a));
     for (const acc of toSettle) {
-      const cost = parseFloat(acc.amount || 0);
-      if (cost <= 0) continue;
+      const cost = merchantCost(acc);
       if (credit >= cost) {
         acc.merchantPaid = 'paid';
         const clientStatus = acc.clientPaid || (acc.paid === 'unpaid' ? 'unpaid' : 'paid');
@@ -1128,10 +1128,13 @@ function isMerchantUnpaid(a) {
   return false;
 }
 
+function merchantCost(a) {
+  return 10;
+}
+
 function getMerchantDue() {
-  return accounts
-    .filter(a => isMerchantUnpaid(a))
-    .reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
+  const count = accounts.filter(a => isMerchantUnpaid(a)).length;
+  return count * 10;
 }
 
 function updateMerchantDue() {
@@ -1150,7 +1153,7 @@ function renderStats() {
   const expired = accounts.filter(a => statusOf(a) === 'expired').length;
   const unpaid = accounts.filter(a => a.paid === 'unpaid').length;
   const debtAccounts = accounts.filter(a => isMerchantUnpaid(a));
-  const debtTotal = debtAccounts.reduce((s,a) => s + parseFloat(a.amount||0), 0);
+  const debtTotal = debtAccounts.reduce((s,a) => s + merchantCost(a), 0);
   const merchantCredit = window._merchantCredit || 0;
   const cur = document.getElementById('filterStatus').value;
   const curP = document.getElementById('filterPaid').value;
@@ -1187,13 +1190,13 @@ function renderStats() {
       <div style="font-size:22px;font-weight:700;color:#f87171">${unpaid}</div>
       <span style="font-size:10px;color:rgba(255,255,255,0.4)">بانتظار الدفع</span>
     </div>
-    <div onclick="openMerchantPayModal()" style="${base} rgba(168,85,247,0.3);background:rgba(168,85,247,0.12)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+    <div onclick="setFilter('debt')" style="${base} ${curP==='merchant_unpaid'?'rgba(168,85,247,0.8);background:rgba(168,85,247,0.25)':'rgba(168,85,247,0.3);background:rgba(168,85,247,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
       <span style="font-size:11px;color:rgba(255,255,255,0.6)">حسابات التاجر</span>
-      <div style="font-size:16px;font-weight:700;color:#c084fc;line-height:1.3">
-        ${debtTotal > 0 ? 'مستحق: ' + debtTotal.toFixed(0) + '$' : 'لا يوجد مستحق'}
+      <div style="font-size:14px;font-weight:700;color:#c084fc;line-height:1.4">
+        ${debtTotal > 0 ? 'مستحق: ' + debtTotal.toFixed(0) + '$' : '✓ كل شيء مسدد'}
       </div>
       <span style="font-size:10px;color:${merchantCredit > 0 ? '#4ade80' : 'rgba(255,255,255,0.4)'}">
-        ${merchantCredit > 0 ? 'رصيد: ' + merchantCredit.toFixed(0) + '$' : debtAccounts.length + ' أكونت'}
+        ${merchantCredit > 0 ? '💚 رصيد: ' + merchantCredit.toFixed(0) + '$' : (debtAccounts.length > 0 ? debtAccounts.length + ' أكونت' : '—')}
       </span>
     </div>
   `;
@@ -1273,7 +1276,7 @@ function showPendingListModal() {
 function showDebtListModal() {
   const debts = accounts.filter(a => isMerchantUnpaid(a))
     .sort((a,b) => new Date(b.startDate||0) - new Date(a.startDate||0));
-  const total = debts.reduce((s, a) => s + parseFloat(a.amount || 0), 0);
+  const total = debts.reduce((s, a) => s + merchantCost(a), 0);
   document.getElementById('debtModalCount').textContent = 'إجمالي: ' + debts.length + ' حساب | ' + total.toFixed(0) + '$';
   document.getElementById('debtModalDate').textContent = 'تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-EG');
   document.getElementById('debtModalTotal').textContent = total.toFixed(0) + '$';
@@ -1586,8 +1589,11 @@ function setFilter(val) {
   const expiredBtn = document.getElementById('expiredListBtn');
   if (expiredBtn) expiredBtn.style.display = (val === 'expired') ? 'inline-block' : 'none';
   const debtBtn = document.getElementById('debtListBtn');
+  const merchantPayBtn = document.getElementById('merchantPayBtn');
   const curPaid = document.getElementById('filterPaid').value;
-  if (debtBtn) debtBtn.style.display = (val === 'debt' || curPaid === 'merchant_unpaid') ? 'inline-block' : 'none';
+  const showDebt = (val === 'debt' || curPaid === 'merchant_unpaid');
+  if (debtBtn) debtBtn.style.display = showDebt ? 'inline-block' : 'none';
+  if (merchantPayBtn) merchantPayBtn.style.display = showDebt ? 'inline-block' : 'none';
   // زراري الكشف الإجمالي وقيد الطلب
   const totalBtn = document.getElementById('totalListBtn');
   if (totalBtn) totalBtn.style.display = val === 'all' ? 'block' : 'none';
@@ -4408,8 +4414,7 @@ function previewMerchantPay() {
   let budget = amount;
   let toSettle = [];
   for (const acc of unpaid) {
-    const cost = parseFloat(acc.amount || 0);
-    if (cost <= 0) continue;
+    const cost = merchantCost(acc);
     if (budget >= cost) {
       toSettle.push(acc);
       budget -= cost;
@@ -4419,13 +4424,13 @@ function previewMerchantPay() {
   list.innerHTML = toSettle.map(a => `
     <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid var(--border);">
       <span style="color:var(--text);">${a.name} — ${a.username}</span>
-      <span style="color:#4ade80;">${a.amount}$</span>
+      <span style="color:#4ade80;">10$</span>
     </div>`).join('') || '<div style="color:var(--text2);">لا يوجد أكونتات كافية</div>';
 
   const prevCredit = window._merchantCredit || 0;
   const totalBudget = parseFloat(document.getElementById('merchantPayAmount').value||0) + prevCredit;
   const allUnpaid = accounts.filter(a => isMerchantUnpaid(a))
-    .reduce((s,a) => s + parseFloat(a.amount||0), 0);
+    .reduce((s,a) => s + merchantCost(a), 0);
   const newCredit = Math.max(0, totalBudget - allUnpaid + budget);
   remaining.textContent = budget.toFixed(0) + '$ متبقي' + (newCredit > 0 ? ' — رصيد: ' + newCredit.toFixed(0) + '$' : '');
   remaining.style.color = newCredit > 0 ? '#4ade80' : budget > 0 ? '#fbbf24' : '#4ade80';
@@ -4443,8 +4448,7 @@ function confirmMerchantPay() {
   let budget = amount;
   let settled = 0;
   for (const acc of unpaid) {
-    const cost = parseFloat(acc.amount || 0);
-    if (cost <= 0) continue;
+    const cost = merchantCost(acc);
     if (budget >= cost) {
       acc.merchantPaid = 'paid';
       // تحديث paid بشكل صحيح بناءً على حالة العميل
