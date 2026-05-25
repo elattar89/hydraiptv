@@ -306,8 +306,80 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const DATA_DOC    = doc(db, "iptv", "accounts");
-    const BACKUP_COL  = "hydra_backups";
+    const DATA_DOC     = doc(db, "iptv", "accounts");
+    const MERCHANT_DOC = doc(db, "iptv", "merchant");
+    const LOGS_DOC     = doc(db, "iptv", "logs");
+    const META_DOC     = doc(db, "iptv", "meta");
+    const BACKUP_COL   = "hydra_backups";
+
+    // ===== merchant: credit + payments =====
+    window.loadMerchantFromFirebase = async function() {
+      try {
+        const snap = await getDoc(MERCHANT_DOC);
+        if (snap.exists()) {
+          const d = snap.data();
+          window._merchantCredit   = parseFloat(d.credit   || '0');
+          window._merchantPayments = JSON.parse(d.payments || '[]');
+        } else {
+          window._merchantCredit   = 0;
+          window._merchantPayments = [];
+        }
+      } catch(e) { console.warn('loadMerchant error:', e); window._merchantCredit = 0; window._merchantPayments = []; }
+    };
+    window.saveMerchantToFirebase = async function() {
+      try {
+        await setDoc(MERCHANT_DOC, {
+          credit:   (window._merchantCredit || 0).toFixed(2),
+          payments: JSON.stringify(window._merchantPayments || [])
+        });
+      } catch(e) { console.warn('saveMerchant error:', e); }
+    };
+
+    // ===== logs: sent messages + reg requests =====
+    window.loadLogsFromFirebase = async function() {
+      try {
+        const snap = await getDoc(LOGS_DOC);
+        if (snap.exists()) {
+          const d = snap.data();
+          window._sentMessages    = JSON.parse(d.sentMsgs    || '{"merchant":[],"user":[]}');
+          window._sentRegRequests = JSON.parse(d.sentRegReqs || '[]');
+        } else {
+          window._sentMessages    = { merchant: [], user: [] };
+          window._sentRegRequests = [];
+        }
+      } catch(e) { console.warn('loadLogs error:', e); window._sentMessages = { merchant:[], user:[] }; window._sentRegRequests = []; }
+    };
+    window.saveLogsToFirebase = async function() {
+      try {
+        await setDoc(LOGS_DOC, {
+          sentMsgs:    JSON.stringify(window._sentMessages    || { merchant:[], user:[] }),
+          sentRegReqs: JSON.stringify(window._sentRegRequests || [])
+        });
+      } catch(e) { console.warn('saveLogs error:', e); }
+    };
+
+    // ===== meta: backup dates =====
+    window.loadMetaFromFirebase = async function() {
+      try {
+        const snap = await getDoc(META_DOC);
+        if (snap.exists()) {
+          const d = snap.data();
+          window._lastBackupDate      = d.lastBackup      || '';
+          window._lastDriveBackupDate = d.lastDriveBackup || '';
+        } else {
+          window._lastBackupDate = '';
+          window._lastDriveBackupDate = '';
+        }
+      } catch(e) { console.warn('loadMeta error:', e); window._lastBackupDate=''; window._lastDriveBackupDate=''; }
+    };
+    window.saveMetaToFirebase = async function() {
+      try {
+        await setDoc(META_DOC, {
+          lastBackup:      window._lastBackupDate      || '',
+          lastDriveBackup: window._lastDriveBackupDate || ''
+        });
+      } catch(e) { console.warn('saveMeta error:', e); }
+    };
 
     // ===== حفظ نسخة احتياطية يومية =====
     window.saveBackupToFirebase = async function(accountsData) {
@@ -320,7 +392,8 @@
           savedAt: Date.now(),
           count:   accountsData.length
         });
-        localStorage.setItem('hydra_last_backup_date', today);
+        window._lastBackupDate = today;
+        window.saveMetaToFirebase && window.saveMetaToFirebase();
 
         // احتفظ بآخر 5 نسخ فقط — احذف الأقدم
         const allSnap = await getDocs(collection(db, BACKUP_COL));
@@ -356,7 +429,8 @@
         const json = await res.json();
         if (json.status === 'ok') {
           console.log('✅ Drive backup saved:', json.file);
-          localStorage.setItem('hydra_last_drive_backup', today);
+          window._lastDriveBackupDate = today;
+          window.saveMetaToFirebase && window.saveMetaToFirebase();
           return true;
         }
         return false;
@@ -427,7 +501,6 @@
         });
         // تحديث الداتا المحلية
         accounts = remote;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
         renderAll();
         // حفظ التصحيحات على Firebase مرة واحدة فقط
         if (needsSave) {
@@ -948,38 +1021,37 @@ let accounts = [];
 let editingId = null;
 
 function load() {
-  // Firebase هو المصدر الأساسي — localStorage كـ fallback
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) { try { accounts = JSON.parse(saved); accounts.forEach(a => { if (!a.duration) a.duration = '15'; }); } catch(e) { accounts = [...DEFAULT_DATA]; } }
-  else { accounts = [...DEFAULT_DATA]; save(); }
+  // Firebase هو المصدر الأساسي — onSnapshot يتولى جلب الداتا
+  if (!accounts || !accounts.length) { accounts = [...DEFAULT_DATA]; }
 }
 
 function save() {
   // تطبيق رصيد التاجر على الأكونتات الجديدة تلقائياً
-  let credit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
+  let credit = window._merchantCredit || 0;
   if (credit > 0) {
-    const toSettle = accounts.filter(a => a.merchantPaid === 'unpaid' && a.amount);
+    const toSettle = accounts.filter(a => isMerchantUnpaid(a));
     for (const acc of toSettle) {
       const cost = parseFloat(acc.amount || 0);
       if (cost <= 0) continue;
       if (credit >= cost) {
         acc.merchantPaid = 'paid';
+        const clientStatus = acc.clientPaid || (acc.paid === 'unpaid' ? 'unpaid' : 'paid');
+        acc.paid = clientStatus === 'paid' ? 'paid' : 'debt';
         credit -= cost;
       } else break;
     }
-    localStorage.setItem('hydra_merchant_credit', credit.toFixed(2));
+    window._merchantCredit = credit;
+    window.saveMerchantToFirebase && window.saveMerchantToFirebase();
   }
-  const data = JSON.stringify(accounts);
-  localStorage.setItem(STORAGE_KEY, data);
   if (window.saveToFirebase) window.saveToFirebase(accounts);
   // نسخة احتياطية يومية
   const today = new Date().toISOString().slice(0,10);
-  const lastBackup = localStorage.getItem('hydra_last_backup_date');
+  const lastBackup = window._lastBackupDate || '';
   if (lastBackup !== today && window.saveBackupToFirebase) {
     window.saveBackupToFirebase(accounts);
   }
   // نسخة على Google Drive يومياً
-  const lastDriveBackup = localStorage.getItem('hydra_last_drive_backup');
+  const lastDriveBackup = window._lastDriveBackupDate || '';
   if (lastDriveBackup !== today && window.saveBackupToDrive) {
     window.saveBackupToDrive(accounts);
   }
@@ -1047,9 +1119,17 @@ function copyText(text, btn) {
 
 
 
+// دالة موحدة لتحديد إذا كان الحساب غير مسدد للتاجر
+function isMerchantUnpaid(a) {
+  if (a.merchantPaid === 'paid') return false;
+  if (a.merchantPaid === 'unpaid') return true;
+  // fallback: اعتمد على حقل paid القديم
+  return a.paid === 'debt' || a.paid === 'unpaid';
+}
+
 function getMerchantDue() {
   return accounts
-    .filter(a => a.merchantPaid === 'unpaid' && a.amount)
+    .filter(a => isMerchantUnpaid(a))
     .reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
 }
 
@@ -1068,9 +1148,9 @@ function renderStats() {
   const expiring = accounts.filter(a => statusOf(a) === 'expiring').length;
   const expired = accounts.filter(a => statusOf(a) === 'expired').length;
   const unpaid = accounts.filter(a => a.paid === 'unpaid').length;
-  const debtAccounts = accounts.filter(a => a.merchantPaid === 'unpaid' && a.amount);
+  const debtAccounts = accounts.filter(a => isMerchantUnpaid(a));
   const debtTotal = debtAccounts.reduce((s,a) => s + parseFloat(a.amount||0), 0);
-  const merchantCredit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
+  const merchantCredit = window._merchantCredit || 0;
   const cur = document.getElementById('filterStatus').value;
   const curP = document.getElementById('filterPaid').value;
   const base = `border-radius:14px;padding:10px 16px;text-align:center;cursor:pointer;transition:all 0.25s;flex:1;min-width:80px;max-width:140px;backdrop-filter:blur(4px);border:2px solid`;
@@ -1190,12 +1270,12 @@ function showPendingListModal() {
 }
 
 function showDebtListModal() {
-  const debts = accounts.filter(a => a.paid === 'debt')
+  const debts = accounts.filter(a => isMerchantUnpaid(a))
     .sort((a,b) => new Date(b.startDate||0) - new Date(a.startDate||0));
-  const total = debts.length * 10;
-  document.getElementById('debtModalCount').textContent = 'إجمالي: ' + debts.length + ' حساب | ' + total + '$';
+  const total = debts.reduce((s, a) => s + parseFloat(a.amount || 0), 0);
+  document.getElementById('debtModalCount').textContent = 'إجمالي: ' + debts.length + ' حساب | ' + total.toFixed(0) + '$';
   document.getElementById('debtModalDate').textContent = 'تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-EG');
-  document.getElementById('debtModalTotal').textContent = total + '$';
+  document.getElementById('debtModalTotal').textContent = total.toFixed(0) + '$';
   const rows = debts.map((a, i) => {
     const status = statusOf(a);
     const statusText = status === 'active' ? 'نشط' : status === 'expiring' ? 'ينتهي قريباً' : 'منتهي';
@@ -1568,7 +1648,7 @@ function filtered() {
 
 function renderAll() {
   // تأكد من الـ auth قبل الرسم
-  const _authCheck = sessionStorage.getItem('hydra_auth') || localStorage.getItem('hydra_auth_persist');
+  const _authCheck = sessionStorage.getItem('hydra_auth');
   if (_authCheck === 'admin') window.isGuest = false;
   else if (_authCheck === 'guest') window.isGuest = true;
 
@@ -2077,6 +2157,10 @@ function autoFillPhoneByName() {
 
 function openAddModal() {
   editingId = null;
+  // إعادة تعيين حالة الـ modal (مهم - يمنع تعارض pending state)
+  _modalIsPending = false;
+  _modalIsAddFromPending = false;
+  _modalPendingIdx = null;
   document.getElementById('modalTitle').textContent = 'إضافة حساب جديد';
   const fpd = document.getElementById('fPhoneDial'); if(fpd) fpd.value = '';
   // reset duration field
@@ -2084,10 +2168,15 @@ function openAddModal() {
   const fDurPrev = document.getElementById('fDurPricePreview'); if(fDurPrev) fDurPrev.style.display = 'none';
   document.querySelectorAll('input[name="fDurationRadio"]').forEach(function(r){ r.checked = false; });
   ['6','12','15','24','30'].forEach(function(d){ var l = document.getElementById('fd-'+d); if(l){ l.style.borderColor=''; l.style.background=''; } });
-  ['fName','fPhone','fUser','fPass','fDate','fExp','fNotes','fAmount','fNationality','fCountry','fCountryOther','fSex'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; }); document.getElementById('fHost').value = ''; const dispEl = document.getElementById('fAmountDisplay'); if(dispEl) dispEl.textContent = '';
+  ['fName','fPhone','fUser','fPass','fDate','fExp','fNotes','fAmount','fCountryOther','fSex'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('fHost').value = '';
+  const dispEl = document.getElementById('fAmountDisplay'); if(dispEl) dispEl.textContent = '';
   const durEl = document.getElementById('fDuration'); if (durEl) durEl.value = '15';
   document.getElementById('fClientPaid').value = 'paid';
   document.getElementById('fMerchantPaid').value = 'paid';
+  // reset nationality and country selects
+  const natEl = document.getElementById('fNationality'); if(natEl) natEl.value = '';
+  const cntEl = document.getElementById('fCountry'); if(cntEl) cntEl.value = '';
   document.getElementById('modalBg').classList.add('active');
   const fNameEl = document.getElementById('fName');
   fNameEl.oninput = function() {
@@ -2096,16 +2185,18 @@ function openAddModal() {
     if (val) renderNameDropdown(val);
     else renderNameDropdown('');
   };
-  // إغلاق الـ dropdown لو دوست برا
-  setTimeout(() => {
-    document.addEventListener('click', function closeDD(e) {
+  // إغلاق الـ dropdown لو دوست برا — مرة واحدة فقط (يمنع تراكم الـ listeners)
+  if (!window._closeDDListenerAdded) {
+    window._closeDDListenerAdded = true;
+    document.addEventListener('click', function(e) {
       const dd = document.getElementById('nameDropdown');
+      const nameInput = document.getElementById('fName');
       const btn = document.getElementById('nameArrowBtn');
-      if (dd && !dd.contains(e.target) && e.target !== fNameEl && e.target !== btn) {
+      if (dd && !dd.contains(e.target) && e.target !== nameInput && e.target !== btn) {
         dd.style.display = 'none';
       }
     });
-  }, 100);
+  }
 }
 
 function editAccount(id) {
@@ -2128,11 +2219,12 @@ function editAccount(id) {
     hostEl.value = a.host || '';
   }
   document.getElementById('fDate').value = a.startDate || '';
-  // حساب تاريخ الانتهاء تلقائياً من تاريخ الاشتراك
+  // حساب تاريخ الانتهاء من تاريخ الاشتراك باستخدام المدة الفعلية للحساب
   if (a.startDate) {
     const s = new Date(a.startDate);
+    const months = parseInt(a.duration) || 15;
     const exp = new Date(s);
-    exp.setMonth(exp.getMonth() + 15);
+    exp.setMonth(exp.getMonth() + months);
     const yyyy = exp.getFullYear();
     const mm = String(exp.getMonth() + 1).padStart(2, '0');
     const lastDay = new Date(yyyy, exp.getMonth() + 1, 0).getDate();
@@ -2456,6 +2548,22 @@ function showToast(msg, err) {
 document.getElementById('modalBg').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
+// تهيئة Firebase الإضافية (merchant + logs + meta) قبل أي شيء
+(async function initFirebaseExtras() {
+  try {
+    await Promise.all([
+      window.loadMerchantFromFirebase && window.loadMerchantFromFirebase(),
+      window.loadLogsFromFirebase    && window.loadLogsFromFirebase(),
+      window.loadMetaFromFirebase    && window.loadMetaFromFirebase(),
+    ]);
+  } catch(e) { console.warn('initFirebaseExtras error:', e); }
+  // مزامنة المتغيرات المحلية مع window
+  if (window._sentMessages)     { _sentMessages    = window._sentMessages; }
+  if (window._sentRegRequests)  { _sentRegRequests = window._sentRegRequests; }
+  if (window._merchantPayments) { _merchantPayments = window._merchantPayments; }
+  updateSentMsgCount();
+})();
+
 load();
 // مسح السيرش عند التحميل
 window.addEventListener('load', function() {
@@ -2578,8 +2686,8 @@ function openWa() {
 }
 
 // ===== سجل الرسائل =====
-var _sentMessages = JSON.parse(localStorage.getItem('hydra_sent_msgs') || '{"merchant":[],"user":[]}');
-var _sentRegRequests = JSON.parse(localStorage.getItem('hydra_sent_reg_requests') || '[]');
+var _sentMessages    = window._sentMessages    || { merchant: [], user: [] };
+var _sentRegRequests = window._sentRegRequests || [];
 window._currentMsgTab = 'merchant';
 
 function logSentMessage(type, name, username, text) {
@@ -2606,7 +2714,8 @@ function logSentMessage(type, name, username, text) {
   _sentMessages[tab].unshift(entry);
   // احتفظ بآخر 100 رسالة لكل تاب
   _sentMessages[tab] = _sentMessages[tab].slice(0, 100);
-  localStorage.setItem('hydra_sent_msgs', JSON.stringify(_sentMessages));
+  window._sentMessages = _sentMessages;
+  window.saveLogsToFirebase && window.saveLogsToFirebase();
   updateSentMsgCount();
 }
 
@@ -2732,14 +2841,16 @@ function renderSentMessages() {
 
 function deleteSentMessage(idx) {
   _sentMessages[window._currentMsgTab].splice(idx, 1);
-  localStorage.setItem('hydra_sent_msgs', JSON.stringify(_sentMessages));
+  window._sentMessages = _sentMessages;
+  window.saveLogsToFirebase && window.saveLogsToFirebase();
   updateSentMsgCount();
   renderSentMessages();
 }
 
 function deleteSentRegRequest(idx) {
   _sentRegRequests.splice(idx, 1);
-  localStorage.setItem('hydra_sent_reg_requests', JSON.stringify(_sentRegRequests));
+  window._sentRegRequests = _sentRegRequests;
+  window.saveLogsToFirebase && window.saveLogsToFirebase();
   updateSentMsgCount();
   renderSentMessages();
 }
@@ -2748,11 +2859,12 @@ function clearSentMessages(tab) {
   if (!confirm('هل تريد مسح سجل الرسائل؟')) return;
   if (tab === 'regReq') {
     _sentRegRequests = [];
-    localStorage.setItem('hydra_sent_reg_requests', JSON.stringify(_sentRegRequests));
+    window._sentRegRequests = [];
   } else {
     _sentMessages[tab] = [];
-    localStorage.setItem('hydra_sent_msgs', JSON.stringify(_sentMessages));
+    window._sentMessages = _sentMessages;
   }
+  window.saveLogsToFirebase && window.saveLogsToFirebase();
   updateSentMsgCount();
   renderSentMessages();
 }
@@ -3004,7 +3116,6 @@ window.isGuest = false;
 
 function doLogout() {
   sessionStorage.removeItem('hydra_auth');
-  localStorage.removeItem('hydra_auth_persist');
   window.isGuest = false;
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginUser').value = '';
@@ -3024,11 +3135,6 @@ function doLogin() {
     window.isGuest = false;
     document.getElementById('loginScreen').style.display = 'none';
     sessionStorage.setItem('hydra_auth', 'admin');
-    if (remember) {
-      localStorage.setItem('hydra_auth_persist', 'admin');
-    } else {
-      localStorage.removeItem('hydra_auth_persist');
-    }
     setTimeout(applyGuestMode, 50);
   } else {
     document.getElementById('loginError').style.display = 'block';
@@ -3061,7 +3167,7 @@ function applyGuestMode() {
 }
 
 // تحقق من الجلسة الحالية أو التذكر الدائم
-const _auth = sessionStorage.getItem('hydra_auth') || localStorage.getItem('hydra_auth_persist');
+const _auth = sessionStorage.getItem('hydra_auth');
 if (_auth === 'admin') {
   window.isGuest = false;
   document.getElementById('loginScreen').style.display = 'none';
@@ -4204,7 +4310,7 @@ function closeRequestMerchantModal() {
 }
 
 // ===== نظام الدفع للتاجر =====
-var _merchantPayments = JSON.parse(localStorage.getItem('hydra_merchant_payments') || '[]');
+var _merchantPayments = window._merchantPayments || [];
 
 
 
@@ -4215,9 +4321,9 @@ function openMerchantPayModal() {
   if (old) old.remove();
 
   const due = getMerchantDue();
-  const credit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
+  const credit = window._merchantCredit || 0;
   const unpaidAccounts = accounts
-    .filter(a => a.merchantPaid === 'unpaid' && a.amount)
+    .filter(a => isMerchantUnpaid(a))
     .sort((a, b) => new Date(a.startDate||'9999') - new Date(b.startDate||'9999'));
 
   const overlay = document.createElement('div');
@@ -4291,7 +4397,7 @@ function previewMerchantPay() {
   preview.style.display = 'block';
 
   const unpaid = accounts
-    .filter(a => a.merchantPaid === 'unpaid' && a.amount)
+    .filter(a => isMerchantUnpaid(a))
     .sort((a, b) => new Date(a.startDate||'9999') - new Date(b.startDate||'9999'));
 
   let budget = amount;
@@ -4311,9 +4417,9 @@ function previewMerchantPay() {
       <span style="color:#4ade80;">${a.amount}$</span>
     </div>`).join('') || '<div style="color:var(--text2);">لا يوجد أكونتات كافية</div>';
 
-  const prevCredit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
+  const prevCredit = window._merchantCredit || 0;
   const totalBudget = parseFloat(document.getElementById('merchantPayAmount').value||0) + prevCredit;
-  const allUnpaid = accounts.filter(a => a.merchantPaid === 'unpaid' && a.amount)
+  const allUnpaid = accounts.filter(a => isMerchantUnpaid(a))
     .reduce((s,a) => s + parseFloat(a.amount||0), 0);
   const newCredit = Math.max(0, totalBudget - allUnpaid + budget);
   remaining.textContent = budget.toFixed(0) + '$ متبقي' + (newCredit > 0 ? ' — رصيد: ' + newCredit.toFixed(0) + '$' : '');
@@ -4326,7 +4432,7 @@ function confirmMerchantPay() {
   if (!confirm('تأكيد دفع ' + amount + '$ للتاجر؟')) return;
 
   const unpaid = accounts
-    .filter(a => a.merchantPaid === 'unpaid' && a.amount)
+    .filter(a => isMerchantUnpaid(a))
     .sort((a, b) => new Date(a.startDate||'9999') - new Date(b.startDate||'9999'));
 
   let budget = amount;
@@ -4336,7 +4442,9 @@ function confirmMerchantPay() {
     if (cost <= 0) continue;
     if (budget >= cost) {
       acc.merchantPaid = 'paid';
-      acc.paid = acc.clientPaid === 'paid' ? 'paid' : acc.paid;
+      // تحديث paid بشكل صحيح بناءً على حالة العميل
+      const clientStatus = acc.clientPaid || (acc.paid === 'unpaid' ? 'unpaid' : 'paid');
+      acc.paid = clientStatus === 'paid' ? 'paid' : 'debt';
       budget -= cost;
       settled++;
     } else break;
@@ -4347,10 +4455,10 @@ function confirmMerchantPay() {
   const due = getMerchantDue();
 
   // احسب الرصيد المتبقي
-  const prevCredit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
+  const prevCredit = window._merchantCredit || 0;
   const totalPaid = amount + prevCredit;
   const newCredit = Math.max(0, totalPaid - (due - budget));
-  localStorage.setItem('hydra_merchant_credit', newCredit.toFixed(2));
+  window._merchantCredit = newCredit;
 
   _merchantPayments.unshift({
     date: dateStr,
@@ -4360,7 +4468,8 @@ function confirmMerchantPay() {
     credit: newCredit.toFixed(0)
   });
   _merchantPayments = _merchantPayments.slice(0, 30);
-  localStorage.setItem('hydra_merchant_payments', JSON.stringify(_merchantPayments));
+  window._merchantPayments = _merchantPayments;
+  window.saveMerchantToFirebase && window.saveMerchantToFirebase();
 
   save(); renderAll();
   document.getElementById('merchantPayModal').remove();
@@ -4423,7 +4532,8 @@ https://elattar89.github.io/hydra-iptv-form/
     phone: fullPhone,
     time: new Date().toLocaleString('ar-KW', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
   });
-  localStorage.setItem('hydra_sent_reg_requests', JSON.stringify(_sentRegRequests));
+  window._sentRegRequests = _sentRegRequests;
+  window.saveLogsToFirebase && window.saveLogsToFirebase();
   updateSentMsgCount();
   document.getElementById('sendRegLinkModal').remove();
   showToast('✅ تم فتح واتساب');
@@ -4556,8 +4666,8 @@ async function openEmergencyModal() {
 
   // تحميل النسخ
   // عرض آخر حفظ
-  const lastFB = localStorage.getItem('hydra_last_backup_date');
-  const lastDR = localStorage.getItem('hydra_last_drive_backup');
+  const lastFB = window._lastBackupDate      || '';
+  const lastDR = window._lastDriveBackupDate || '';
   const infoEl = document.getElementById('lastBackupInfo');
   if (infoEl) {
     let info = [];
