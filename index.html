@@ -666,7 +666,7 @@
     <option value="expiring">قريب الانتهاء</option>
     <option value="expired">منتهي</option>
   </select>
-  <select id="filterPaid" onchange="renderAll()">
+  <select id="filterPaid" onchange="renderAll()" style="display:none">
     <option value="all">كل الحالات</option>
     <option value="client_paid">العميل دفع ✅</option>
     <option value="client_unpaid">العميل لم يدفع ❌</option>
@@ -1195,8 +1195,8 @@ function renderStats() {
       <div style="font-size:14px;font-weight:700;color:#c084fc;line-height:1.4">
         ${debtTotal > 0 ? 'مستحق: ' + debtTotal.toFixed(0) + '$' : '✓ كل شيء مسدد'}
       </div>
-      <span style="font-size:10px;color:${merchantCredit > 0 ? '#4ade80' : 'rgba(255,255,255,0.4)'}">
-        ${merchantCredit > 0 ? '💚 رصيد: ' + merchantCredit.toFixed(0) + '$' : (debtAccounts.length > 0 ? debtAccounts.length + ' أكونت' : '—')}
+      <span style="font-size:10px;color:${merchantCredit > 0 ? '#4ade80' : 'rgba(255,255,255,0.5)'}">
+        رصيد: ${merchantCredit > 0 ? merchantCredit.toFixed(0) + '$' : '0$'}
       </span>
     </div>
   `;
