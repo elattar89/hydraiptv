@@ -2557,10 +2557,11 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
       window.loadMetaFromFirebase    && window.loadMetaFromFirebase(),
     ]);
   } catch(e) { console.warn('initFirebaseExtras error:', e); }
-  // مزامنة المتغيرات المحلية مع window
-  if (window._sentMessages)     { _sentMessages    = window._sentMessages; }
-  if (window._sentRegRequests)  { _sentRegRequests = window._sentRegRequests; }
-  if (window._merchantPayments) { _merchantPayments = window._merchantPayments; }
+  // مزامنة المتغيرات المحلية مع window بعد تحميل Firebase
+  // (الـ var declarations ممكن تكون شتغلت قبل الـ await)
+  if (window._sentMessages)     _sentMessages    = window._sentMessages;
+  if (window._sentRegRequests)  _sentRegRequests = window._sentRegRequests;
+  if (window._merchantPayments) _merchantPayments = window._merchantPayments;
   updateSentMsgCount();
 })();
 
@@ -2686,8 +2687,10 @@ function openWa() {
 }
 
 // ===== سجل الرسائل =====
-var _sentMessages    = window._sentMessages    || { merchant: [], user: [] };
-var _sentRegRequests = window._sentRegRequests || [];
+if (typeof _sentMessages === 'undefined') var _sentMessages = window._sentMessages || { merchant: [], user: [] };
+else if (window._sentMessages) _sentMessages = window._sentMessages;
+if (typeof _sentRegRequests === 'undefined') var _sentRegRequests = window._sentRegRequests || [];
+else if (window._sentRegRequests) _sentRegRequests = window._sentRegRequests;
 window._currentMsgTab = 'merchant';
 
 function logSentMessage(type, name, username, text) {
@@ -4310,7 +4313,8 @@ function closeRequestMerchantModal() {
 }
 
 // ===== نظام الدفع للتاجر =====
-var _merchantPayments = window._merchantPayments || [];
+if (typeof _merchantPayments === 'undefined') var _merchantPayments = window._merchantPayments || [];
+else if (window._merchantPayments) _merchantPayments = window._merchantPayments;
 
 
 
