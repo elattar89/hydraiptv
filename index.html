@@ -1975,6 +1975,7 @@ function showPaidMenu(e, id) {
   menu.style.transform = 'translate(-50%, -50%)';
   const overlay2 = document.createElement('div');
   overlay2.style.cssText = 'position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.4);';
+  overlay2.setAttribute('data-overlay', 'paid');
   overlay2.onclick = () => { menu.remove(); overlay2.remove(); };
   document.body.appendChild(overlay2);
   document.body.appendChild(menu);
@@ -1988,6 +1989,7 @@ function setClientPaid(id, value) {
   const merchant = a.merchantPaid || 'paid';
   a.paid = (value === 'paid' && merchant === 'paid') ? 'paid' : (value === 'paid' && merchant === 'unpaid') ? 'debt' : 'unpaid';
   document.querySelectorAll('.paid-menu').forEach(m => m.remove());
+  document.querySelectorAll('[data-overlay="paid"]').forEach(m => m.remove());
   save(); renderAll();
   showToast('✅ تم تحديث حالة العميل');
 }
@@ -1999,6 +2001,7 @@ function setMerchantPaid(id, value) {
   const client = a.clientPaid || 'paid';
   a.paid = (client === 'paid' && value === 'paid') ? 'paid' : (client === 'paid' && value === 'unpaid') ? 'debt' : 'unpaid';
   document.querySelectorAll('.paid-menu').forEach(m => m.remove());
+  document.querySelectorAll('[data-overlay="paid"]').forEach(m => m.remove());
   save(); renderAll();
   showToast('✅ تم تحديث حالة التاجر');
 }
