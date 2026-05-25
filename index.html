@@ -1780,10 +1780,11 @@ function buildTable(rows) {
         </div>
         ${accs.length > 1 ? `<span style="background:rgba(79,142,247,0.15);color:#60a5fa;border:1px solid rgba(79,142,247,0.3);font-size:11px;padding:2px 8px;border-radius:20px;flex-shrink:0">${accs.length} أكونتات</span>` : ''}
         <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
-            ${accs.length === 1 && first.startDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="direction:ltr;display:inline-block;color:#4ade80">${first.startDate.slice(8,10)}/${first.startDate.slice(5,7)}/${first.startDate.slice(0,4)}</span></div>` : ''}
-            ${accs.length === 1 && first.expDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#f87171">تاريخ الانتهاء</span> <span style="direction:ltr;display:inline-block;color:#f87171">${first.expDate.slice(8,10)}/${first.expDate.slice(5,7)}/${first.expDate.slice(0,4)}</span></div>` : ''}
-          </div>
+
+          ${accs.length === 1 ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin-bottom:4px;">
+            ${first.startDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="direction:ltr;display:inline-block;color:#4ade80">${first.startDate.slice(8,10)}/${first.startDate.slice(5,7)}/${first.startDate.slice(0,4)}</span></div>` : ''}
+            ${first.expDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#f87171">تاريخ الانتهاء</span> <span style="direction:ltr;display:inline-block;color:#f87171">${first.expDate.slice(8,10)}/${first.expDate.slice(5,7)}/${first.expDate.slice(0,4)}</span></div>` : ''}
+          </div>` : ''}
           <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
             ${first.sex ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.3)">${first.sex === 'ذكر' ? '👨' : '👩'} ${first.sex}</span>` : ''}
             ${first.nationality ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.3)">🌍 ${first.nationality}</span>` : ''}
@@ -1805,9 +1806,12 @@ function buildTable(rows) {
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <div style="font-family:monospace;font-size:12px;flex:1;min-width:0;color:var(--text2)">
-            <span style="color:#1a6cf0">U:</span> ${a.username} &nbsp;
-            <span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}
-            ${!window.isGuest ? `&nbsp;<button class="copy-btn" style="font-size:10px;padding:1px 6px;display:inline-flex;align-items:center;gap:2px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ</button>` : ''}
+            <div>
+              <span style="color:#1a6cf0">U:</span> ${a.username} &nbsp;
+              <span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}
+              ${!window.isGuest ? `&nbsp;<button class="copy-btn" style="font-size:10px;padding:1px 6px;display:inline-flex;align-items:center;gap:2px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ</button>` : ''}
+            </div>
+
           </div>
           <div style="font-size:14px;font-weight:700;color:${daysColor};flex-shrink:0">${st==='expired'?'منتهي':daysText}</div>
         </div>
@@ -1844,11 +1848,10 @@ function buildTable(rows) {
         const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
         t += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <div style="font-family:monospace;font-size:11px;flex:1;min-width:150px;color:var(--text2);display:flex;flex-direction:column;gap:4px;">
-            <div style="font-family:monospace;font-size:11px;color:var(--text2);">
-              <span style="color:#1a6cf0">U:</span> ${a.username} &nbsp;
-              <span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}
-              ${window.isGuest ? '' : `&nbsp;<button class="copy-btn" style="font-size:10px;padding:1px 6px;display:inline-flex;align-items:center;gap:2px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ</button>
-              <button class="btn btn-primary" style="padding:1px 6px;font-size:10px;margin-right:2px;" onclick="editAccount(${a.id})">✏️ تعديل</button>`}
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;font-family:monospace;font-size:11px;color:var(--text2);">
+              <span><span style="color:#1a6cf0">U:</span> ${a.username}</span>
+              <span><span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}</span>
+              ${window.isGuest ? '' : `<button class="copy-btn" style="font-size:10px;padding:1px 6px;display:flex;align-items:center;gap:2px;flex-shrink:0;" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ</button><button class="btn btn-primary" style="padding:1px 6px;font-size:10px;flex-shrink:0;" onclick="editAccount(${a.id})">✏️ تعديل</button>`}
             </div>
             ${(a.startDate || a.expDate) ? `<div style="display:flex;gap:10px;font-family:Cairo,sans-serif;font-size:10px;margin-top:2px;flex-wrap:nowrap;">
               ${a.startDate ? `<span><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="direction:ltr;display:inline-block;color:#4ade80">${a.startDate.slice(8,10)}/${a.startDate.slice(5,7)}/${a.startDate.slice(0,4)}</span></span>` : ''}
