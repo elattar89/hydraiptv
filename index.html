@@ -1780,8 +1780,10 @@ function buildTable(rows) {
         </div>
         ${accs.length > 1 ? `<span style="background:rgba(79,142,247,0.15);color:#60a5fa;border:1px solid rgba(79,142,247,0.3);font-size:11px;padding:2px 8px;border-radius:20px;flex-shrink:0">${accs.length} أكونتات</span>` : ''}
         <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-          ${accs.length === 1 && first.startDate ? `<div style="font-size:11px;color:var(--text2);white-space:nowrap">تاريخ الاشتراك <span style="direction:ltr;display:inline-block">${first.startDate.slice(8,10)}/${first.startDate.slice(5,7)}/${first.startDate.slice(0,4)}</span></div>` : ''}
-          ${accs.length === 1 && first.expDate ? `<div style="font-size:11px;color:var(--text2);white-space:nowrap">تاريخ الانتهاء <span style="direction:ltr;display:inline-block">${first.expDate.slice(8,10)}/${first.expDate.slice(5,7)}/${first.expDate.slice(0,4)}</span></div>` : ''}
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+            ${accs.length === 1 && first.startDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="direction:ltr;display:inline-block;color:#4ade80">${first.startDate.slice(8,10)}/${first.startDate.slice(5,7)}/${first.startDate.slice(0,4)}</span></div>` : ''}
+            ${accs.length === 1 && first.expDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#f87171">تاريخ الانتهاء</span> <span style="direction:ltr;display:inline-block;color:#f87171">${first.expDate.slice(8,10)}/${first.expDate.slice(5,7)}/${first.expDate.slice(0,4)}</span></div>` : ''}
+          </div>
           <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
             ${first.sex ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.3)">${first.sex === 'ذكر' ? '👨' : '👩'} ${first.sex}</span>` : ''}
             ${first.nationality ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.3)">🌍 ${first.nationality}</span>` : ''}
@@ -1805,8 +1807,8 @@ function buildTable(rows) {
           <div style="font-family:monospace;font-size:12px;flex:1;min-width:0;color:var(--text2)">
             <span style="color:#1a6cf0">U:</span> ${a.username} &nbsp;
             <span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}
+            ${!window.isGuest ? `&nbsp;<button class="copy-btn" style="font-size:10px;padding:1px 6px;display:inline-flex;align-items:center;gap:2px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ</button>` : ''}
           </div>
-          ${!window.isGuest ? `<button class="copy-btn" style="font-size:11px;padding:3px 9px;display:flex;align-items:center;gap:4px;flex-shrink:0" onclick="copyBoth('${a.username}','${a.password}',this)">📋 <span>نسخ</span></button>` : ''}
           <div style="font-size:14px;font-weight:700;color:${daysColor};flex-shrink:0">${st==='expired'?'منتهي':daysText}</div>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px">
@@ -1824,6 +1826,7 @@ function buildTable(rows) {
             <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">🔔 <span>تذكير المستخدم بالتجديد</span></button>
             <button onclick="showMsg(${a.id},'remindMerchant')" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">💰 <span>طلب تجديد اشتراك</span></button>
             <button onclick="showMsg(${a.id},'changePassMerchant')" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.4);color:#fca5a5;border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:4px">🔐 <span>طلب تغيير كلمة السر</span></button>
+            <button class="btn btn-danger" style="padding:3px 9px;font-size:11px;display:flex;align-items:center;gap:4px" onclick="deleteAccount(${a.id})">🗑️ <span>مسح</span></button>
             `}
           </div>
         </div>
@@ -1841,13 +1844,15 @@ function buildTable(rows) {
         const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
         t += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <div style="font-family:monospace;font-size:11px;flex:1;min-width:150px;color:var(--text2);display:flex;flex-direction:column;gap:4px;">
-            <div>
+            <div style="font-family:monospace;font-size:11px;color:var(--text2);">
               <span style="color:#1a6cf0">U:</span> ${a.username} &nbsp;
               <span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}
+              ${window.isGuest ? '' : `&nbsp;<button class="copy-btn" style="font-size:10px;padding:1px 6px;display:inline-flex;align-items:center;gap:2px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ</button>
+              <button class="btn btn-primary" style="padding:1px 6px;font-size:10px;margin-right:2px;" onclick="editAccount(${a.id})">✏️ تعديل</button>`}
             </div>
-            ${(a.startDate || a.expDate) ? `<div style="display:flex;gap:12px;font-family:Cairo,sans-serif;font-size:10px;color:var(--text2);margin-top:2px;">
-              ${a.startDate ? `<span>تاريخ الاشتراك <span style="direction:ltr;display:inline-block">${a.startDate.slice(8,10)}/${a.startDate.slice(5,7)}/${a.startDate.slice(0,4)}</span></span>` : ''}
-              ${a.expDate ? `<span>تاريخ الانتهاء <span style="direction:ltr;display:inline-block">${a.expDate.slice(8,10)}/${a.expDate.slice(5,7)}/${a.expDate.slice(0,4)}</span> <span style="font-family:Cairo,sans-serif;font-size:14px;font-weight:700;color:${statusOf(a)==='active'?'#22c55e':statusOf(a)==='expiring'?'#f59e0b':'#ef4444'}">${daysLeft(a.expDate) === null ? '—' : daysLeft(a.expDate) < 0 ? 'منتهي' : daysLeft(a.expDate) + ' يوم'}</span></span>` : ''}
+            ${(a.startDate || a.expDate) ? `<div style="display:flex;gap:10px;font-family:Cairo,sans-serif;font-size:10px;margin-top:2px;flex-wrap:nowrap;">
+              ${a.startDate ? `<span><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="direction:ltr;display:inline-block;color:#4ade80">${a.startDate.slice(8,10)}/${a.startDate.slice(5,7)}/${a.startDate.slice(0,4)}</span></span>` : ''}
+              ${a.expDate ? `<span><span style="color:#f87171">تاريخ الانتهاء</span> <span style="direction:ltr;display:inline-block;color:#f87171">${a.expDate.slice(8,10)}/${a.expDate.slice(5,7)}/${a.expDate.slice(0,4)}</span> <span style="font-size:12px;font-weight:700;color:${statusOf(a)==='active'?'#22c55e':statusOf(a)==='expiring'?'#f59e0b':'#ef4444'};margin-right:8px;">&nbsp;&nbsp;${daysLeft(a.expDate) === null ? '—' : daysLeft(a.expDate) < 0 ? 'منتهي' : daysLeft(a.expDate) + ' يوم'}</span></span>` : ''}
             </div>` : ''}
           </div>
           <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0;display:flex;gap:3px">
@@ -1856,16 +1861,14 @@ function buildTable(rows) {
           </button>
           ${a.amount ? `<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
 
-          <div style="display:flex;gap:3px">
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
             ${window.isGuest ? '' : `
-            <button class="copy-btn" style="font-size:10px;padding:2px 8px;display:flex;align-items:center;gap:3px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 <span>نسخ</span></button>
-            <button class="btn btn-primary" style="padding:2px 8px;font-size:10px;display:flex;align-items:center;gap:3px" onclick="editAccount(${a.id})">✏️ <span>تعديل</span></button>
-            <button class="btn btn-danger" style="padding:2px 8px;font-size:10px;display:flex;align-items:center;gap:3px" onclick="deleteAccount(${a.id})">🗑️ <span>مسح</span></button>
             <button onclick="showMsg(${a.id},'confirm')" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">📨 <span>إرسال كود الاشتراك</span></button>
             <button onclick="showMsg(${a.id},'changePass')" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">🔑 <span>إرسال كلمة السر للمستخدم</span></button>
             <button onclick="showMsg(${a.id},'remind')" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.4);color:#a78bfa;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">🔔 <span>تذكير المستخدم بالتجديد</span></button>
             <button onclick="showMsg(${a.id},'remindMerchant')" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">💰 <span>طلب تجديد اشتراك</span></button>
             <button onclick="showMsg(${a.id},'changePassMerchant')" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.4);color:#fca5a5;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:3px">🔐 <span>طلب تغيير كلمة السر</span></button>
+            <button class="btn btn-danger" style="padding:2px 8px;font-size:10px;display:flex;align-items:center;gap:3px" onclick="deleteAccount(${a.id})">🗑️ <span>مسح</span></button>
             `}
           </div>
         </div>`;
@@ -1892,7 +1895,11 @@ function openPersonEdit(name) {
   document.getElementById('personPhone').value = _pDial ? _pPhone.slice(_pDial.length) : _pPhone;
   document.getElementById('personSex').value = a ? (a.sex || '') : '';
   document.getElementById('personNationality').value = a ? (a.nationality || '') : '';
-  document.getElementById('personCountry').value = a ? (a.country || '') : '';
+  const pcEl = document.getElementById('personCountry');
+  if (pcEl) {
+    const knownC = ['الكويت','السعودية','الإمارات','قطر','سلطنة عمان','البحرين','العراق','اليمن','سوريا','فلسطين','لبنان','الاردن','مصر','المغرب','تونس','ليبيا','السودان','تركيا','الهند','باكستان','فلبين','بريطانيا','فرنسا','ألمانيا','إيطاليا','إسبانيا','هولندا','السويد','النرويج','الدنمارك','كندا','أمريكا','أستراليا','أخرى'];
+    pcEl.value = (a && a.country && knownC.includes(a.country)) ? a.country : '';
+  }
   document.getElementById('personModal').style.display = 'flex';
 }
 
@@ -3642,7 +3649,43 @@ if (_auth === 'admin') {
     </div>
     <div style="margin-bottom:20px">
       <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">دولة الاستخدام</label>
-      <input id="personCountry" type="text" placeholder="اختياري" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px">
+      <select id="personCountry" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px;outline:none;">
+        <option value="">— اختر —</option>
+              <option>الكويت</option>
+              <option>السعودية</option>
+              <option>الإمارات</option>
+              <option>قطر</option>
+              <option>سلطنة عمان</option>
+              <option>البحرين</option>
+              <option>العراق</option>
+              <option>اليمن</option>
+              <option>سوريا</option>
+              <option>فلسطين</option>
+              <option>لبنان</option>
+              <option>الاردن</option>
+              <option>مصر</option>
+              <option>المغرب</option>
+              <option>تونس</option>
+              <option>ليبيا</option>
+              <option>السودان</option>
+              <option>تركيا</option>
+              <option>الهند</option>
+              <option>باكستان</option>
+              <option>فلبين</option>
+              <option>بريطانيا</option>
+              <option>فرنسا</option>
+              <option>ألمانيا</option>
+              <option>إيطاليا</option>
+              <option>إسبانيا</option>
+              <option>هولندا</option>
+              <option>السويد</option>
+              <option>النرويج</option>
+              <option>الدنمارك</option>
+              <option>كندا</option>
+              <option>أمريكا</option>
+              <option>أستراليا</option>
+              <option>أخرى</option>
+      </select>
     </div>
     <div style="display:flex;gap:10px">
       <button onclick="savePersonEdit()" class="btn btn-primary" style="flex:1">💾 حفظ</button>
