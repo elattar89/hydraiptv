@@ -414,26 +414,22 @@
     };
 
     // ===== حفظ نسخة على Google Drive =====
-    const DRIVE_BACKUP_URL = "https://script.google.com/macros/s/AKfycbylkppdraGJL9bW0ASPCgZ0gudCpHaim6miLNOdL6zD0K0kNzPgSJlgGIAE29FyR0KF/exec";
+    const DRIVE_BACKUP_URL = "https://script.google.com/macros/s/AKfycbyl__nIvL3g1hCJPxqcjWDbojL2M5TwSHlKZNwq7qvUGyKMosPpdpVtjS6cfMzUMkWb/exec";
     window.saveBackupToDrive = async function(accountsData) {
       try {
         const today = new Date().toISOString().slice(0,10);
         const time  = new Date().toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'}).replace(':','-');
         const fileName = `hydra-backup_${today}_${time}-(${accountsData.length}-accounts).json`;
         const content  = JSON.stringify({ exportedAt: new Date().toISOString(), count: accountsData.length, data: accountsData }, null, 2);
-        const res = await fetch(DRIVE_BACKUP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileName, content })
+        const params = new URLSearchParams({ fileName, content });
+        await fetch(DRIVE_BACKUP_URL + '?' + params.toString(), {
+          method: 'GET',
+          mode: 'no-cors'
         });
-        const json = await res.json();
-        if (json.status === 'ok') {
-          console.log('✅ Drive backup saved:', json.file);
-          window._lastDriveBackupDate = today;
-          window.saveMetaToFirebase && window.saveMetaToFirebase();
-          return true;
-        }
-        return false;
+        console.log('\u2705 Drive backup sent:', fileName);
+        window._lastDriveBackupDate = today;
+        window.saveMetaToFirebase && window.saveMetaToFirebase();
+        return true;
       } catch(e) { console.warn('Drive backup error:', e); return false; }
     };
 
