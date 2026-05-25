@@ -1779,8 +1779,8 @@ function buildTable(rows) {
         </div>
         ${accs.length > 1 ? `<span style="background:rgba(79,142,247,0.15);color:#60a5fa;border:1px solid rgba(79,142,247,0.3);font-size:11px;padding:2px 8px;border-radius:20px;flex-shrink:0">${accs.length} أكونتات</span>` : ''}
         <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-          ${first.startDate ? `<div style="font-size:11px;color:var(--text2);white-space:nowrap">تاريخ الاشتراك <span style="direction:ltr;display:inline-block">${first.startDate.slice(8,10)}/${first.startDate.slice(5,7)}/${first.startDate.slice(0,4)}</span></div>` : ''}
-          ${first.expDate ? `<div style="font-size:11px;color:var(--text2);white-space:nowrap">تاريخ الانتهاء <span style="direction:ltr;display:inline-block">${first.expDate.slice(8,10)}/${first.expDate.slice(5,7)}/${first.expDate.slice(0,4)}</span></div>` : ''}
+          ${accs.length === 1 && first.startDate ? `<div style="font-size:11px;color:var(--text2);white-space:nowrap">تاريخ الاشتراك <span style="direction:ltr;display:inline-block">${first.startDate.slice(8,10)}/${first.startDate.slice(5,7)}/${first.startDate.slice(0,4)}</span></div>` : ''}
+          ${accs.length === 1 && first.expDate ? `<div style="font-size:11px;color:var(--text2);white-space:nowrap">تاريخ الانتهاء <span style="direction:ltr;display:inline-block">${first.expDate.slice(8,10)}/${first.expDate.slice(5,7)}/${first.expDate.slice(0,4)}</span></div>` : ''}
           <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
             ${first.sex ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.3)">${first.sex === 'ذكر' ? '👨' : '👩'} ${first.sex}</span>` : ''}
             ${first.nationality ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.3)">🌍 ${first.nationality}</span>` : ''}
@@ -1839,16 +1839,22 @@ function buildTable(rows) {
         const merchant = a.merchantPaid || 'paid';
         const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
         t += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <div style="font-family:monospace;font-size:11px;flex:1;min-width:150px;color:var(--text2)">
-            <span style="color:#1a6cf0">U:</span> ${a.username} &nbsp;
-            <span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}
+          <div style="font-family:monospace;font-size:11px;flex:1;min-width:150px;color:var(--text2);display:flex;flex-direction:column;gap:4px;">
+            <div>
+              <span style="color:#1a6cf0">U:</span> ${a.username} &nbsp;
+              <span style="color:#1a6cf0">P:</span> ${window.isGuest ? '••••••' : a.password}
+            </div>
+            ${(a.startDate || a.expDate) ? `<div style="display:flex;gap:12px;font-family:Cairo,sans-serif;font-size:10px;color:var(--text2);margin-top:2px;">
+              ${a.startDate ? `<span>تاريخ الاشتراك <span style="direction:ltr;display:inline-block">${a.startDate.slice(8,10)}/${a.startDate.slice(5,7)}/${a.startDate.slice(0,4)}</span></span>` : ''}
+              ${a.expDate ? `<span>تاريخ الانتهاء <span style="direction:ltr;display:inline-block">${a.expDate.slice(8,10)}/${a.expDate.slice(5,7)}/${a.expDate.slice(0,4)}</span> <span style="font-family:Cairo,sans-serif;font-size:14px;font-weight:700;color:${statusOf(a)==='active'?'#22c55e':statusOf(a)==='expiring'?'#f59e0b':'#ef4444'}">${daysLeft(a.expDate) === null ? '—' : daysLeft(a.expDate) < 0 ? 'منتهي' : daysLeft(a.expDate) + ' يوم'}</span></span>` : ''}
+            </div>` : ''}
           </div>
           <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0;display:flex;gap:3px">
             <span style="font-size:10px;padding:2px 6px;border-radius:20px;background:${client==='paid'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.15)'};color:${client==='paid'?'#4ade80':'#f87171'};border:1px solid ${client==='paid'?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'}">عميل ${client==='paid'?'✓':'✗'}</span>
             <span style="font-size:10px;padding:2px 6px;border-radius:20px;background:${merchant==='paid'?'rgba(34,197,94,0.15)':'rgba(245,158,11,0.15)'};color:${merchant==='paid'?'#4ade80':'#fbbf24'};border:1px solid ${merchant==='paid'?'rgba(34,197,94,0.3)':'rgba(245,158,11,0.3)'}">تاجر ${merchant==='paid'?'✓':'✗'}</span>
           </button>
           ${a.amount ? `<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
-          <span style="font-size:12px;font-weight:700;color:${daysColor}">${ast==='expired'?'منتهي':daysText}</span>
+
           <div style="display:flex;gap:3px">
             ${window.isGuest ? '' : `
             <button class="copy-btn" style="font-size:10px;padding:2px 8px;display:flex;align-items:center;gap:3px" onclick="copyBoth('${a.username}','${a.password}',this)">📋 <span>نسخ</span></button>
