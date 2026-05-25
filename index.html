@@ -414,17 +414,41 @@
     };
 
     // ===== حفظ نسخة على Google Drive =====
-    const DRIVE_BACKUP_URL = "https://script.google.com/macros/s/AKfycbyl__nIvL3g1hCJPxqcjWDbojL2M5TwSHlKZNwq7qvUGyKMosPpdpVtjS6cfMzUMkWb/exec";
+    const DRIVE_BACKUP_URL = "https://script.google.com/macros/s/AKfycbxnERBIj7hCXCf52h39QPnJ99LmgK0giAKGcoEL2bwM3pCri0ZVB8S0VS0CywD4bE5g/exec";
     window.saveBackupToDrive = async function(accountsData) {
       try {
         const today = new Date().toISOString().slice(0,10);
         const time  = new Date().toLocaleTimeString('ar-KW',{hour:'2-digit',minute:'2-digit'}).replace(':','-');
         const fileName = `hydra-backup_${today}_${time}-(${accountsData.length}-accounts).json`;
         const content  = JSON.stringify({ exportedAt: new Date().toISOString(), count: accountsData.length, data: accountsData }, null, 2);
-        const params = new URLSearchParams({ fileName, content });
-        await fetch(DRIVE_BACKUP_URL + '?' + params.toString(), {
-          method: 'GET',
-          mode: 'no-cors'
+        // نبعت عبر iframe خفي عشان نتجنب CORS مع POST
+        await new Promise((resolve) => {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = DRIVE_BACKUP_URL;
+          form.target = '_drive_backup_frame';
+          form.style.display = 'none';
+          const addField = (name, value) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+          };
+          addField('fileName', fileName);
+          addField('content', content);
+          let iframe = document.getElementById('_drive_backup_frame');
+          if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.name = '_drive_backup_frame';
+            iframe.id = '_drive_backup_frame';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+          }
+          document.body.appendChild(form);
+          form.submit();
+          document.body.removeChild(form);
+          setTimeout(resolve, 3000);
         });
         console.log('\u2705 Drive backup sent:', fileName);
         window._lastDriveBackupDate = today;
