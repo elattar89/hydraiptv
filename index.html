@@ -555,10 +555,13 @@
 
 <header style="background:linear-gradient(160deg,#0a1628 0%,#1a3a6e 50%,#0d2244 100%);padding:28px 24px 20px;display:flex;flex-direction:column;align-items:center;">
 
-  <!-- زرار الخروج -->
-  <button onclick="doLogout()" style="position:absolute;left:16px;top:16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:10px;padding:8px 16px;font-size:13px;font-family:Cairo,sans-serif;cursor:pointer;">
-    🚪 خروج
-  </button>
+  <!-- زراري الخروج والتحديث -->
+  <div style="position:absolute;left:16px;top:16px;display:flex;gap:8px;align-items:center;">
+    <button id="refreshBtn" onclick="manualRefresh()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.35);color:#93c5fd;border-radius:10px;padding:8px 14px;font-size:13px;font-family:Cairo,sans-serif;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all 0.2s;" onmouseover="this.style.background='rgba(79,142,247,0.28)'" onmouseout="this.style.background='rgba(79,142,247,0.15)'" title="تحديث الصفحة">🔄 تحديث</button>
+    <button onclick="doLogout()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:10px;padding:8px 16px;font-size:13px;font-family:Cairo,sans-serif;cursor:pointer;">
+      🚪 خروج
+    </button>
+  </div>
 
   <!-- اللوجو -->
   <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:14px">
@@ -600,16 +603,23 @@
   <button id="expiringListBtn" onclick="showExpiringListModal()" style="display:none;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(245,158,11,0.25)'" onmouseout="this.style.background='rgba(245,158,11,0.15)'">📋 كشف المنتهية قريباً</button>
   <button id="activeListBtn" onclick="showActiveListModal()" style="display:none;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#4ade80;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='rgba(34,197,94,0.15)'">📋 كشف النشطاء</button>
   <button id="expiredListBtn" onclick="showExpiredListModal()" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">📋 كشف المنتهين</button>
-  <button id="totalListBtn" onclick="showTotalListModal()" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(99,102,241,0.25)'" onmouseout="this.style.background='rgba(99,102,241,0.15)'">📊 الكشف الإجمالي</button>
+  <button id="totalListBtn" onclick="showTotalListModal()" style="display:none;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(99,102,241,0.25)'" onmouseout="this.style.background='rgba(99,102,241,0.15)'">📊 الكشف الإجمالي</button>
+  <button id="pendingListBtn" onclick="showPendingListModal()" style="display:none;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.4);color:#fb923c;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s">📋 كشف قيد الطلب</button>
   <button id="debtListBtn" onclick="showDebtListModal()" style="display:none;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#c084fc;border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='rgba(168,85,247,0.25)'" onmouseout="this.style.background='rgba(168,85,247,0.15)'">📋 كشف الديون</button>
-  <!-- زر إضافة حساب -->
-  <div style="display:inline-block" id="addBtnWrapper">
-    <button class="btn btn-primary" onclick="openAddModal()" id="addMainBtn">+ إضافة حساب</button>
+  <!-- زر إضافة حساب (dropdown) -->
+  <div style="position:relative;display:inline-block" id="addBtnWrapper">
+    <button class="btn btn-primary" onclick="toggleAddMenu(event)" id="addMainBtn" style="display:flex;align-items:center;gap:6px;">
+      + إضافة حساب <span style="font-size:10px;opacity:0.8">▼</span>
+    </button>
+    <div id="addDropMenu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--bg2);border:1px solid var(--border);border-radius:12px;min-width:190px;z-index:999;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+      <button onclick="closeAddMenu();openAddModal();" style="width:100%;text-align:right;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text);padding:12px 16px;cursor:pointer;font-family:Cairo,sans-serif;font-size:14px;display:flex;align-items:center;gap:8px;transition:background 0.15s;" onmouseover="this.style.background='rgba(79,142,247,0.1)'" onmouseout="this.style.background='none'">
+        ➕ حساب جديد
+      </button>
+      <button onclick="closeAddMenu();openSendRegLinkModal();" style="width:100%;text-align:right;background:none;border:none;color:var(--text);padding:12px 16px;cursor:pointer;font-family:Cairo,sans-serif;font-size:14px;display:flex;align-items:center;gap:8px;transition:background 0.15s;" onmouseover="this.style.background='rgba(5,150,105,0.12)'" onmouseout="this.style.background='none'">
+        📤 إرسال طلب تسجيل
+      </button>
+    </div>
   </div>
-  <button onclick="openSendRegLinkModal()" style="background:linear-gradient(135deg,#065f46,#059669);border:none;color:white;border-radius:10px;padding:8px 14px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;">
-    📤 إرسال طلب تسجيل
-  </button>
-  <button id="refreshBtn" onclick="manualRefresh()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;transition:all 0.3s;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:6px" title="تحديث الصفحة">🔄 تحديث</button>
   <button onclick="showSentMessages()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.4);color:#60a5fa;border-radius:10px;padding:8px 14px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">
   📬 الرسائل
   <span id="sentMsgCount" style="background:#3b82f6;color:white;border-radius:20px;padding:1px 7px;font-size:11px;display:none">0</span>
@@ -804,7 +814,21 @@
       <span id="fAmountDisplay" style="display:none;"></span>
       <div class="form-group">
         <label>الجنسية</label>
-        <input type="text" id="fNationality" placeholder="اختياري" />
+        <select id="fNationality" style="width:100%">
+          <option value="">— اختياري —</option>
+          <option>الكويت</option><option>السعودية</option><option>الإمارات</option>
+          <option>قطر</option><option>سلطنة عمان</option><option>البحرين</option>
+          <option>العراق</option><option>اليمن</option><option>سوريا</option>
+          <option>فلسطين</option><option>لبنان</option><option>الاردن</option>
+          <option>مصر</option><option>المغرب</option><option>تونس</option>
+          <option>ليبيا</option><option>السودان</option><option>تركيا</option>
+          <option>الهند</option><option>باكستان</option><option>فلبين</option>
+          <option>بريطانيا</option><option>فرنسا</option><option>ألمانيا</option>
+          <option>إيطاليا</option><option>إسبانيا</option><option>هولندا</option>
+          <option>السويد</option><option>النرويج</option><option>الدنمارك</option>
+          <option>كندا</option><option>أمريكا</option><option>أستراليا</option>
+          <option value="أخرى">أخرى</option>
+        </select>
       </div>
     </div>
 
@@ -931,6 +955,20 @@ function load() {
 }
 
 function save() {
+  // تطبيق رصيد التاجر على الأكونتات الجديدة تلقائياً
+  let credit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
+  if (credit > 0) {
+    const toSettle = accounts.filter(a => a.merchantPaid === 'unpaid' && a.amount);
+    for (const acc of toSettle) {
+      const cost = parseFloat(acc.amount || 0);
+      if (cost <= 0) continue;
+      if (credit >= cost) {
+        acc.merchantPaid = 'paid';
+        credit -= cost;
+      } else break;
+    }
+    localStorage.setItem('hydra_merchant_credit', credit.toFixed(2));
+  }
   const data = JSON.stringify(accounts);
   localStorage.setItem(STORAGE_KEY, data);
   if (window.saveToFirebase) window.saveToFirebase(accounts);
@@ -1009,53 +1047,73 @@ function copyText(text, btn) {
 
 
 
+function getMerchantDue() {
+  return accounts
+    .filter(a => a.merchantPaid === 'unpaid' && a.amount)
+    .reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
+}
+
+function updateMerchantDue() {
+  const due = getMerchantDue();
+  const el = document.getElementById('merchantDueAmount');
+  if (el) el.textContent = due.toFixed(0) + '$';
+  const btn = document.getElementById('merchantPayBtn');
+  if (btn) btn.style.opacity = due > 0 ? '1' : '0.5';
+}
+
 function renderStats() {
+  updateMerchantDue();
   const total = accounts.length;
   const active = accounts.filter(a => statusOf(a) === 'active').length;
   const expiring = accounts.filter(a => statusOf(a) === 'expiring').length;
   const expired = accounts.filter(a => statusOf(a) === 'expired').length;
   const unpaid = accounts.filter(a => a.paid === 'unpaid').length;
-  const debtAccounts = accounts.filter(a => (a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : 'paid')) === 'unpaid');
-  const debtTotal = debtAccounts.length * 10;
+  const debtAccounts = accounts.filter(a => a.merchantPaid === 'unpaid' && a.amount);
+  const debtTotal = debtAccounts.reduce((s,a) => s + parseFloat(a.amount||0), 0);
+  const merchantCredit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
   const cur = document.getElementById('filterStatus').value;
   const curP = document.getElementById('filterPaid').value;
   const base = `border-radius:14px;padding:10px 16px;text-align:center;cursor:pointer;transition:all 0.25s;flex:1;min-width:80px;max-width:140px;backdrop-filter:blur(4px);border:2px solid`;
 
   document.getElementById('statsBar').innerHTML = `
+    <div onclick="setFilter('all')" style="${base} ${cur==='all'?'rgba(59,130,246,0.8);background:rgba(59,130,246,0.25)':'rgba(59,130,246,0.3);background:rgba(59,130,246,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:11px;color:rgba(255,255,255,0.6)">الإجمالي</span>
+      <div style="font-size:22px;font-weight:700;color:#60a5fa">${total}</div>
+      <span style="font-size:10px;color:rgba(255,255,255,0.4)">كل الحسابات</span>
+    </div>
     <div onclick="setFilter('active')" style="${base} ${cur==='active'?'rgba(34,197,94,0.8);background:rgba(34,197,94,0.25)':'rgba(34,197,94,0.3);background:rgba(34,197,94,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-      <span style="font-size:11px;color:rgba(255,255,255,0.6)">نشط ✅</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.6)">نشط</span>
       <div style="font-size:22px;font-weight:700;color:#4ade80">${active}</div>
       <span style="font-size:10px;color:rgba(255,255,255,0.4)">حساب نشط</span>
     </div>
     <div onclick="setFilter('expiring')" style="${base} ${cur==='expiring'?'rgba(245,158,11,0.8);background:rgba(245,158,11,0.25)':'rgba(245,158,11,0.3);background:rgba(245,158,11,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-      <span style="font-size:11px;color:rgba(255,255,255,0.6)">ينتهي قريباً ⚠️</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.6)">ينتهي قريبا</span>
       <div style="font-size:22px;font-weight:700;color:#fbbf24">${expiring}</div>
       <span style="font-size:10px;color:rgba(255,255,255,0.4)">خلال 30 يوم</span>
     </div>
     <div onclick="setFilter('expired')" style="${base} ${cur==='expired'?'rgba(239,68,68,0.8);background:rgba(239,68,68,0.25)':'rgba(239,68,68,0.3);background:rgba(239,68,68,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-      <span style="font-size:11px;color:rgba(255,255,255,0.6)">منتهي ⛔</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.6)">منتهي</span>
       <div style="font-size:22px;font-weight:700;color:#f87171">${expired}</div>
       <span style="font-size:10px;color:rgba(255,255,255,0.4)">حساب منتهي</span>
     </div>
+    <div onclick="setFilter('pending')" style="${base} rgba(251,146,60,0.3);background:rgba(251,146,60,0.12)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:11px;color:rgba(255,255,255,0.6)">قيد الطلب</span>
+      <div id="pendingPillCount" style="font-size:22px;font-weight:700;color:#fb923c">0</div>
+      <span style="font-size:10px;color:rgba(255,255,255,0.4)">طلب من التاجر</span>
+    </div>
     <div onclick="setFilter('unpaid')" style="${base} ${cur==='unpaid'?'rgba(239,68,68,0.8);background:rgba(239,68,68,0.25)':'rgba(239,68,68,0.3);background:rgba(239,68,68,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-      <span style="font-size:11px;color:rgba(255,255,255,0.6)">غير مدفوع 💸</span>
+      <span style="font-size:11px;color:rgba(255,255,255,0.6)">غير مدفوع</span>
       <div style="font-size:22px;font-weight:700;color:#f87171">${unpaid}</div>
       <span style="font-size:10px;color:rgba(255,255,255,0.4)">بانتظار الدفع</span>
     </div>
-    <div onclick="setFilter('all')" style="${base} ${cur==='all'?'rgba(59,130,246,0.8);background:rgba(59,130,246,0.25)':'rgba(59,130,246,0.3);background:rgba(59,130,246,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-      <span style="font-size:11px;color:rgba(255,255,255,0.6)">الإجمالي 👥</span>
-      <div style="font-size:22px;font-weight:700;color:#60a5fa">${total}</div>
-      <span style="font-size:10px;color:rgba(255,255,255,0.4)">كل الحسابات</span>
-    </div>
-    <div onclick="setFilter('debt')" style="${base} ${curP==='merchant_unpaid'?'rgba(168,85,247,0.8);background:rgba(168,85,247,0.25)':'rgba(168,85,247,0.3);background:rgba(168,85,247,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-      <span style="font-size:11px;color:rgba(255,255,255,0.6)">مستحق للتاجر 🔥</span>
-      <div style="font-size:22px;font-weight:700;color:#c084fc">${debtTotal}$</div>
-      <span style="font-size:10px;color:rgba(255,255,255,0.4)">${debtAccounts.length} أكونت × 10$</span>
-    </div>
-    <div onclick="showPendingListModal()" style="${base} rgba(251,146,60,0.3);background:rgba(251,146,60,0.12)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-      <span style="font-size:11px;color:rgba(255,255,255,0.6)">قيد الطلب ⏳</span>
-      <div id="pendingPillCount" style="font-size:22px;font-weight:700;color:#fb923c">0</div>
-      <span style="font-size:10px;color:rgba(255,255,255,0.4)">طلب من التاجر</span>
+    <div onclick="openMerchantPayModal()" style="${base} rgba(168,85,247,0.3);background:rgba(168,85,247,0.12)" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:11px;color:rgba(255,255,255,0.6)">حسابات التاجر</span>
+      <div style="font-size:16px;font-weight:700;color:#c084fc;line-height:1.3">
+        ${debtTotal > 0 ? 'مستحق: ' + debtTotal.toFixed(0) + '$' : 'لا يوجد مستحق'}
+      </div>
+      <span style="font-size:10px;color:${merchantCredit > 0 ? '#4ade80' : 'rgba(255,255,255,0.4)'}">
+        ${merchantCredit > 0 ? 'رصيد: ' + merchantCredit.toFixed(0) + '$' : debtAccounts.length + ' أكونت'}
+      </span>
     </div>
   `;
   // تحديث العداد بعد رسم الهيدر
@@ -1092,6 +1150,20 @@ async function shareActivePDF() {
       alert('✅ تم نسخ الكشف — الصقه في أي تطبيق');
     });
   }
+}
+
+function sharePendingList() {
+  const rows = document.querySelectorAll('#pendingListBody tr');
+  let text = 'كشف قيد الطلب - Hydra IPTV\n';
+  text += new Date().toLocaleDateString('ar-EG') + '\n\n';
+  rows.forEach((r, i) => {
+    const cells = r.querySelectorAll('td');
+    if (cells.length >= 4) {
+      text += (i+1) + '. ' + (cells[1]?.textContent||'') + ' - ' + (cells[3]?.textContent||'') + '\n';
+    }
+  });
+  if (navigator.share) navigator.share({ title: 'كشف قيد الطلب', text });
+  else navigator.clipboard.writeText(text).then(() => showToast('تم نسخ الكشف'));
 }
 
 function showPendingListModal() {
@@ -1400,13 +1472,30 @@ function setFilter(val) {
   if (val === 'unpaid') {
     document.getElementById('filterStatus').value = 'all';
     document.getElementById('filterPaid').value = 'unpaid';
+    const tcU = document.getElementById('tablesContainer'); if(tcU) tcU.style.display = ''; window._pendingFilterActive = false;
   } else if (val === 'debt') {
     document.getElementById('filterStatus').value = 'all';
     document.getElementById('filterPaid').value = 'merchant_unpaid';
+    const tcD = document.getElementById('tablesContainer'); if(tcD) tcD.style.display = ''; window._pendingFilterActive = false;
     setTimeout(() => { document.getElementById('tablesContainer').scrollIntoView({ behavior: 'smooth' }); }, 100);
+  } else if (val === 'pending') {
+    document.getElementById('filterStatus').value = 'all';
+    document.getElementById('filterPaid').value = 'all';
+    // إخفاء الكروت وإظهار قيد الطلب فقط
+    const tc = document.getElementById('tablesContainer');
+    if (tc) tc.style.display = 'none';
+    setTimeout(() => {
+      const ps = document.getElementById('pendingRequestsSection');
+      if (ps) ps.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+    window._pendingFilterActive = true;
   } else {
     document.getElementById('filterPaid').value = 'all';
     document.getElementById('filterStatus').value = val;
+    // إظهار الكروت لو كانت مخفية من pending
+    const tc = document.getElementById('tablesContainer');
+    if (tc) tc.style.display = '';
+    window._pendingFilterActive = false;
   }
   // إظهار/إخفاء أزرار الكشوف
   const activeBtn = document.getElementById('activeListBtn');
@@ -1418,6 +1507,11 @@ function setFilter(val) {
   const debtBtn = document.getElementById('debtListBtn');
   const curPaid = document.getElementById('filterPaid').value;
   if (debtBtn) debtBtn.style.display = (val === 'debt' || curPaid === 'merchant_unpaid') ? 'inline-block' : 'none';
+  // زراري الكشف الإجمالي وقيد الطلب
+  const totalBtn = document.getElementById('totalListBtn');
+  if (totalBtn) totalBtn.style.display = val === 'all' ? 'block' : 'none';
+  const pendingBtn = document.getElementById('pendingListBtn');
+  if (pendingBtn) pendingBtn.style.display = val === 'pending' ? 'block' : 'none';
   renderAll();
   window.scrollTo({ top: 200, behavior: 'smooth' });
 }
@@ -1444,7 +1538,7 @@ function filtered() {
   const fp = document.getElementById('filterPaid').value;
   return accounts.filter(a => {
     const matchQ = !q || fuzzyMatch(a.name, q) || fuzzyMatch(a.username, q) || (a.phone||'').replace(/\s+/g,'').includes(q.replace(/\s+/g,''));
-    const matchS = fs === 'all' || statusOf(a) === fs;
+    const matchS = fs === 'all' || fs === 'pending' || statusOf(a) === fs;
     const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
     const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
     const matchP = fp === 'all'
@@ -1477,6 +1571,7 @@ function renderAll() {
   const _authCheck = sessionStorage.getItem('hydra_auth') || localStorage.getItem('hydra_auth_persist');
   if (_authCheck === 'admin') window.isGuest = false;
   else if (_authCheck === 'guest') window.isGuest = true;
+
 
   renderStats();
   const data = filtered();
@@ -3101,6 +3196,7 @@ if (_auth === 'admin') {
 <div id="pendingListModal" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;overflow-y:auto;font-family:Cairo,sans-serif;color:#111;direction:rtl">
   <div id="pendingListControls" style="position:fixed;top:0;right:0;left:0;background:#c2410c;padding:10px 20px;display:flex;align-items:center;gap:10px;z-index:10000;box-shadow:0 2px 10px rgba(0,0,0,0.3)">
     <button onclick="window.print()" style="background:#fff;color:#c2410c;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🖨️ طباعة / PDF</button>
+    <button onclick="sharePendingList()" style="background:#25d366;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">📤 مشاركة</button>
     <button onclick="document.getElementById('pendingListModal').style.display='none'" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif">✕ إغلاق</button>
     <div id="pendingListCount" style="color:rgba(255,255,255,0.8);font-size:13px;margin-right:auto"></div>
   </div>
@@ -3343,7 +3439,21 @@ if (_auth === 'admin') {
     </div>
     <div style="margin-bottom:14px">
       <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">الجنسية</label>
-      <input id="personNationality" type="text" placeholder="اختياري" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px">
+      <select id="personNationality" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px">
+        <option value="">— اختياري —</option>
+        <option>الكويت</option><option>السعودية</option><option>الإمارات</option>
+        <option>قطر</option><option>سلطنة عمان</option><option>البحرين</option>
+        <option>العراق</option><option>اليمن</option><option>سوريا</option>
+        <option>فلسطين</option><option>لبنان</option><option>الاردن</option>
+        <option>مصر</option><option>المغرب</option><option>تونس</option>
+        <option>ليبيا</option><option>السودان</option><option>تركيا</option>
+        <option>الهند</option><option>باكستان</option><option>فلبين</option>
+        <option>بريطانيا</option><option>فرنسا</option><option>ألمانيا</option>
+        <option>إيطاليا</option><option>إسبانيا</option><option>هولندا</option>
+        <option>السويد</option><option>النرويج</option><option>الدنمارك</option>
+        <option>كندا</option><option>أمريكا</option><option>أستراليا</option>
+        <option value="أخرى">أخرى</option>
+      </select>
     </div>
     <div style="margin-bottom:20px">
       <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">دولة الاستخدام</label>
@@ -3946,12 +4056,16 @@ document.addEventListener('DOMContentLoaded', function() { renderPendingSection(
 // أو مباشرة لو DOMContentLoaded فات
 if (document.readyState !== 'loading') { setTimeout(renderPendingSection, 200); }
 
-function toggleAddMenu() {
+function toggleAddMenu(e) {
+  if (e) e.stopPropagation();
   const menu = document.getElementById('addDropMenu');
+  if (!menu) return;
   menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
 }
 function closeAddMenu() {
-  document.getElementById('addDropMenu').style.display = 'none';
+  const menu = document.getElementById('addDropMenu');
+  if (!menu) return;
+  menu.style.display = 'none';
 }
 document.addEventListener('click', function(e) {
   const wrapper = document.getElementById('addBtnWrapper');
@@ -4047,6 +4161,171 @@ function openRequestMerchantModal() {
 }
 function closeRequestMerchantModal() {
   document.getElementById('requestMerchantModal').style.display = 'none';
+}
+
+// ===== نظام الدفع للتاجر =====
+var _merchantPayments = JSON.parse(localStorage.getItem('hydra_merchant_payments') || '[]');
+
+
+
+
+
+function openMerchantPayModal() {
+  const old = document.getElementById('merchantPayModal');
+  if (old) old.remove();
+
+  const due = getMerchantDue();
+  const credit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
+  const unpaidAccounts = accounts
+    .filter(a => a.merchantPaid === 'unpaid' && a.amount)
+    .sort((a, b) => new Date(a.startDate||'9999') - new Date(b.startDate||'9999'));
+
+  const overlay = document.createElement('div');
+  overlay.id = 'merchantPayModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:9000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+
+  const payments = _merchantPayments.slice(0,5);
+  const paymentsHtml = payments.length ? payments.map(p => `
+    <div style="padding:8px 10px;background:var(--bg);border-radius:8px;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="color:var(--text2);margin-bottom:2px;">${p.date}</div>
+        <div style="color:var(--text2);font-size:11px;">${p.count} أكونت</div>
+      </div>
+      <div style="text-align:left;">
+        <div style="color:#4ade80;font-weight:700;">+${p.paid}$</div>
+        <div style="color:#fbbf24;font-size:11px;">متبقي: ${p.remaining}$</div>
+      </div>
+    </div>`).join('') : '<div style="color:var(--text2);font-size:12px;text-align:center;padding:1rem;">لا توجد دفعات سابقة</div>';
+
+  overlay.innerHTML = `
+    <div style="background:var(--card);border-radius:18px;padding:1.5rem;width:100%;max-width:580px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:1rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:15px;font-weight:700;color:var(--text);">دفع للتاجر</div>
+        <button onclick="document.getElementById('merchantPayModal').remove()" style="background:none;border:none;color:var(--text2);font-size:1.3rem;cursor:pointer;">✕</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="background:var(--bg);border-radius:12px;padding:1rem;text-align:center;">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">اجمالي مستحق</div>
+          <div style="font-size:24px;font-weight:700;color:#ef4444;">${due.toFixed(0)}$</div>
+          ${credit > 0 ? '<div style="font-size:12px;color:#4ade80;margin-top:4px;">رصيد لديك: ' + credit.toFixed(0) + '$</div>' : ''}
+        </div>
+        <div style="background:var(--bg);border-radius:12px;padding:1rem;text-align:center;">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">عدد الاكونتات</div>
+          <div style="font-size:24px;font-weight:700;color:var(--text);">${unpaidAccounts.length}</div>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">المبلغ المدفوع للتاجر</label>
+        <input type="number" id="merchantPayAmount" placeholder="مثال: 150" oninput="previewMerchantPay()" style="width:100%;font-size:16px;padding:10px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:Cairo,sans-serif;" />
+      </div>
+
+      <div id="merchantPayPreview" style="display:none;background:var(--bg);border-radius:12px;padding:12px;font-size:12px;">
+        <div style="font-weight:700;color:var(--text);margin-bottom:8px;">الاكونتات اللي هتتحول لـ سددت:</div>
+        <div id="merchantPayList" style="display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto;"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">
+          <span style="color:var(--text2);">المتبقي بعد الدفع</span>
+          <span id="merchantPayRemaining" style="font-weight:700;color:#fbbf24;">0$</span>
+        </div>
+      </div>
+
+      <button onclick="confirmMerchantPay()" style="width:100%;padding:12px;background:#16a34a;color:white;border:none;border-radius:10px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">تأكيد الدفع</button>
+
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;">سجل المدفوعات</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">${paymentsHtml}</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function previewMerchantPay() {
+  const amount = parseFloat(document.getElementById('merchantPayAmount').value) || 0;
+  const preview = document.getElementById('merchantPayPreview');
+  const list = document.getElementById('merchantPayList');
+  const remaining = document.getElementById('merchantPayRemaining');
+
+  if (amount <= 0) { preview.style.display = 'none'; return; }
+  preview.style.display = 'block';
+
+  const unpaid = accounts
+    .filter(a => a.merchantPaid === 'unpaid' && a.amount)
+    .sort((a, b) => new Date(a.startDate||'9999') - new Date(b.startDate||'9999'));
+
+  let budget = amount;
+  let toSettle = [];
+  for (const acc of unpaid) {
+    const cost = parseFloat(acc.amount || 0);
+    if (cost <= 0) continue;
+    if (budget >= cost) {
+      toSettle.push(acc);
+      budget -= cost;
+    } else break;
+  }
+
+  list.innerHTML = toSettle.map(a => `
+    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid var(--border);">
+      <span style="color:var(--text);">${a.name} — ${a.username}</span>
+      <span style="color:#4ade80;">${a.amount}$</span>
+    </div>`).join('') || '<div style="color:var(--text2);">لا يوجد أكونتات كافية</div>';
+
+  const prevCredit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
+  const totalBudget = parseFloat(document.getElementById('merchantPayAmount').value||0) + prevCredit;
+  const allUnpaid = accounts.filter(a => a.merchantPaid === 'unpaid' && a.amount)
+    .reduce((s,a) => s + parseFloat(a.amount||0), 0);
+  const newCredit = Math.max(0, totalBudget - allUnpaid + budget);
+  remaining.textContent = budget.toFixed(0) + '$ متبقي' + (newCredit > 0 ? ' — رصيد: ' + newCredit.toFixed(0) + '$' : '');
+  remaining.style.color = newCredit > 0 ? '#4ade80' : budget > 0 ? '#fbbf24' : '#4ade80';
+}
+
+function confirmMerchantPay() {
+  const amount = parseFloat(document.getElementById('merchantPayAmount').value) || 0;
+  if (amount <= 0) { showToast('❌ ادخل المبلغ', true); return; }
+  if (!confirm('تأكيد دفع ' + amount + '$ للتاجر؟')) return;
+
+  const unpaid = accounts
+    .filter(a => a.merchantPaid === 'unpaid' && a.amount)
+    .sort((a, b) => new Date(a.startDate||'9999') - new Date(b.startDate||'9999'));
+
+  let budget = amount;
+  let settled = 0;
+  for (const acc of unpaid) {
+    const cost = parseFloat(acc.amount || 0);
+    if (cost <= 0) continue;
+    if (budget >= cost) {
+      acc.merchantPaid = 'paid';
+      acc.paid = acc.clientPaid === 'paid' ? 'paid' : acc.paid;
+      budget -= cost;
+      settled++;
+    } else break;
+  }
+
+  const today = new Date();
+  const dateStr = today.getDate() + '/' + (today.getMonth()+1) + '/' + today.getFullYear();
+  const due = getMerchantDue();
+
+  // احسب الرصيد المتبقي
+  const prevCredit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
+  const totalPaid = amount + prevCredit;
+  const newCredit = Math.max(0, totalPaid - (due - budget));
+  localStorage.setItem('hydra_merchant_credit', newCredit.toFixed(2));
+
+  _merchantPayments.unshift({
+    date: dateStr,
+    paid: amount.toFixed(0),
+    count: settled,
+    remaining: (due - (amount + prevCredit)).toFixed(0) < 0 ? '0' : (due - (amount + prevCredit)).toFixed(0),
+    credit: newCredit.toFixed(0)
+  });
+  _merchantPayments = _merchantPayments.slice(0, 30);
+  localStorage.setItem('hydra_merchant_payments', JSON.stringify(_merchantPayments));
+
+  save(); renderAll();
+  document.getElementById('merchantPayModal').remove();
+  const msg = settled + ' أكونت تم تسديدها' + (newCredit > 0 ? ' — رصيد: ' + newCredit.toFixed(0) + '$' : '');
+  showToast('✅ ' + msg);
 }
 
 // ===== إرسال طلب التسجيل =====
