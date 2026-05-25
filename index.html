@@ -1083,7 +1083,7 @@ function statusBadge(acc) {
 
 function paidBadge(a) {
   const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
-  const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+  const merchant = a.merchantPaid || 'paid';
   const clientBadge = client === 'paid'
     ? `<span class="badge badge-green" style="font-size:11px">عميل ✅</span>`
     : `<span class="badge badge-red" style="font-size:11px">عميل ❌</span>`;
@@ -1330,7 +1330,7 @@ function showExpiringListModal() {
     const d = Math.ceil((new Date(a.expDate) - new Date()) / 86400000);
     const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
     const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
-    const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+    const merchant = a.merchantPaid || 'paid';
     const paidText = `عميل: ${client==='paid'?'✅':'❌'} | تاجر: ${merchant==='paid'?'✅':'❌'}`;
     const rowBg = i % 2 === 0 ? '#fffbeb' : '#fff';
     return `<tr style="background:${rowBg}">
@@ -1627,7 +1627,7 @@ function filtered() {
     const matchQ = !q || fuzzyMatch(a.name, q) || fuzzyMatch(a.username, q) || (a.phone||'').replace(/\s+/g,'').includes(q.replace(/\s+/g,''));
     const matchS = fs === 'all' || fs === 'pending' || statusOf(a) === fs;
     const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
-    const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+    const merchant = a.merchantPaid || 'paid';
     const matchP = fp === 'all'
       || (fp === 'client_paid' && client === 'paid')
       || (fp === 'client_unpaid' && client === 'unpaid')
@@ -1774,7 +1774,7 @@ function buildTable(rows) {
       const daysText = d === null ? '—' : d < 0 ? `منذ ${Math.abs(d)} يوم` : `${d} يوم`;
       const daysColor = st === 'active' ? '#22c55e' : st === 'expiring' ? '#f59e0b' : '#ef4444';
       const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
-      const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+      const merchant = a.merchantPaid || 'paid';
       const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
       t += `
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">
@@ -1814,7 +1814,7 @@ function buildTable(rows) {
         const daysText = d === null ? '—' : d < 0 ? `منذ ${Math.abs(d)} يوم` : `${d} يوم`;
         const daysColor = ast === 'active' ? '#22c55e' : ast === 'expiring' ? '#f59e0b' : '#ef4444';
         const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
-        const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+        const merchant = a.merchantPaid || 'paid';
         const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
         t += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <div style="font-family:monospace;font-size:11px;flex:1;min-width:150px;color:var(--text2)">
@@ -1929,7 +1929,7 @@ function showPaidMenu(e, id) {
   const a = accounts.find(x => x.id === id);
   if (!a) return;
   const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
-  const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+  const merchant = a.merchantPaid || 'paid';
   const menu = document.createElement('div');
   menu.className = 'paid-menu';
   menu.style.cssText = 'position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px;z-index:200;box-shadow:0 8px 30px rgba(0,0,0,0.5);min-width:220px;direction:rtl';
@@ -2241,7 +2241,7 @@ function editAccount(id) {
     document.getElementById('fExp').value = a.expDate || '';
   }
   document.getElementById('fClientPaid').value = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
-  document.getElementById('fMerchantPaid').value = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+  document.getElementById('fMerchantPaid').value = a.merchantPaid || 'paid';
   document.getElementById('fNotes').value = a.notes || '';
   const aEl = document.getElementById('fAmount'); if(aEl) aEl.value = a.amount || '';
   const _eDial = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'].find(d => (a.phone||'').startsWith(d)) || '';
@@ -4847,7 +4847,7 @@ function showPersonDetails(name) {
     const dText = d === null ? '—' : d < 0 ? `منتهي منذ ${Math.abs(d)} يوم` : `متبقي ${d} يوم`;
     const dColor = statusOf(a) === 'active' ? '#4ade80' : statusOf(a) === 'expiring' ? '#fbbf24' : '#f87171';
     const client = a.clientPaid || (a.paid === 'unpaid' ? 'unpaid' : 'paid');
-    const merchant = a.merchantPaid || (a.paid === 'debt' ? 'unpaid' : a.paid === 'paid' ? 'paid' : 'unpaid');
+    const merchant = a.merchantPaid || 'paid';
     const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
     return `
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:10px">
