@@ -1215,6 +1215,7 @@ function renderStats() {
       <div style="font-size:14px;font-weight:700;color:#c084fc;line-height:1.4">
         ${debtTotal > 0 ? 'مستحق: ' + debtTotal.toFixed(0) + '$' : '✓ كل شيء مسدد'}
       </div>
+      ${debtTotal > 0 ? `<div style="font-size:11px;color:#a78bfa;margin-top:1px">${accounts.filter(a => a.merchantPaid === 'unpaid').length} حساب</div>` : ''}
       <span style="font-size:10px;color:${merchantCredit > 0 ? '#4ade80' : 'rgba(255,255,255,0.5)'}">
         رصيد: ${merchantCredit > 0 ? merchantCredit.toFixed(0) + '$' : '0$'}
       </span>
