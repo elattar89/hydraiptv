@@ -4091,15 +4091,12 @@ function sendRegLink() {
   const phone = document.getElementById('regLinkPhone').value.trim();
   if (!phone) { showToast('❌ أدخل رقم الهاتف', true); return; }
   const fullPhone = (dial + phone).replace(/[^0-9+]/g, '');
-  const msg = `يسعدنا انضمامك الى Hydra IPTV
-
-لاتمام طلب اشتراكك، يرجى تسجيل بياناتك عبر الرابط التالي:
-
+  const msg = `يسعدنا انضمامك الى Hydra IPTV ,
+يرجى تسجيل بياناتك عبر الرابط التالي
+لاتمام طلب اشتراكك,
 https://elattar89.github.io/hydra-iptv-form/
-
 سيتم التواصل معك في اقرب وقت ممكن لاتمام الاشتراك
-
-شكرا لك`;
+شكرا`;
   const waUrl = 'https://wa.me/' + fullPhone.replace('+','') + '?text=' + encodeURIComponent(msg);
   window.open(waUrl, '_blank');
   document.getElementById('sendRegLinkModal').remove();
