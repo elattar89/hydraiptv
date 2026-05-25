@@ -1123,8 +1123,9 @@ function copyText(text, btn) {
 function isMerchantUnpaid(a) {
   if (a.merchantPaid === 'paid') return false;
   if (a.merchantPaid === 'unpaid') return true;
-  // fallback: اعتمد على حقل paid القديم
-  return a.paid === 'debt' || a.paid === 'unpaid';
+  // لو الحقل موجود صراحةً اعتمد عليه فقط
+  // لو مش موجود (حسابات قديمة) → اعتبره مسدد للتاجر
+  return false;
 }
 
 function getMerchantDue() {
