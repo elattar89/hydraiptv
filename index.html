@@ -354,28 +354,89 @@
   .hidden { display: none !important; }
 
   @media (max-width: 768px) {
-    header { flex-direction: column; gap: 10px; }
+    /* ===== Header ===== */
+    header { flex-direction: column; gap: 10px; padding: 14px 12px 12px !important; position: relative; padding-top: 56px !important; }
+    header > div:first-child { position: absolute !important; top: 10px; left: 10px; display: flex; gap: 6px; }
+    header > div:first-child button { font-size: 11px !important; padding: 6px 10px !important; }
     .stats-bar { flex-wrap: wrap; }
+
+    /* ===== Toolbar ===== */
+    .toolbar { padding: 10px 12px; gap: 8px; }
+    .search-box { min-width: 0; width: 100%; flex: 0 0 100%; }
+    .toolbar select { flex: 1; min-width: 0; font-size: 12px; padding: 8px 8px; }
+
+    /* إخفاء أزرار الكشوفات الطويلة في تولبار على الموبايل */
+    #expiringListBtn, #activeListBtn, #expiredListBtn,
+    #totalListBtn, #pendingListBtn, #debtListBtn, #merchantPayBtn {
+      font-size: 11px !important;
+      padding: 6px 10px !important;
+    }
+
+    /* ===== Main ===== */
     main { padding: 10px; }
     .form-row { grid-template-columns: 1fr; }
     th, td { padding: 8px 10px; font-size: 12px; }
     .mono { font-size: 11px; }
+
+    /* ===== Stats Bar ===== */
     #statsBar > div { min-width: calc(33% - 8px) !important; max-width: calc(33% - 4px) !important; padding: 6px 8px !important; }
     #statsBar > div span:last-child { display: none; }
+
+    /* ===== Cards ===== */
     .acct-card { border-radius: 10px !important; }
     .acct-name { font-size: 14px !important; }
+    .acct-card-body { padding: 10px 12px !important; }
+    .acct-grid { grid-template-columns: 1fr 1fr !important; gap: 7px !important; }
+
+    /* ===== Banner ===== */
     .banner-wrap { margin: 16px 0 10px !important; }
     .banner-wrap .banner-text-active,
     .banner-wrap .banner-text-expiring,
     .banner-wrap .banner-text-expired { font-size: 18px !important; }
+
+    /* ===== Card action buttons ===== */
     .btn-user, .btn-user-2, .btn-user-3, .btn-merchant, .btn-merchant-2 {
       font-size: 9px !important;
       padding: 3px 8px !important;
     }
+
+    /* حاوية الأزرار — تاخذ عرض كامل وتنزل لسطر جديد */
+    .mobile-btn-row {
+      width: 100% !important;
+      margin-right: 0 !important;
+      flex-wrap: wrap !important;
+      gap: 5px !important;
+      padding-top: 8px !important;
+      border-top: 1px solid rgba(255,255,255,0.07) !important;
+      margin-top: 8px !important;
+    }
+
+    /* ===== Modals ===== */
+    .modal { padding: 18px 14px !important; border-radius: 14px !important; }
+    .modal h2 { font-size: 16px !important; margin-bottom: 14px !important; }
+    .modal-actions { flex-wrap: wrap; gap: 8px; }
+    .modal-actions button { flex: 1; min-width: 100px; justify-content: center; }
+
+    /* إصلاح كارت الأكونتات المتعددة على الموبايل */
+    .acct-card-body > div > div[style*="background:var(--bg2)"] {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+    }
+
+    /* ===== Footer ===== */
+    footer { padding: 10px 12px; gap: 8px; }
+    .btn-footer-emergency, .btn-footer-action { padding: 8px 14px !important; font-size: 12px !important; }
   }
+
   @media (max-width: 400px) {
     #statsBar > div { min-width: calc(50% - 6px) !important; max-width: calc(50% - 4px) !important; }
     main { padding: 8px; }
+    .toolbar select { font-size: 11px; }
+    #expiringListBtn, #activeListBtn, #expiredListBtn,
+    #totalListBtn, #pendingListBtn, #debtListBtn, #merchantPayBtn {
+      font-size: 10px !important;
+      padding: 5px 8px !important;
+    }
   }
 </style>
   <!-- Firebase SDK -->
@@ -739,7 +800,7 @@
 <header style="background:linear-gradient(160deg,#0a1628 0%,#1a3a6e 50%,#0d2244 100%);padding:28px 24px 20px;display:flex;flex-direction:column;align-items:center;">
 
   <!-- زراري الخروج والتحديث -->
-  <div style="position:absolute;left:16px;top:16px;display:flex;gap:8px;align-items:center;">
+  <div style="position:absolute;left:16px;top:16px;display:flex;gap:8px;align-items:center;z-index:10;">
     <button id="refreshBtn" onclick="manualRefresh()" style="background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.35);color:#93c5fd;border-radius:10px;padding:8px 14px;font-size:13px;font-family:Cairo,sans-serif;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all 0.2s;" onmouseover="this.style.background='rgba(79,142,247,0.28)'" onmouseout="this.style.background='rgba(79,142,247,0.15)'" title="تحديث الصفحة">🔄 تحديث</button>
     <button onclick="doLogout()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:10px;padding:8px 16px;font-size:13px;font-family:Cairo,sans-serif;cursor:pointer;">
       🚪 خروج
@@ -1912,20 +1973,19 @@ function buildTable(rows) {
           ${a.amount ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
           <span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(79,142,247,0.12);color:var(--accent);border:1px solid rgba(79,142,247,0.25)">${dur}</span>
           ${a.notes ? `<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:rgba(148,163,184,0.1);color:var(--text2);border:1px solid var(--border)">${a.notes}</span>` : ''}
-          <div style="margin-right:auto;display:flex;gap:4px">
-            ${window.isGuest ? '' : `
-            <span style="font-size:10px;color:#34d399;font-weight:700;opacity:0.9;">للمستخدم</span>
-            <button class="btn-user" onclick="showMsg(${a.id},'confirm')">📨 إرسال كود الاشتراك</button>
-            <button class="btn-user-2" onclick="showMsg(${a.id},'changePass')">🔑 إرسال كلمة السر للمستخدم</button>
-            <button class="btn-user-3" onclick="showMsg(${a.id},'remind')">🔔 تذكير المستخدم بالتجديد</button>
-            <span style="width:1.5px;height:22px;background:rgba(255,255,255,0.15);display:inline-block;margin:0 4px;border-radius:2px;vertical-align:middle;"></span>
-            <span style="font-size:10px;color:#f59e0b;font-weight:700;opacity:0.9;">للتاجر</span>
-            <button class="btn-merchant" onclick="showMsg(${a.id},'remindMerchant')">💰 طلب تجديد اشتراك</button>
-            <button class="btn-merchant-2" onclick="showMsg(${a.id},'changePassMerchant')">🔐 طلب تغيير كلمة السر</button>
-            <button class="btn btn-danger" style="padding:3px 9px;font-size:11px;display:flex;align-items:center;gap:4px;border-radius:50px;" onclick="deleteAccount(${a.id})">🗑️ <span>مسح</span></button>
-            `}
-          </div>
         </div>
+        ${window.isGuest ? '' : `
+        <div class="mobile-btn-row" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07);width:100%">
+          <span style="font-size:10px;color:#34d399;font-weight:700;opacity:0.9;">للمستخدم</span>
+          <button class="btn-user" onclick="showMsg(${a.id},'confirm')">📨 إرسال كود الاشتراك</button>
+          <button class="btn-user-2" onclick="showMsg(${a.id},'changePass')">🔑 إرسال كلمة السر للمستخدم</button>
+          <button class="btn-user-3" onclick="showMsg(${a.id},'remind')">🔔 تذكير المستخدم بالتجديد</button>
+          <span style="width:1.5px;height:22px;background:rgba(255,255,255,0.15);display:inline-block;margin:0 4px;border-radius:2px;vertical-align:middle;"></span>
+          <span style="font-size:10px;color:#f59e0b;font-weight:700;opacity:0.9;">للتاجر</span>
+          <button class="btn-merchant" onclick="showMsg(${a.id},'remindMerchant')">💰 طلب تجديد اشتراك</button>
+          <button class="btn-merchant-2" onclick="showMsg(${a.id},'changePassMerchant')">🔐 طلب تغيير كلمة السر</button>
+          <button class="btn btn-danger" style="padding:3px 9px;font-size:11px;display:flex;align-items:center;gap:4px;border-radius:50px;" onclick="deleteAccount(${a.id})">🗑️ <span>مسح</span></button>
+        </div>`}
       </div>`;
     } else {
       // أكونتات متعددة - صفوف صغيرة
@@ -1956,7 +2016,7 @@ function buildTable(rows) {
           </button>
           ${a.amount ? `<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
 
-          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <div style="display:flex;gap:5px;flex-wrap:wrap;width:100%;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
             ${window.isGuest ? '' : `
             <span style="font-size:10px;color:#34d399;font-weight:700;opacity:0.9;align-self:center;">للمستخدم</span>
             <button class="btn-user" onclick="showMsg(${a.id},'confirm')">📨 إرسال كود الاشتراك</button>
