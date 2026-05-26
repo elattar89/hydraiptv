@@ -2807,16 +2807,31 @@ New Password : ${a.password}
   }
   document.getElementById('msgText').value = text;
 
-  const rawPhone = (a.phone || '').replace(/[^0-9+]/g, '');
+  const isMerchantType = ['remindMerchant', 'changePassMerchant', 'newSubMerchant'].includes(type);
   window._currentMsgPhone = '';
   window._currentMsgText = text;
   window._currentMsgMeta = { type, name: a.name, username: a.username };
-  if (rawPhone) {
-    const phone = rawPhone.startsWith('+') ? rawPhone.replace('+','') : rawPhone.startsWith('00') ? rawPhone.slice(2) : rawPhone;
-    window._currentMsgPhone = phone;
-    document.getElementById('waBtn').style.display = 'inline-flex';
+
+  if (isMerchantType) {
+    // رسائل التاجر: استخدم رقم التاجر الثابت
+    if (typeof MERCHANT_WHATSAPP !== 'undefined' && MERCHANT_WHATSAPP && MERCHANT_WHATSAPP !== '96500000000') {
+      window._currentMsgPhone = MERCHANT_WHATSAPP;
+      document.getElementById('waBtn').style.display = 'inline-flex';
+    } else {
+      // رقم التاجر لم يُضبط بعد
+      document.getElementById('waBtn').style.display = 'none';
+      showToast('⚠️ يرجى تعديل رقم التاجر في الكود (MERCHANT_WHATSAPP)', true);
+    }
   } else {
-    document.getElementById('waBtn').style.display = 'none';
+    // رسائل العميل: استخدم رقم العميل
+    const rawPhone = (a.phone || '').replace(/[^0-9+]/g, '');
+    if (rawPhone) {
+      const phone = rawPhone.startsWith('+') ? rawPhone.replace('+','') : rawPhone.startsWith('00') ? rawPhone.slice(2) : rawPhone;
+      window._currentMsgPhone = phone;
+      document.getElementById('waBtn').style.display = 'inline-flex';
+    } else {
+      document.getElementById('waBtn').style.display = 'none';
+    }
   }
   document.getElementById('msgModalBg').classList.add('active');
 }
@@ -3953,8 +3968,8 @@ if (_auth === 'admin') {
 </div>
 
 <script>
-// رقم التاجر على واتساب — غيّره لرقم التاجر الحقيقي (بدون + أو 00)
-const MERCHANT_WHATSAPP = '96500000000';
+// ⚠️ غيّر هذا الرقم لرقم التاجر الحقيقي (بدون + أو 00، مثال: 96512345678)
+const MERCHANT_WHATSAPP = '97477177206';
 
 // ===== popup بيانات الطلب =====
 function openFormRegDetails(firestoreId) {
@@ -4423,7 +4438,7 @@ function mrqDupConfirm() {
 }
 function doSendMerchantReqWithPerson(existingPerson, username) {
   const msg = document.getElementById('merchantReqMsgBox').value.trim();
-  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  window.open('https://wa.me/' + MERCHANT_WHATSAPP + '?text=' + encodeURIComponent(msg), '_blank');
 
   // بيانات الكرت = بيانات الشخص الموجود + اليوزرنيم الجديد + أي بيانات إضافية من الفورم
   const extra = {
@@ -4968,7 +4983,7 @@ function sendMerchantReqWa() {
     return;
   }
 
-  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  window.open('https://wa.me/' + MERCHANT_WHATSAPP + '?text=' + encodeURIComponent(msg), '_blank');
 
   // جمع البيانات الإضافية لتحفظ على الكرت فقط
   const extra = {
