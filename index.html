@@ -2813,15 +2813,9 @@ New Password : ${a.password}
   window._currentMsgMeta = { type, name: a.name, username: a.username };
 
   if (isMerchantType) {
-    // رسائل التاجر: استخدم رقم التاجر الثابت
-    if (typeof MERCHANT_WHATSAPP !== 'undefined' && MERCHANT_WHATSAPP && MERCHANT_WHATSAPP !== '96500000000') {
-      window._currentMsgPhone = MERCHANT_WHATSAPP;
-      document.getElementById('waBtn').style.display = 'inline-flex';
-    } else {
-      // رقم التاجر لم يُضبط بعد
-      document.getElementById('waBtn').style.display = 'none';
-      showToast('⚠️ يرجى تعديل رقم التاجر في الكود (MERCHANT_WHATSAPP)', true);
-    }
+    // رسائل التاجر: استخدم رقم التاجر الثابت دائماً بغض النظر عن رقم العميل
+    window._currentMsgPhone = MERCHANT_WHATSAPP;
+    document.getElementById('waBtn').style.display = 'inline-flex';
   } else {
     // رسائل العميل: استخدم رقم العميل
     const rawPhone = (a.phone || '').replace(/[^0-9+]/g, '');
