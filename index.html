@@ -1956,7 +1956,7 @@ function buildTable(rows) {
           </button>
           ${a.amount ? `<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
 
-          <div style="display:flex;gap:5px;flex-wrap:wrap;width:100%;overflow:hidden;">
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
             ${window.isGuest ? '' : `
             <span style="font-size:10px;color:#34d399;font-weight:700;opacity:0.9;align-self:center;">للمستخدم</span>
             <button class="btn-user" onclick="showMsg(${a.id},'confirm')">📨 إرسال كود الاشتراك</button>
