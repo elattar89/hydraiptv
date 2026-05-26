@@ -196,6 +196,7 @@
     background: #d1fae5;
     box-shadow: 0 0 0 1.5px #34d399;
     color: #065f46;
+    white-space: nowrap;
   }
   .btn-user:hover { background: #34d399; color: #fff; box-shadow: 0 0 0 1.5px #34d399, 0 4px 12px rgba(52,211,153,0.4); }
   .btn-user:active { background: #047857; color: #fff; transform: scale(0.96); }
@@ -209,6 +210,7 @@
     cursor: pointer;
     font-family: Cairo, sans-serif;
     transition: all 0.2s;
+    white-space: nowrap;
     background: #dbeafe;
     box-shadow: 0 0 0 1.5px #60a5fa;
     color: #1e3a8a;
@@ -225,6 +227,7 @@
     cursor: pointer;
     font-family: Cairo, sans-serif;
     transition: all 0.2s;
+    white-space: nowrap;
     background: #ede9fe;
     box-shadow: 0 0 0 1.5px #a78bfa;
     color: #4c1d95;
@@ -241,6 +244,7 @@
     cursor: pointer;
     font-family: Cairo, sans-serif;
     transition: all 0.2s;
+    white-space: nowrap;
     background: #fef3c7;
     box-shadow: 0 0 0 1.5px #f59e0b;
     color: #78350f;
@@ -257,6 +261,7 @@
     cursor: pointer;
     font-family: Cairo, sans-serif;
     transition: all 0.2s;
+    white-space: nowrap;
     background: #fce7f3;
     box-shadow: 0 0 0 1.5px #f472b6;
     color: #831843;
@@ -357,13 +362,16 @@
     .mono { font-size: 11px; }
     #statsBar > div { min-width: calc(33% - 8px) !important; max-width: calc(33% - 4px) !important; padding: 6px 8px !important; }
     #statsBar > div span:last-child { display: none; }
-    /* الكروت - عمود واحد على الموبايل */
     .acct-card { border-radius: 10px !important; }
     .acct-name { font-size: 14px !important; }
     .banner-wrap { margin: 16px 0 10px !important; }
     .banner-wrap .banner-text-active,
     .banner-wrap .banner-text-expiring,
     .banner-wrap .banner-text-expired { font-size: 18px !important; }
+    .btn-user, .btn-user-2, .btn-user-3, .btn-merchant, .btn-merchant-2 {
+      font-size: 9px !important;
+      padding: 3px 8px !important;
+    }
   }
   @media (max-width: 400px) {
     #statsBar > div { min-width: calc(50% - 6px) !important; max-width: calc(50% - 4px) !important; }
@@ -1948,14 +1956,14 @@ function buildTable(rows) {
           </button>
           ${a.amount ? `<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
 
-          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <div style="display:flex;gap:5px;flex-wrap:wrap;width:100%;overflow:hidden;">
             ${window.isGuest ? '' : `
-            <span style="font-size:10px;color:#34d399;font-weight:700;opacity:0.9;">للمستخدم</span>
+            <span style="font-size:10px;color:#34d399;font-weight:700;opacity:0.9;align-self:center;">للمستخدم</span>
             <button class="btn-user" onclick="showMsg(${a.id},'confirm')">📨 إرسال كود الاشتراك</button>
             <button class="btn-user-2" onclick="showMsg(${a.id},'changePass')">🔑 إرسال كلمة السر للمستخدم</button>
             <button class="btn-user-3" onclick="showMsg(${a.id},'remind')">🔔 تذكير المستخدم بالتجديد</button>
-            <span style="width:1.5px;height:22px;background:rgba(255,255,255,0.15);display:inline-block;margin:0 4px;border-radius:2px;vertical-align:middle;"></span>
-            <span style="font-size:10px;color:#f59e0b;font-weight:700;opacity:0.9;">للتاجر</span>
+            <span style="width:1.5px;height:22px;background:rgba(255,255,255,0.15);display:inline-block;margin:0 4px;border-radius:2px;align-self:center;"></span>
+            <span style="font-size:10px;color:#f59e0b;font-weight:700;opacity:0.9;align-self:center;">للتاجر</span>
             <button class="btn-merchant" onclick="showMsg(${a.id},'remindMerchant')">💰 طلب تجديد اشتراك</button>
             <button class="btn-merchant-2" onclick="showMsg(${a.id},'changePassMerchant')">🔐 طلب تغيير كلمة السر</button>
             <button class="btn btn-danger" style="padding:2px 8px;font-size:10px;display:flex;align-items:center;gap:3px;border-radius:50px;" onclick="deleteAccount(${a.id})">🗑️ <span>مسح</span></button>
