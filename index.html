@@ -2347,7 +2347,14 @@ function selectName(name) {
   document.getElementById('fName').value = name;
   document.getElementById('nameDropdown').style.display = 'none';
   const match = accounts.find(x => x.name === name && x.phone);
-  if (match) document.getElementById('fPhone').value = match.phone;
+  if (match) {
+    const _dialCodes = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'];
+    const _fullPhone = match.phone || '';
+    const _dial = _dialCodes.find(d => _fullPhone.startsWith(d)) || '';
+    const fPhoneDial = document.getElementById('fPhoneDial');
+    if (fPhoneDial) fPhoneDial.value = _dial;
+    document.getElementById('fPhone').value = _dial ? _fullPhone.slice(_dial.length) : _fullPhone;
+  }
   document.getElementById('fUser').value = '';
   document.getElementById('fPass').value = '';
 }
@@ -2356,7 +2363,14 @@ function autoFillPhoneByName() {
   const name = document.getElementById('fName').value.trim();
   if (!name) return;
   const match = accounts.find(x => x.name === name && x.phone);
-  if (match) document.getElementById('fPhone').value = match.phone;
+  if (match) {
+    const _dialCodes = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'];
+    const _fullPhone = match.phone || '';
+    const _dial = _dialCodes.find(d => _fullPhone.startsWith(d)) || '';
+    const fPhoneDial = document.getElementById('fPhoneDial');
+    if (fPhoneDial) fPhoneDial.value = _dial;
+    document.getElementById('fPhone').value = _dial ? _fullPhone.slice(_dial.length) : _fullPhone;
+  }
 }
 
 function openAddModal() {
@@ -2411,7 +2425,6 @@ function editAccount(id) {
   document.getElementById('modalTitle').textContent = '✏️ تعديل الحساب';
   document.getElementById('fName').value = a.name || '';
   const phoneVal = a.phone || (accounts.find(x => x.name === a.name && x.phone) || {}).phone || '';
-  document.getElementById('fPhone').value = phoneVal;
   document.getElementById('fUser').value = a.username || '';
   document.getElementById('fPass').value = a.password || '';
   // تعبئة الهوست - يختار المطابق من القائمة أو يضيف custom
@@ -2441,11 +2454,11 @@ function editAccount(id) {
   document.getElementById('fMerchantPaid').value = a.merchantPaid || 'paid';
   document.getElementById('fNotes').value = a.notes || '';
   const aEl = document.getElementById('fAmount'); if(aEl) aEl.value = a.amount || '';
-  const _eDial = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'].find(d => (a.phone||'').startsWith(d)) || '';
+  const _eDial = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'].find(d => (phoneVal||'').startsWith(d)) || '';
   const fPhoneDialEl = document.getElementById('fPhoneDial');
   const fPhoneEl = document.getElementById('fPhone');
   if (fPhoneDialEl) fPhoneDialEl.value = _eDial;
-  if (fPhoneEl) fPhoneEl.value = _eDial ? (a.phone||'').slice(_eDial.length) : (a.phone||'');
+  if (fPhoneEl) fPhoneEl.value = _eDial ? (phoneVal||'').slice(_eDial.length) : (phoneVal||'');
   const aDEl = document.getElementById('fAmountDisplay'); if(aDEl) aDEl.textContent = a.amount ? a.amount+' KD' : '';
   const sexEl = document.getElementById('fSex'); if(sexEl) sexEl.value = a.sex || '';
   const cntEditEl = document.getElementById('fCountry');
