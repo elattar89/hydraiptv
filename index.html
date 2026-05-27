@@ -2352,6 +2352,7 @@ function selectName(name) {
   document.getElementById('nameDropdown').style.display = 'none';
   // جلب بيانات الشخص من أي أكونت بنفس الاسم
   const _allSame = accounts.filter(x => x.name === name);
+  const _withPhone = _allSame.find(x => x.phone);
   if (_withPhone) {
     const _spSelect = splitPhoneAndDial(_withPhone.phone || '');
     const fPhoneDial = document.getElementById('fPhoneDial');
