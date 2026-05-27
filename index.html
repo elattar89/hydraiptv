@@ -2521,7 +2521,18 @@ function editAccount(id) {
       cntEditEl.value = '';
     }
   }
+  // إظهار حقل المدة والسعر بناءً على الدولة المختارة
+  if (typeof showDashDurationField === 'function') showDashDurationField();
+  // تحديد المدة الصحيحة بعد ظهور الحقل
   const durEl2 = document.getElementById('fDuration'); if (durEl2) durEl2.value = a.duration || '15';
+  document.querySelectorAll('input[name="fDurationRadio"]').forEach(function(r) {
+    r.checked = (r.value === String(a.duration || '15'));
+    const lbl = r.closest('label');
+    if (lbl) {
+      if (r.checked) { lbl.style.background = 'var(--accent)'; lbl.style.color = '#fff'; lbl.style.borderColor = 'var(--accent)'; }
+      else { lbl.style.background = ''; lbl.style.color = ''; lbl.style.borderColor = ''; }
+    }
+  });
   document.getElementById('modalBg').classList.add('active');
 }
 
