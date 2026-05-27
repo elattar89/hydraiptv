@@ -2044,19 +2044,23 @@ let _editingPersonName = null;
 
 function openPersonEdit(name) {
   _editingPersonName = name;
-  const a = accounts.find(x => x.name === name);
+  const _allSamePerson = accounts.filter(x => x.name === name);
+  // جلب أفضل بيانات من أي أكونت بنفس الاسم
+  const _bestPhone       = (_allSamePerson.find(x => x.phone)       || {}).phone       || '';
+  const _bestSex         = (_allSamePerson.find(x => x.sex)         || {}).sex         || '';
+  const _bestNationality = (_allSamePerson.find(x => x.nationality) || {}).nationality || '';
+  const _bestCountry     = (_allSamePerson.find(x => x.country)     || {}).country     || '';
   document.getElementById('personName').value = name;
   // فصل المفتاح عن الرقم
-  const _pPhone = a ? (a.phone || '') : '';
-  const _pDial = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'].find(d => _pPhone.startsWith(d)) || '';
-  document.getElementById('personPhoneDial').value = _pDial;
-  document.getElementById('personPhone').value = _pDial ? _pPhone.slice(_pDial.length) : _pPhone;
-  document.getElementById('personSex').value = a ? (a.sex || '') : '';
-  document.getElementById('personNationality').value = a ? (a.nationality || '') : '';
+  const _spPerson = splitPhoneAndDial(_bestPhone);
+  document.getElementById('personPhoneDial').value = _spPerson.dial;
+  document.getElementById('personPhone').value = _spPerson.number;
+  document.getElementById('personSex').value = _bestSex;
+  document.getElementById('personNationality').value = _bestNationality;
   const pcEl = document.getElementById('personCountry');
   if (pcEl) {
     const knownC = ['الكويت','السعودية','الإمارات','قطر','سلطنة عمان','البحرين','العراق','اليمن','سوريا','فلسطين','لبنان','الاردن','مصر','المغرب','تونس','ليبيا','السودان','تركيا','الهند','باكستان','فلبين','بريطانيا','فرنسا','ألمانيا','إيطاليا','إسبانيا','هولندا','السويد','النرويج','الدنمارك','كندا','أمريكا','أستراليا','أخرى'];
-    pcEl.value = (a && a.country && knownC.includes(a.country)) ? a.country : '';
+    pcEl.value = (_bestCountry && knownC.includes(_bestCountry)) ? _bestCountry : '';
   }
   document.getElementById('personModal').style.display = 'flex';
 }
@@ -2346,14 +2350,31 @@ function toggleNameDropdown() {
 function selectName(name) {
   document.getElementById('fName').value = name;
   document.getElementById('nameDropdown').style.display = 'none';
-  const match = accounts.find(x => x.name === name && x.phone);
-  if (match) {
-    const _dialCodes = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'];
-    const _fullPhone = match.phone || '';
-    const _dial = _dialCodes.find(d => _fullPhone.startsWith(d)) || '';
+  // جلب بيانات الشخص من أي أكونت بنفس الاسم
+  const _allSame = accounts.filter(x => x.name === name);
+  if (_withPhone) {
+    const _spSelect = splitPhoneAndDial(_withPhone.phone || '');
     const fPhoneDial = document.getElementById('fPhoneDial');
-    if (fPhoneDial) fPhoneDial.value = _dial;
-    document.getElementById('fPhone').value = _dial ? _fullPhone.slice(_dial.length) : _fullPhone;
+    if (fPhoneDial) fPhoneDial.value = _spSelect.dial;
+    document.getElementById('fPhone').value = _spSelect.number;
+  }
+  // تعبئة الجنس والجنسية ودولة الاستخدام
+  const _withInfo = _allSame.find(x => x.sex || x.nationality || x.country);
+  if (_withInfo) {
+    const sexEl = document.getElementById('fSex'); if(sexEl && _withInfo.sex) sexEl.value = _withInfo.sex;
+    const natEl = document.getElementById('fNationality'); if(natEl && _withInfo.nationality) natEl.value = _withInfo.nationality;
+    const cntEl = document.getElementById('fCountry');
+    if (cntEl && _withInfo.country) {
+      const knownCountries = ['الكويت','السعودية','الإمارات','قطر','سلطنة عمان','البحرين','العراق','اليمن','سوريا','فلسطين','لبنان','الاردن','مصر','المغرب','تونس','ليبيا','السودان','تركيا','الهند','باكستان','فلبين','بريطانيا','فرنسا','ألمانيا','إيطاليا','إسبانيا','هولندا','السويد','النرويج','الدنمارك','كندا','أمريكا','أستراليا'];
+      const cntOtherEl = document.getElementById('fCountryOther');
+      if (knownCountries.includes(_withInfo.country)) {
+        cntEl.value = _withInfo.country;
+        if (cntOtherEl) { cntOtherEl.style.display = 'none'; cntOtherEl.value = ''; }
+      } else {
+        cntEl.value = 'أخرى';
+        if (cntOtherEl) { cntOtherEl.style.display = 'block'; cntOtherEl.value = _withInfo.country; }
+      }
+    }
   }
   document.getElementById('fUser').value = '';
   document.getElementById('fPass').value = '';
@@ -2362,14 +2383,31 @@ function selectName(name) {
 function autoFillPhoneByName() {
   const name = document.getElementById('fName').value.trim();
   if (!name) return;
-  const match = accounts.find(x => x.name === name && x.phone);
-  if (match) {
-    const _dialCodes = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'];
-    const _fullPhone = match.phone || '';
-    const _dial = _dialCodes.find(d => _fullPhone.startsWith(d)) || '';
+  const _allSame = accounts.filter(x => x.name === name);
+  if (!_allSame.length) return;
+  const _withPhone = _allSame.find(x => x.phone);
+  if (_withPhone) {
+    const _spAuto = splitPhoneAndDial(_withPhone.phone || '');
     const fPhoneDial = document.getElementById('fPhoneDial');
-    if (fPhoneDial) fPhoneDial.value = _dial;
-    document.getElementById('fPhone').value = _dial ? _fullPhone.slice(_dial.length) : _fullPhone;
+    if (fPhoneDial) fPhoneDial.value = _spAuto.dial;
+    document.getElementById('fPhone').value = _spAuto.number;
+  }
+  const _withInfo = _allSame.find(x => x.sex || x.nationality || x.country);
+  if (_withInfo) {
+    const sexEl = document.getElementById('fSex'); if(sexEl && _withInfo.sex) sexEl.value = _withInfo.sex;
+    const natEl = document.getElementById('fNationality'); if(natEl && _withInfo.nationality) natEl.value = _withInfo.nationality;
+    const cntEl = document.getElementById('fCountry');
+    if (cntEl && _withInfo.country) {
+      const knownCountries = ['الكويت','السعودية','الإمارات','قطر','سلطنة عمان','البحرين','العراق','اليمن','سوريا','فلسطين','لبنان','الاردن','مصر','المغرب','تونس','ليبيا','السودان','تركيا','الهند','باكستان','فلبين','بريطانيا','فرنسا','ألمانيا','إيطاليا','إسبانيا','هولندا','السويد','النرويج','الدنمارك','كندا','أمريكا','أستراليا'];
+      const cntOtherEl = document.getElementById('fCountryOther');
+      if (knownCountries.includes(_withInfo.country)) {
+        cntEl.value = _withInfo.country;
+        if (cntOtherEl) { cntOtherEl.style.display = 'none'; cntOtherEl.value = ''; }
+      } else {
+        cntEl.value = 'أخرى';
+        if (cntOtherEl) { cntOtherEl.style.display = 'block'; cntOtherEl.value = _withInfo.country; }
+      }
+    }
   }
 }
 
@@ -2454,23 +2492,29 @@ function editAccount(id) {
   document.getElementById('fMerchantPaid').value = a.merchantPaid || 'paid';
   document.getElementById('fNotes').value = a.notes || '';
   const aEl = document.getElementById('fAmount'); if(aEl) aEl.value = a.amount || '';
-  const _eDial = ['+965','+966','+971','+974','+968','+973','+964','+967','+963','+961','+962','+970','+20','+212','+216','+218','+249','+90','+91','+92','+63','+44','+33','+49','+1','+61'].find(d => (phoneVal||'').startsWith(d)) || '';
+  const _spEdit = splitPhoneAndDial(phoneVal || '');
   const fPhoneDialEl = document.getElementById('fPhoneDial');
   const fPhoneEl = document.getElementById('fPhone');
-  if (fPhoneDialEl) fPhoneDialEl.value = _eDial;
-  if (fPhoneEl) fPhoneEl.value = _eDial ? (phoneVal||'').slice(_eDial.length) : (phoneVal||'');
+  if (fPhoneDialEl) fPhoneDialEl.value = _spEdit.dial;
+  if (fPhoneEl) fPhoneEl.value = _spEdit.number;
   const aDEl = document.getElementById('fAmountDisplay'); if(aDEl) aDEl.textContent = a.amount ? a.amount+' KD' : '';
-  const sexEl = document.getElementById('fSex'); if(sexEl) sexEl.value = a.sex || '';
+  // جلب بيانات الشخص من أي أكونت بنفس الاسم لو الأكونت الحالي مالوش
+  const _sibling = accounts.find(x => x.name === a.name && x.id !== a.id && (x.sex || x.nationality || x.country));
+  const _sex         = a.sex         || (_sibling && _sibling.sex)         || '';
+  const _nationality = a.nationality || (_sibling && _sibling.nationality) || '';
+  const _country     = a.country     || (_sibling && _sibling.country)     || '';
+  const sexEl = document.getElementById('fSex'); if(sexEl) sexEl.value = _sex;
+  const natEditEl = document.getElementById('fNationality'); if(natEditEl) natEditEl.value = _nationality;
   const cntEditEl = document.getElementById('fCountry');
   const cntOtherEl = document.getElementById('fCountryOther');
   if (cntEditEl) {
     const knownCountries = ['الكويت','السعودية','الإمارات','قطر','سلطنة عمان','البحرين','العراق','اليمن','سوريا','فلسطين','لبنان','الاردن','مصر','المغرب','تونس','ليبيا','السودان','تركيا','الهند','باكستان','فلبين','بريطانيا','فرنسا','ألمانيا','إيطاليا','إسبانيا','هولندا','السويد','النرويج','الدنمارك','كندا','أمريكا','أستراليا'];
-    if (a.country && knownCountries.includes(a.country)) {
-      cntEditEl.value = a.country;
+    if (_country && knownCountries.includes(_country)) {
+      cntEditEl.value = _country;
       if (cntOtherEl) { cntOtherEl.style.display = 'none'; cntOtherEl.value = ''; }
-    } else if (a.country) {
+    } else if (_country) {
       cntEditEl.value = 'أخرى';
-      if (cntOtherEl) { cntOtherEl.style.display = 'block'; cntOtherEl.value = a.country; }
+      if (cntOtherEl) { cntOtherEl.style.display = 'block'; cntOtherEl.value = _country; }
     } else {
       cntEditEl.value = '';
     }
@@ -2605,7 +2649,15 @@ function _doAdd(a) {
   }
 
   const wasEditing = !!editingId;
-  if (a.phone) accounts.forEach(x => { if (x.name === a.name) x.phone = a.phone; });
+  // مزامنة بيانات الشخص المشتركة على كل أكونتاته
+  accounts.forEach(x => {
+    if (x.name === a.name) {
+      if (a.phone       !== undefined && a.phone       !== '') x.phone       = a.phone;
+      if (a.sex         !== undefined && a.sex         !== '') x.sex         = a.sex;
+      if (a.nationality !== undefined && a.nationality !== '') x.nationality = a.nationality;
+      if (a.country     !== undefined && a.country     !== '') x.country     = a.country;
+    }
+  });
 
   // لو الإضافة جاية من كرت pending التاجر → احذف الكرت
   const pIdx = _modalPendingIdx;
@@ -4265,13 +4317,20 @@ function openFormRegModal(firestoreId) {
   document.getElementById('fHost').value    = '';
   document.getElementById('fDate').value    = '';
   document.getElementById('fExp').value     = '';
-  const sexFormEl = document.getElementById('fSex'); if(sexFormEl) sexFormEl.value = reg.sex || '';
-  const natEl = document.getElementById('fNationality'); if(natEl) natEl.value = reg.nationality || '';
+  const sexFormEl = document.getElementById('fSex');
+  const natEl = document.getElementById('fNationality');
   const cntEl = document.getElementById('fCountry');
+  // لو الطلب مالوش بيانات، نجيبها من الأكونتات الموجودة بنفس الاسم أو التليفون
+  const _existingForReg = accounts.find(x => x.name === prefillName && (x.sex || x.nationality || x.country));
+  const _regSex         = reg.sex         || (_existingForReg && _existingForReg.sex)         || '';
+  const _regNationality = reg.nationality || (_existingForReg && _existingForReg.nationality) || '';
+  const _regCountry     = reg.country     || (_existingForReg && _existingForReg.country)     || '';
+  if(sexFormEl) sexFormEl.value = _regSex;
+  if(natEl) natEl.value = _regNationality;
   if(cntEl) {
-    cntEl.value = reg.country || '';
+    cntEl.value = _regCountry || '';
     // إظهار قسم المدة وتحديث الأسعار
-    if (reg.country && typeof showDashDurationField === 'function') showDashDurationField();
+    if (_regCountry && typeof showDashDurationField === 'function') showDashDurationField();
   }
   document.getElementById('fNotes').value   = '';
   // ملء المدة من الطلب
@@ -4442,8 +4501,17 @@ function openPendingModal(idx) {
   document.getElementById('fDate').value     = req.startDate|| '';
   document.getElementById('fExp').value      = req.expDate  || '';
   document.getElementById('fNotes').value    = req.notes    || '';
-  const natEl2 = document.getElementById('fNationality'); if(natEl2) natEl2.value = req.nationality || '';
-  const cntEl2 = document.getElementById('fCountry'); if(cntEl2) cntEl2.value = req.country || '';
+  const natEl2 = document.getElementById('fNationality');
+  const cntEl2 = document.getElementById('fCountry');
+  const sexEl2 = document.getElementById('fSex');
+  // لو الطلب مالوش بيانات، نجيبها من الأكونتات الموجودة بنفس الاسم
+  const _existingForPending = accounts.find(x => x.name === (req.name||'') && (x.sex || x.nationality || x.country));
+  const _pSex         = req.sex         || (_existingForPending && _existingForPending.sex)         || '';
+  const _pNationality = req.nationality || (_existingForPending && _existingForPending.nationality) || '';
+  const _pCountry     = req.country     || (_existingForPending && _existingForPending.country)     || '';
+  if(sexEl2) sexEl2.value = _pSex;
+  if(natEl2) natEl2.value = _pNationality;
+  if(cntEl2) cntEl2.value = _pCountry;
   document.getElementById('fAmount').value   = req.amount   || '';
   const durEl = document.getElementById('fDuration');
   if (durEl) durEl.value = req.duration || '15';
