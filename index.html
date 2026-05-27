@@ -1938,7 +1938,7 @@ function buildTable(rows) {
           <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
             ${first.sex ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.3)">${first.sex === 'ذكر' ? '👨' : '👩'} ${first.sex}</span>` : ''}
             ${first.nationality ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.3)">🌍 ${first.nationality}</span>` : ''}
-            ${first.country ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.3)">📍 ${first.country}</span>` : ''}
+            ${accs.length === 1 && first.country ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.3)">📍 ${first.country}</span>` : ''}
           </div>
         </div>
       </div>`;
@@ -2015,6 +2015,7 @@ function buildTable(rows) {
             <span style="font-size:10px;padding:2px 6px;border-radius:20px;background:${merchant==='paid'?'rgba(34,197,94,0.15)':'rgba(245,158,11,0.15)'};color:${merchant==='paid'?'#4ade80':'#fbbf24'};border:1px solid ${merchant==='paid'?'rgba(34,197,94,0.3)':'rgba(245,158,11,0.3)'}">تاجر ${merchant==='paid'?'✓':'✗'}</span>
           </button>
           ${a.amount ? `<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${a.amount} KD</span>` : ''}
+          ${a.country ? `<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.3)">📍 ${a.country}</span>` : ''}
 
           <div style="display:flex;gap:5px;flex-wrap:wrap;width:100%;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
             ${window.isGuest ? '' : `
@@ -3878,46 +3879,6 @@ if (_auth === 'admin') {
         <option>السويد</option><option>النرويج</option><option>الدنمارك</option>
         <option>كندا</option><option>أمريكا</option><option>أستراليا</option>
         <option value="أخرى">أخرى</option>
-      </select>
-    </div>
-    <div style="margin-bottom:20px">
-      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">دولة الاستخدام</label>
-      <select id="personCountry" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:Cairo,sans-serif;font-size:14px;outline:none;">
-        <option value="">— اختر —</option>
-              <option>الكويت</option>
-              <option>السعودية</option>
-              <option>الإمارات</option>
-              <option>قطر</option>
-              <option>سلطنة عمان</option>
-              <option>البحرين</option>
-              <option>العراق</option>
-              <option>اليمن</option>
-              <option>سوريا</option>
-              <option>فلسطين</option>
-              <option>لبنان</option>
-              <option>الاردن</option>
-              <option>مصر</option>
-              <option>المغرب</option>
-              <option>تونس</option>
-              <option>ليبيا</option>
-              <option>السودان</option>
-              <option>تركيا</option>
-              <option>الهند</option>
-              <option>باكستان</option>
-              <option>فلبين</option>
-              <option>بريطانيا</option>
-              <option>فرنسا</option>
-              <option>ألمانيا</option>
-              <option>إيطاليا</option>
-              <option>إسبانيا</option>
-              <option>هولندا</option>
-              <option>السويد</option>
-              <option>النرويج</option>
-              <option>الدنمارك</option>
-              <option>كندا</option>
-              <option>أمريكا</option>
-              <option>أستراليا</option>
-              <option>أخرى</option>
       </select>
     </div>
     <div style="display:flex;gap:10px">
