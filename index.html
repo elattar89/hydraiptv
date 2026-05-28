@@ -2073,7 +2073,7 @@ function closePersonModal() {
 
 function savePersonEdit() {
   const newName = document.getElementById('personName').value.trim();
-  const newPhone = ((document.getElementById('personPhoneDial').value||'') + document.getElementById('personPhone').value.trim()).trim();
+  const newPhone = cleanPhone(document.getElementById('personPhoneDial').value||'', document.getElementById('personPhone').value.trim());
   if (!newName) { showToast('❌ الاسم مطلوب', true); return; }
   // تحديث كل الأكونتات بنفس الاسم
   const newSex         = document.getElementById('personSex').value;
@@ -2351,35 +2351,47 @@ function toggleNameDropdown() {
 function selectName(name) {
   document.getElementById('fName').value = name;
   document.getElementById('nameDropdown').style.display = 'none';
-  // جلب بيانات الشخص من أي أكونت بنفس الاسم
-  const _allSame = accounts.filter(x => x.name === name);
-  const _withPhone = _allSame.find(x => x.phone);
-  if (_withPhone) {
-    const _spSelect = splitPhoneAndDial(_withPhone.phone || '');
-    const fPhoneDial = document.getElementById('fPhoneDial');
-    if (fPhoneDial) fPhoneDial.value = _spSelect.dial;
-    document.getElementById('fPhone').value = _spSelect.number;
-  }
-  // تعبئة الجنس والجنسية ودولة الاستخدام
-  const _withInfo = _allSame.find(x => x.sex || x.nationality || x.country);
-  if (_withInfo) {
-    const sexEl = document.getElementById('fSex'); if(sexEl && _withInfo.sex) sexEl.value = _withInfo.sex;
-    const natEl = document.getElementById('fNationality'); if(natEl && _withInfo.nationality) natEl.value = _withInfo.nationality;
-    const cntEl = document.getElementById('fCountry');
-    if (cntEl && _withInfo.country) {
-      const knownCountries = ['الكويت','السعودية','الإمارات','قطر','سلطنة عمان','البحرين','العراق','اليمن','سوريا','فلسطين','لبنان','الاردن','مصر','المغرب','تونس','ليبيا','السودان','تركيا','الهند','باكستان','فلبين','بريطانيا','فرنسا','ألمانيا','إيطاليا','إسبانيا','هولندا','السويد','النرويج','الدنمارك','كندا','أمريكا','أستراليا'];
-      const cntOtherEl = document.getElementById('fCountryOther');
-      if (knownCountries.includes(_withInfo.country)) {
-        cntEl.value = _withInfo.country;
-        if (cntOtherEl) { cntOtherEl.style.display = 'none'; cntOtherEl.value = ''; }
-      } else {
-        cntEl.value = 'أخرى';
-        if (cntOtherEl) { cntOtherEl.style.display = 'block'; cntOtherEl.value = _withInfo.country; }
+
+  if (editingId) {
+    // وضع التعديل: بس غير التليفون للشخص الجديد، لا تمس اليوزر/باسورد/جنس/جنسية/دولة
+    const _allSame = accounts.filter(x => x.name === name);
+    const _withPhone = _allSame.find(x => x.phone);
+    if (_withPhone) {
+      const _spSelect = splitPhoneAndDial(_withPhone.phone || '');
+      const fPhoneDial = document.getElementById('fPhoneDial');
+      if (fPhoneDial) fPhoneDial.value = _spSelect.dial;
+      document.getElementById('fPhone').value = _spSelect.number;
+    }
+  } else {
+    // وضع الإضافة الجديدة: جلب كل بيانات الشخص
+    const _allSame = accounts.filter(x => x.name === name);
+    const _withPhone = _allSame.find(x => x.phone);
+    if (_withPhone) {
+      const _spSelect = splitPhoneAndDial(_withPhone.phone || '');
+      const fPhoneDial = document.getElementById('fPhoneDial');
+      if (fPhoneDial) fPhoneDial.value = _spSelect.dial;
+      document.getElementById('fPhone').value = _spSelect.number;
+    }
+    const _withInfo = _allSame.find(x => x.sex || x.nationality || x.country);
+    if (_withInfo) {
+      const sexEl = document.getElementById('fSex'); if(sexEl && _withInfo.sex) sexEl.value = _withInfo.sex;
+      const natEl = document.getElementById('fNationality'); if(natEl && _withInfo.nationality) natEl.value = _withInfo.nationality;
+      const cntEl = document.getElementById('fCountry');
+      if (cntEl && _withInfo.country) {
+        const knownCountries = ['الكويت','السعودية','الإمارات','قطر','سلطنة عمان','البحرين','العراق','اليمن','سوريا','فلسطين','لبنان','الاردن','مصر','المغرب','تونس','ليبيا','السودان','تركيا','الهند','باكستان','فلبين','بريطانيا','فرنسا','ألمانيا','إيطاليا','إسبانيا','هولندا','السويد','النرويج','الدنمارك','كندا','أمريكا','أستراليا'];
+        const cntOtherEl = document.getElementById('fCountryOther');
+        if (knownCountries.includes(_withInfo.country)) {
+          cntEl.value = _withInfo.country;
+          if (cntOtherEl) { cntOtherEl.style.display = 'none'; cntOtherEl.value = ''; }
+        } else {
+          cntEl.value = 'أخرى';
+          if (cntOtherEl) { cntOtherEl.style.display = 'block'; cntOtherEl.value = _withInfo.country; }
+        }
       }
     }
+    document.getElementById('fUser').value = '';
+    document.getElementById('fPass').value = '';
   }
-  document.getElementById('fUser').value = '';
-  document.getElementById('fPass').value = '';
 }
 
 function autoFillPhoneByName() {
@@ -4068,13 +4080,11 @@ function openFormRegDetails(firestoreId) {
   const reg = (window._formRegistrations || []).find(r => r._firestoreId === firestoreId);
   if (!reg) return;
 
-  // شيل الـ popup القديم لو موجود
   const old = document.getElementById('formRegDetailsPopup');
   if (old) old.remove();
 
   const date = reg.createdAt ? new Date(reg.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : '—';
 
-  // جلب الجنس والجنسية والدولة من الأكونتات السابقة لو مش موجودين في الطلب
   const _existingAccs = (accounts || []).filter(x =>
     (reg.username && x.username && x.username.trim().toLowerCase() === reg.username.trim().toLowerCase()) ||
     (reg.name && x.name && x.name.trim() === reg.name.trim())
@@ -4272,7 +4282,6 @@ function splitPhoneAndDial(fullPhone) {
   const clean = (fullPhone || '').trim();
   const dial = dials.find(d => clean.startsWith(d)) || '';
   let number = dial ? clean.slice(dial.length) : clean;
-  // تنظيف: لو الرقم يبدأ بنفس المفتاح بدون + (مثل 965 في +96596566640114)
   if (dial) {
     const dialDigits = dial.replace('+', '');
     if (number.startsWith(dialDigits)) number = number.slice(dialDigits.length);
