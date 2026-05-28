@@ -2563,7 +2563,7 @@ function showDupModal(title, desc, accountData, existingPerson) {
 function saveAccount() {
   const a = {
     name:         document.getElementById('fName').value.trim(),
-    phone:        ((document.getElementById('fPhoneDial').value||'') + document.getElementById('fPhone').value.trim()).trim(),
+    phone:        cleanPhone(document.getElementById('fPhoneDial').value||'', document.getElementById('fPhone').value.trim()),
     username:     document.getElementById('fUser').value.trim(),
     password:     document.getElementById('fPass').value.trim(),
     host:         document.getElementById('fHost').value.trim(),
@@ -4074,14 +4074,17 @@ function openFormRegDetails(firestoreId) {
 
   const date = reg.createdAt ? new Date(reg.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : '—';
 
-  // جلب الجنسية ودولة الاستخدام من الأكونتات السابقة لو مش موجودين في الطلب
+  // جلب الجنس والجنسية والدولة من الأكونتات السابقة لو مش موجودين في الطلب
   const _existingAccs = (accounts || []).filter(x =>
     (reg.username && x.username && x.username.trim().toLowerCase() === reg.username.trim().toLowerCase()) ||
     (reg.name && x.name && x.name.trim() === reg.name.trim())
   );
-  const _withInfo = _existingAccs.find(x => x.nationality || x.country);
+  const _withInfo    = _existingAccs.find(x => x.sex || x.nationality || x.country);
+  const _sex         = reg.sex         || (_withInfo && _withInfo.sex)         || '';
   const _nationality = reg.nationality || (_withInfo && _withInfo.nationality) || '—';
   const _country     = reg.country     || (_withInfo && _withInfo.country)     || '—';
+  const _spPopup     = splitPhoneAndDial((reg.phone || '').trim());
+  const _phoneDisplay = reg.phone ? (_spPopup.dial ? _spPopup.dial + ' ' + _spPopup.number : reg.phone) : '—';
 
   function badgeHTML(clientType) {
     if (clientType === 'renew')     return '<span style="background:rgba(59,130,246,0.18);color:#3b82f6;border:1px solid #3b82f655;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">تجديد</span>';
@@ -4106,12 +4109,13 @@ function openFormRegDetails(firestoreId) {
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:var(--text2);">
           <div>👤 ${reg.name || '—'}</div>
-          <div>📱 ${reg.phone || '—'}</div>
+          <div>📱 ${_phoneDisplay}</div>
+          <div>${_sex ? (_sex === 'ذكر' ? '👨 ذكر' : '👩 أنثى') : '—'}</div>
           <div>🌍 ${_nationality}</div>
           <div>📍 ${_country}</div>
           <div>📅 ${date}</div>
           <div>⏱ ${reg.duration ? reg.duration + ' شهر' : '—'}</div>
-          <div>💰 ${reg.price ? (reg.price + ' ' + (reg.country === 'مصر' ? 'جنيه' : (!reg.country || reg.country === 'الكويت') ? 'دينار' : '$ USD')) : '—'}</div>
+          <div>💰 ${reg.price ? (reg.price + ' ' + (_country === 'مصر' ? 'جنيه' : (!_country || _country === 'الكويت') ? 'دينار' : '$ USD')) : '—'}</div>
         </div>
       </div>
 
@@ -4267,7 +4271,22 @@ function splitPhoneAndDial(fullPhone) {
   const dials = ["+965", "+966", "+971", "+974", "+968", "+973", "+964", "+967", "+963", "+961", "+962", "+970", "+20", "+212", "+216", "+218", "+249", "+90", "+91", "+92", "+63", "+44", "+33", "+49", "+1", "+61", "+7", "+52", "+55", "+54", "+57", "+56", "+27", "+234", "+61", "+64", "+998", "+994", "+995", "+374", "+380", "+48", "+40", "+36", "+30", "+351", "+34", "+39", "+31", "+32", "+41", "+43", "+46", "+47", "+45", "+358", "+65", "+60", "+66", "+84", "+62", "+86", "+81", "+82", "+852", "+886", "+93", "+880", "+94", "+977", "+63", "+253", "+252", "+222", "+213", "+237", "+243", "+225", "+255", "+256", "+254", "+251", "+233"];
   const clean = (fullPhone || '').trim();
   const dial = dials.find(d => clean.startsWith(d)) || '';
-  return { dial, number: dial ? clean.slice(dial.length) : clean };
+  let number = dial ? clean.slice(dial.length) : clean;
+  // تنظيف: لو الرقم يبدأ بنفس المفتاح بدون + (مثل 965 في +96596566640114)
+  if (dial) {
+    const dialDigits = dial.replace('+', '');
+    if (number.startsWith(dialDigits)) number = number.slice(dialDigits.length);
+  }
+  return { dial, number };
+}
+
+function cleanPhone(dial, number) {
+  if (!dial || !number) return (dial || '') + (number || '');
+  const dialDigits = dial.replace('+', '');
+  let cleanNum = number.trim();
+  if (cleanNum.startsWith(dial)) cleanNum = cleanNum.slice(dial.length);
+  else if (cleanNum.startsWith(dialDigits)) cleanNum = cleanNum.slice(dialDigits.length);
+  return dial + cleanNum;
 }
 
 function openFormRegModal(firestoreId) {
