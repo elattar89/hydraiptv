@@ -2812,8 +2812,17 @@ function restoreFromTrash(idx) {
 
 function deleteFromTrash(idx) {
   if (!confirm('حذف نهائي؟ لا يمكن التراجع')) return;
+  const item = _trashItems[idx];
   _trashItems.splice(idx, 1);
   if (window.saveTrashFirebase) window.saveTrashFirebase(_trashItems);
+  // مسح من Google Sheet لو عنده username
+  if (item && item.username) {
+    const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzfOmvqXRY6mW7U1hv4nLK3pPsdpFJWQn-Lezx7hseA1uC0tfQTHageB8iod926kBGp/exec';
+    fetch(SHEET_URL, {
+      method: 'POST',
+      body: JSON.stringify({ type: 'deleteRow', username: item.username })
+    }).catch(() => {});
+  }
   renderTrashBtn();
   showTrashModal();
   showToast('🗑️ تم الحذف النهائي');
