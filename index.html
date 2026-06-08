@@ -4406,6 +4406,10 @@ function openRenewApprovalModal(reg) {
       <div style="font-size:13px;color:var(--text2);margin-bottom:1.2rem;">
         <b style="color:var(--text)">${reg.name || '—'}</b> &nbsp;|&nbsp; <span style="font-family:monospace">${reg.username || '—'}</span>
       </div>
+      ${(()=>{
+        const _acc = (accounts||[]).find(x => x.username && reg.username && x.username.trim().toLowerCase()===reg.username.trim().toLowerCase());
+        return _acc && _acc.expDate ? '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:8px 14px;font-size:13px;color:#f87171;margin-bottom:1.2rem;">⚠️ ينتهي الاشتراك الحالي: <b>' + _acc.expDate + '</b></div>' : '';
+      })()}
 
       <div style="margin-bottom:1rem;">
         <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">تاريخ الاشتراك</label>
