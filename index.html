@@ -1053,6 +1053,7 @@
     <div class="form-row">
       <div class="form-group">
         <label>الجنسية</label>
+        <div style="font-size:11px;color:transparent;margin-bottom:4px">-</div>
         <select id="fNationality" style="width:100%">
           <option value="">— اختياري —</option>
           <option>الكويت</option><option>السعودية</option><option>الإمارات</option>
@@ -2952,6 +2953,8 @@ function showMsg(id, type) {
     text = `Welcome to hydra server Enjoy our world ( Live Tv channels , Movies , Series)
 Username : ${a.username}
 Password: ${a.password}
+${a.startDate ? 'تاريخ الاشتراك: ' + formatDate(a.startDate) : ''}
+${a.expDate ? 'تاريخ الانتهاء: ' + formatDate(a.expDate) : ''}
 
 Host 1: http://tvhydra.com
 Or
