@@ -1400,7 +1400,7 @@ async function shareActivePDF() {
     text += `📞 ${a.phone || '—'}\n`;
     text += `👤 ${a.username} | 🔑 ${a.password}\n`;
     text += `🖥️ ${(a.host||'—').replace('http://','')}\n`;
-    text += `📅 ينتهي: ${a.expDate||'—'} (${daysLeft} يوم)\n`;
+    text += `📅 ينتهي: ${formatDate(a.expDate)||'—'} (${daysLeft} يوم)\n`;
     text += `💰 ${paidText}${a.amount ? ' | '+a.amount+' KD' : ''}\n`;
     text += `${'─'.repeat(20)}\n`;
   });
@@ -1474,8 +1474,8 @@ function showDebtListModal() {
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#5b21b6">${a.username}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#555">${window.isGuest ? '••••••' : a.password}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-size:10px;color:#777">${(a.host||'—').replace('http://','')}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${a.startDate||'—'}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#5b21b6;font-weight:600">${a.expDate||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${formatDate(a.startDate)}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#5b21b6;font-weight:600">${formatDate(a.expDate)}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:600;color:${statusColor}">${statusText}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${dur}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:700;color:#dc2626">${a.amount ? a.amount+' KD' : '10$'}</td>
@@ -1492,7 +1492,7 @@ async function shareDebtList() {
   const total = debts.length * 10;
   let text = `🟡 كشف الديون للتاجر\nHydra IPTV - Ahmed EL-Attar\n📅 ${date}\n👥 الإجمالي: ${debts.length} حساب | 💰 ${total}$\n${'─'.repeat(25)}\n\n`;
   debts.forEach((a, i) => {
-    text += `${i+1}. ${a.name}\n📞 ${a.phone||'—'}\n👤 ${a.username} | 🔑 ${a.password}\n📅 ينتهي: ${a.expDate||'—'}\n💰 دين للتاجر${a.amount?' | '+a.amount+' KD':' | 10$'}\n${'─'.repeat(20)}\n`;
+    text += `${i+1}. ${a.name}\n📞 ${a.phone||'—'}\n👤 ${a.username} | 🔑 ${a.password}\n📅 ينتهي: ${formatDate(a.expDate)||'—'}\n💰 دين للتاجر${a.amount?' | '+a.amount+' KD':' | 10$'}\n${'─'.repeat(20)}\n`;
   });
   if (navigator.share) {
     try { await navigator.share({ title: 'كشف الديون - Hydra IPTV', text }); return; } catch(e) {}
@@ -1521,8 +1521,8 @@ function showExpiringListModal() {
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#92400e">${a.username}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#555">${window.isGuest ? '••••••' : a.password}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-size:10px;color:#777">${(a.host||'—').replace('http://','')}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${a.startDate||'—'}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#d97706;font-weight:600">${a.expDate||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${formatDate(a.startDate)}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#d97706;font-weight:600">${formatDate(a.expDate)}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:700;color:#dc2626">${d} يوم</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${dur}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-size:11px">${paidText}</td>
@@ -1541,7 +1541,7 @@ async function shareExpiringList() {
   let text = `⚠️ كشف الحسابات المنتهية قريباً\nHydra IPTV - Ahmed EL-Attar\n📅 ${date}\n👥 الإجمالي: ${expiring.length} حساب\n${'─'.repeat(25)}\n\n`;
   expiring.forEach((a, i) => {
     const d = Math.ceil((new Date(a.expDate) - new Date()) / 86400000);
-    text += `${i+1}. ${a.name}\n📞 ${a.phone||'—'}\n👤 ${a.username} | 🔑 ${a.password}\n📅 ينتهي: ${a.expDate||'—'} (${d} يوم)\n${'─'.repeat(20)}\n`;
+    text += `${i+1}. ${a.name}\n📞 ${a.phone||'—'}\n👤 ${a.username} | 🔑 ${a.password}\n📅 ينتهي: ${formatDate(a.expDate)||'—'} (${d} يوم)\n${'─'.repeat(20)}\n`;
   });
   if (navigator.share) {
     try { await navigator.share({ title: 'كشف المنتهية قريباً - Hydra IPTV', text }); return; } catch(e) {}
@@ -1569,8 +1569,8 @@ function showActiveListModal() {
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#1a3a6e">${a.username}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#555">${window.isGuest ? '••••••' : a.password}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-size:10px;color:#777">${(a.host||'—').replace('http://','')}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${a.startDate||'—'}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#16a34a;font-weight:600">${a.expDate||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${formatDate(a.startDate)}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#16a34a;font-weight:600">${formatDate(a.expDate)}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:700;color:#1a3a6e">${daysLeft}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${dur}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:600;color:${paidColor}">${paidText}</td>
@@ -1602,8 +1602,8 @@ function showExpiredListModal() {
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#7f1d1d">${a.username}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#555">${window.isGuest ? '••••••' : a.password}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-size:10px;color:#777">${(a.host||'—').replace('http://','')}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${a.startDate||'—'}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#dc2626;font-weight:600">${a.expDate||'—'}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${formatDate(a.startDate)}</td>
+      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#dc2626;font-weight:600">${formatDate(a.expDate)}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:700;color:#dc2626">${diff > 0 ? 'منذ ' + diff + ' يوم' : '—'}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${dur}</td>
       <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:600;color:${paidColor}">${paidText}</td>
@@ -1621,7 +1621,7 @@ function shareExpiredList() {
   let text = 'كشف الحسابات المنتهية - Hydra IPTV\n' + new Date().toLocaleDateString('ar-EG') + '\n' + '─'.repeat(25) + '\n';
   expired.forEach((a, i) => {
     const diff = Math.ceil((new Date() - new Date(a.expDate)) / 86400000);
-    text += `${i+1}. ${a.name}\n📞 ${a.phone||'—'}\n👤 ${a.username} | 🔑 ${a.password}\n📅 انتهى: ${a.expDate||'—'} (منذ ${diff} يوم)\n${'─'.repeat(20)}\n`;
+    text += `${i+1}. ${a.name}\n📞 ${a.phone||'—'}\n👤 ${a.username} | 🔑 ${a.password}\n📅 انتهى: ${formatDate(a.expDate)||'—'} (منذ ${diff} يوم)\n${'─'.repeat(20)}\n`;
   });
   if (navigator.share) {
     navigator.share({ title: 'كشف المنتهين - Hydra IPTV', text });
@@ -1648,7 +1648,7 @@ function buildSectionRows(list, type) {
       <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};direction:ltr">${window.isGuest ? '—' : (a.phone || '—')}</td>
       <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};font-family:monospace;color:#374151">${a.username}</td>
       <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};font-family:monospace;color:#555">${window.isGuest ? '••••••' : a.password}</td>
-      <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};color:${type==='expired'?'#dc2626':type==='expiring'?'#b45309':'#15803d'};font-weight:600">${a.expDate||'—'}</td>
+      <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};color:${type==='expired'?'#dc2626':type==='expiring'?'#b45309':'#15803d'};font-weight:600">${formatDate(a.expDate)}</td>
       ${daysCell}
       <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor}">${dur}</td>
       <td style="padding:7px 6px;text-align:center;border:1px solid ${borderColor};font-weight:600;color:${window.isGuest ? '#666' : paidColor}">${window.isGuest ? '—' : paidText}</td>
@@ -1721,7 +1721,7 @@ ${'─'.repeat(25)}
 ${'─'.repeat(20)}
 `;
     list.forEach((a,i) => { s += `${i+1}. ${a.name}
-👤 ${a.username} | 📅 ${a.expDate||'—'}
+👤 ${a.username} | 📅 ${formatDate(a.expDate)||'—'}
 `; });
     return s + '\n';
   };
@@ -1941,8 +1941,8 @@ function buildTable(rows) {
         <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
 
           ${accs.length === 1 ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin-bottom:4px;">
-            ${first.startDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="direction:ltr;display:inline-block;color:#4ade80">${first.startDate.slice(8,10)}/${first.startDate.slice(5,7)}/${first.startDate.slice(0,4)}</span></div>` : ''}
-            ${first.expDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#f87171">تاريخ الانتهاء</span> <span style="direction:ltr;display:inline-block;color:#f87171">${first.expDate.slice(8,10)}/${first.expDate.slice(5,7)}/${first.expDate.slice(0,4)}</span></div>` : ''}
+            ${first.startDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="color:#4ade80">${formatDate(first.startDate)}</span></div>` : ''}
+            ${first.expDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#f87171">تاريخ الانتهاء</span> <span style="color:#f87171">${formatDate(first.expDate)}</span></div>` : ''}
           </div>` : ''}
           <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
             ${first.sex ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.3)">${first.sex === 'ذكر' ? '👨' : '👩'} ${first.sex}</span>` : ''}
@@ -2015,8 +2015,8 @@ function buildTable(rows) {
               ${window.isGuest ? '' : `<button class="copy-btn" style="font-size:10px;padding:1px 6px;display:flex;align-items:center;gap:2px;flex-shrink:0;" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ</button><button class="btn btn-primary" style="padding:1px 6px;font-size:10px;flex-shrink:0;" onclick="editAccount(${a.id})">✏️ تعديل</button>`}
             </div>
             ${(a.startDate || a.expDate) ? `<div style="display:flex;gap:10px;font-family:Cairo,sans-serif;font-size:10px;margin-top:2px;flex-wrap:nowrap;">
-              ${a.startDate ? `<span><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="direction:ltr;display:inline-block;color:#4ade80">${a.startDate.slice(8,10)}/${a.startDate.slice(5,7)}/${a.startDate.slice(0,4)}</span></span>` : ''}
-              ${a.expDate ? `<span><span style="color:#f87171">تاريخ الانتهاء</span> <span style="direction:ltr;display:inline-block;color:#f87171">${a.expDate.slice(8,10)}/${a.expDate.slice(5,7)}/${a.expDate.slice(0,4)}</span> <span style="font-size:12px;font-weight:700;color:${statusOf(a)==='active'?'#22c55e':statusOf(a)==='expiring'?'#f59e0b':'#ef4444'};margin-right:8px;">&nbsp;&nbsp;${daysLeft(a.expDate) === null ? '—' : daysLeft(a.expDate) < 0 ? 'منتهي' : daysLeft(a.expDate) + ' يوم'}</span></span>` : ''}
+              ${a.startDate ? `<span><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="color:#4ade80">${formatDate(a.startDate)}</span></span>` : ''}
+              ${a.expDate ? `<span><span style="color:#f87171">تاريخ الانتهاء</span> <span style="color:#f87171">${formatDate(a.expDate)}</span> <span style="font-size:12px;font-weight:700;color:${statusOf(a)==='active'?'#22c55e':statusOf(a)==='expiring'?'#f59e0b':'#ef4444'};margin-right:8px;">&nbsp;&nbsp;${daysLeft(a.expDate) === null ? '—' : daysLeft(a.expDate) < 0 ? 'منتهي' : daysLeft(a.expDate) + ' يوم'}</span></span>` : ''}
             </div>` : ''}
           </div>
           <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0;display:flex;gap:3px">
