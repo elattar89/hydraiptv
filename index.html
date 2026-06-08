@@ -1941,8 +1941,8 @@ function buildTable(rows) {
         <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
 
           ${accs.length === 1 ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin-bottom:4px;">
-            ${first.startDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="color:#4ade80">${formatDate(first.startDate)}</span></div>` : ''}
-            ${first.expDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#f87171">تاريخ الانتهاء</span> <span style="color:#f87171">${formatDate(first.expDate)}</span></div>` : ''}
+            ${first.startDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#4ade80">تاريخ الاشتراك: </span><span style="color:#4ade80">${formatDate(first.startDate)}</span></div>` : ''}
+            ${first.expDate ? `<div style="font-size:11px;white-space:nowrap"><span style="color:#f87171">تاريخ الانتهاء: </span><span style="color:#f87171">${formatDate(first.expDate)}</span></div>` : ''}
           </div>` : ''}
           <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
             ${first.sex ? `<span style="font-size:11px;padding:1px 7px;border-radius:20px;background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.3)">${first.sex === 'ذكر' ? '👨' : '👩'} ${first.sex}</span>` : ''}
@@ -2015,8 +2015,8 @@ function buildTable(rows) {
               ${window.isGuest ? '' : `<button class="copy-btn" style="font-size:10px;padding:1px 6px;display:flex;align-items:center;gap:2px;flex-shrink:0;" onclick="copyBoth('${a.username}','${a.password}',this)">📋 نسخ</button><button class="btn btn-primary" style="padding:1px 6px;font-size:10px;flex-shrink:0;" onclick="editAccount(${a.id})">✏️ تعديل</button>`}
             </div>
             ${(a.startDate || a.expDate) ? `<div style="display:flex;gap:10px;font-family:Cairo,sans-serif;font-size:10px;margin-top:2px;flex-wrap:nowrap;">
-              ${a.startDate ? `<span><span style="color:#4ade80">تاريخ الاشتراك</span> <span style="color:#4ade80">${formatDate(a.startDate)}</span></span>` : ''}
-              ${a.expDate ? `<span><span style="color:#f87171">تاريخ الانتهاء</span> <span style="color:#f87171">${formatDate(a.expDate)}</span> <span style="font-size:12px;font-weight:700;color:${statusOf(a)==='active'?'#22c55e':statusOf(a)==='expiring'?'#f59e0b':'#ef4444'};margin-right:8px;">&nbsp;&nbsp;${daysLeft(a.expDate) === null ? '—' : daysLeft(a.expDate) < 0 ? 'منتهي' : daysLeft(a.expDate) + ' يوم'}</span></span>` : ''}
+              ${a.startDate ? `<span><span style="color:#4ade80">تاريخ الاشتراك: </span><span style="color:#4ade80">${formatDate(a.startDate)}</span></span>` : ''}
+              ${a.expDate ? `<span><span style="color:#f87171">تاريخ الانتهاء: </span><span style="color:#f87171">${formatDate(a.expDate)}</span> <span style="font-size:12px;font-weight:700;color:${statusOf(a)==='active'?'#22c55e':statusOf(a)==='expiring'?'#f59e0b':'#ef4444'};margin-right:8px;">&nbsp;&nbsp;${daysLeft(a.expDate) === null ? '—' : daysLeft(a.expDate) < 0 ? 'منتهي' : daysLeft(a.expDate) + ' يوم'}</span></span>` : ''}
             </div>` : ''}
           </div>
           <button onclick="showPaidMenu(event,${a.id})" style="background:none;border:none;cursor:pointer;padding:0;display:flex;gap:3px">
@@ -4101,7 +4101,7 @@ function openFormRegDetails(firestoreId) {
   const old = document.getElementById('formRegDetailsPopup');
   if (old) old.remove();
 
-  const date = reg.createdAt ? new Date(reg.createdAt.seconds * 1000).toLocaleDateString('ar-EG') : '—';
+  const date = reg.createdAt ? formatDate(new Date(reg.createdAt.seconds * 1000).toISOString().slice(0,10)) : '—';
 
   const _existingAccs = (accounts || []).filter(x =>
     (reg.username && x.username && x.username.trim().toLowerCase() === reg.username.trim().toLowerCase()) ||
@@ -4144,7 +4144,7 @@ function openFormRegDetails(firestoreId) {
           <div>${_sex ? (_sex === 'ذكر' ? '👨 ذكر' : '👩 أنثى') : '—'}</div>
           <div>🌍 ${_nationality}</div>
           <div>📍 ${_country}</div>
-          <div>📅 ${date}</div>
+          <div>📅 تاريخ الطلب: ${date}</div>
           <div>⏱ ${reg.duration ? reg.duration + ' شهر' : '—'}</div>
           <div>💰 ${reg.price ? (reg.price + ' ' + (_country === 'مصر' ? 'جنيه' : (!_country || _country === 'الكويت') ? 'دينار' : '$ USD')) : '—'}</div>
           ${reg.clientType === 'renew' && _currentExp ? '<div style="grid-column:1/-1;margin-top:4px;padding:6px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:12px;font-weight:600;">⚠️ ينتهي الاشتراك الحالي: ' + formatDateAr(_currentExp) + '</div>' : ''}
@@ -4263,7 +4263,7 @@ function renderPendingSection() {
           ${badgeByType(req.clientType)}
         </div>
         <div style="font-size:11px;color:var(--text2);margin-bottom:2px;">👤 ${req.name || '—'}</div>
-        <div style="font-size:11px;color:var(--text2);">📅 ${date}</div>
+        <div style="font-size:11px;color:var(--text2);">📅 تاريخ الطلب: ${date}</div>
       </div>`;
   }).join('');
 
@@ -4275,7 +4275,7 @@ function renderPendingSection() {
       onmouseout="this.style.background='rgba(251,146,60,0.08)'">
       <div style="font-size:10px;color:#fb923c;margin-bottom:4px;font-weight:600;">⏳ قيد الطلب من التاجر</div>
       <div style="font-size:15px;font-weight:700;color:var(--text);font-family:monospace;direction:ltr;margin-bottom:6px">${req.username}</div>
-      <div style="font-size:11px;color:var(--text2)">📅 ${req.date}</div>
+      <div style="font-size:11px;color:var(--text2)">📅 تاريخ الطلب: ${req.date}</div>
       <button onclick="event.stopPropagation();removePendingRequest(${i})" title="حذف الطلب"
         style="position:absolute;top:8px;left:10px;background:none;border:none;color:rgba(251,146,60,0.5);font-size:14px;cursor:pointer;line-height:1;padding:0;transition:color 0.2s"
         onmouseover="this.style.color='#ef4444'"
