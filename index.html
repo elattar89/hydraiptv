@@ -1273,8 +1273,10 @@ function paidBadge(a) {
 
 function formatDate(d) {
   if (!d) return '—';
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   const parts = d.split('-');
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  const m = parseInt(parts[1], 10);
+  return `${parseInt(parts[2])} ${months[m-1] || parts[1]} ${parts[0]}`;
 }
 
 function copyBoth(user, pass, btn) {
@@ -4145,7 +4147,7 @@ function openFormRegDetails(firestoreId) {
           <div>📅 ${date}</div>
           <div>⏱ ${reg.duration ? reg.duration + ' شهر' : '—'}</div>
           <div>💰 ${reg.price ? (reg.price + ' ' + (_country === 'مصر' ? 'جنيه' : (!_country || _country === 'الكويت') ? 'دينار' : '$ USD')) : '—'}</div>
-          ${reg.clientType === 'renew' && _currentExp ? '<div style="grid-column:1/-1;margin-top:4px;padding:6px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:12px;font-weight:600;">⚠️ ينتهي الاشتراك الحالي: ' + _currentExp + '</div>' : ''}
+          ${reg.clientType === 'renew' && _currentExp ? '<div style="grid-column:1/-1;margin-top:4px;padding:6px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:12px;font-weight:600;">⚠️ ينتهي الاشتراك الحالي: ' + formatDateAr(_currentExp) + '</div>' : ''}
         </div>
       </div>
 
@@ -4392,6 +4394,10 @@ function openFormRegModal(firestoreId) {
 }
 
 // ===== مودال قبول التجديد =====
+function formatDateAr(dateStr) {
+  return formatDate(dateStr);
+}
+
 function openRenewApprovalModal(reg) {
   // احذف المودال القديم لو موجود
   const old = document.getElementById('renewApprovalModal');
@@ -4408,7 +4414,7 @@ function openRenewApprovalModal(reg) {
       </div>
       ${(()=>{
         const _acc = (accounts||[]).find(x => x.username && reg.username && x.username.trim().toLowerCase()===reg.username.trim().toLowerCase());
-        return _acc && _acc.expDate ? '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:8px 14px;font-size:13px;color:#f87171;margin-bottom:1.2rem;">⚠️ ينتهي الاشتراك الحالي: <b>' + _acc.expDate + '</b></div>' : '';
+        return _acc && _acc.expDate ? '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:8px 14px;font-size:13px;color:#f87171;margin-bottom:1.2rem;">⚠️ ينتهي الاشتراك الحالي: <b>' + formatDateAr(_acc.expDate) + '</b></div>' : '';
       })()}
 
       <div style="margin-bottom:1rem;">
@@ -5223,8 +5229,8 @@ function showPersonDetails(name) {
       ${row('اليوزرنيم', a.username, true)}
       ${row('الباسورد', window.isGuest ? '••••••' : a.password, true)}
       ${row('الهوست', (a.host||'').replace('http://','').replace(':80',''), true)}
-      ${row('تاريخ الاشتراك', a.startDate ? a.startDate.slice(8,10)+'/'+a.startDate.slice(5,7)+'/'+a.startDate.slice(0,4) : null)}
-      ${row('تاريخ الانتهاء', a.expDate ? a.expDate.slice(8,10)+'/'+a.expDate.slice(5,7)+'/'+a.expDate.slice(0,4) : null)}
+      ${row('تاريخ الاشتراك', a.startDate ? formatDate(a.startDate) : null)}
+      ${row('تاريخ الانتهاء', a.expDate ? formatDate(a.expDate) : null)}
       <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
         <span style="font-size:12px;color:var(--text2)">الوقت المتبقي</span>
         <span style="font-size:13px;font-weight:700;color:${dColor}">${dText}</span>
