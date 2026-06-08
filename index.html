@@ -631,10 +631,15 @@
     };
 
     // استبدال دالة save لترفع على Firebase
+    window._isSaving = false;
+
     window.saveToFirebase = async function(data) {
       try {
+        window._isSaving = true;
         await setDoc(DATA_DOC, { list: JSON.stringify(data) });
+        setTimeout(() => { window._isSaving = false; }, 2000);
       } catch(e) {
+        window._isSaving = false;
         console.error("Firebase save error:", e);
         showToast("❌ خطأ في الحفظ على Firebase", true);
       }
@@ -642,6 +647,8 @@
 
     // مراقبة التغييرات في real-time
     onSnapshot(DATA_DOC, (snapshot) => {
+      // لو لسه بنحفظ، تجاهل الـ snapshot عشان متعملش overwrite
+      if (window._isSaving) return;
       if (snapshot.exists()) {
         const raw = snapshot.data().list;
         const remote = JSON.parse(raw);
@@ -2353,7 +2360,7 @@ function selectName(name) {
   document.getElementById('nameDropdown').style.display = 'none';
 
   if (editingId) {
-    // وضع التعديل: بس غير التليفون للشخص الجديد، لا تمس اليوزر/باسورد/جنس/جنسية/دولة
+    // وضع التعديل: بس غير التليفون، لا تمس اليوزر/باسورد/جنس/جنسية/دولة
     const _allSame = accounts.filter(x => x.name === name);
     const _withPhone = _allSame.find(x => x.phone);
     if (_withPhone) {
