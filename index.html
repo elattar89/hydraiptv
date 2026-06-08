@@ -4111,6 +4111,9 @@ function openFormRegDetails(firestoreId) {
   const _country     = reg.country     || (_withInfo && _withInfo.country)     || '—';
   const _spPopup     = splitPhoneAndDial((reg.phone || '').trim());
   const _phoneDisplay = reg.phone ? (_spPopup.dial ? _spPopup.dial + ' ' + _spPopup.number : reg.phone) : '—';
+  // تاريخ انتهاء الاشتراك الحالي (للتجديد فقط)
+  const _currentAcc = _existingAccs.find(x => x.username && reg.username && x.username.trim().toLowerCase() === reg.username.trim().toLowerCase());
+  const _currentExp = _currentAcc ? (_currentAcc.expDate || '') : '';
 
   function badgeHTML(clientType) {
     if (clientType === 'renew')     return '<span style="background:rgba(59,130,246,0.18);color:#3b82f6;border:1px solid #3b82f655;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">تجديد</span>';
@@ -4142,6 +4145,7 @@ function openFormRegDetails(firestoreId) {
           <div>📅 ${date}</div>
           <div>⏱ ${reg.duration ? reg.duration + ' شهر' : '—'}</div>
           <div>💰 ${reg.price ? (reg.price + ' ' + (_country === 'مصر' ? 'جنيه' : (!_country || _country === 'الكويت') ? 'دينار' : '$ USD')) : '—'}</div>
+          ${reg.clientType === 'renew' && _currentExp ? '<div style="grid-column:1/-1;margin-top:4px;padding:6px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;color:#f87171;font-size:12px;font-weight:600;">⚠️ ينتهي الاشتراك الحالي: ' + _currentExp + '</div>' : ''}
         </div>
       </div>
 
