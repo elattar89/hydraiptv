@@ -2201,14 +2201,12 @@ function savePersonEdit() {
   // تحديث كل الأكونتات بنفس الاسم
   const newSex         = document.getElementById('personSex').value;
   const newNationality = document.getElementById('personNationality').value.trim();
-  const newCountry     = document.getElementById('personCountry').value.trim();
   accounts.forEach(a => {
     if (a.name === _editingPersonName) {
       a.name        = newName;
       a.phone       = newPhone;
       a.sex         = newSex;
       a.nationality = newNationality;
-      a.country     = newCountry;
     }
   });
   save();
