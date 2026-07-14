@@ -3126,12 +3126,12 @@ Password الحالية: ${a.password}
     document.getElementById('msgModalTitle').textContent = 'طلب تغيير كلمة السر - ' + a.name;
   } else if (type === 'changePass') {
     text = `عزيزي ${a.name}،
-تم تغيير كلمة السر الخاصة باشتراكك.
+كلمة السر الخاصة باشتراكك.
 
 Username : ${a.username}
-New Password : ${a.password}
+Password : ${a.password}
 
-يرجى تحديث التطبيق بكلمة السر الجديدة.`;
+يسعدنا خدمتكم دائما`;
     document.getElementById('msgModalTitle').textContent = 'ارسال كلمة السر - ' + a.name;
   }
   document.getElementById('msgText').value = text;
