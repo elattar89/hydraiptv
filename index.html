@@ -2870,6 +2870,7 @@ function _doAdd(a) {
   save(); closeModal();
   renderAll(); renderPendingSection();
   showToast(wasEditing ? '✅ تم التعديل' : '✅ تمت الإضافة');
+  syncGist();
 }
 
 function confirmDupSave() {
@@ -2923,6 +2924,7 @@ async function deleteAccount(id) {
   accounts = accounts.filter(x => x.id !== id);
   save(); renderAll();
   showToast('🗑️ تم الحذف — يمكنك الاسترجاع من السلة');
+  syncGist();
 
   // مسح من registration_requests في Firebase
   if (acc && acc.username && window.deleteFromRegRequests) {
@@ -5478,6 +5480,43 @@ function showPersonDetails(name) {
 
 function closePersonDetails() {
   document.getElementById('personDetailsModal').style.display = 'none';
+}
+
+// ===== Gist Sync =====
+const GIST_ID    = '60cb3e2eb70186d8cec046177a628d46';
+const GIST_TOKEN = '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';
+
+async function syncGist() {
+  try {
+    const users = accounts
+      .filter(a => a.username)
+      .map(a => ({
+        username: a.username,
+        phone: a.phone ? a.phone.replace(/\D/g,'') : ''
+      }));
+    // إزالة المكررين بالـ username
+    const unique = [];
+    const seen = new Set();
+    users.forEach(u => {
+      if (!seen.has(u.username.toLowerCase())) {
+        seen.add(u.username.toLowerCase());
+        unique.push(u);
+      }
+    });
+    await fetch('https://api.github.com/gists/' + GIST_ID, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': 'token ' + GIST_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        files: { 'users.json': { content: JSON.stringify(unique, null, 2) } }
+      })
+    });
+    console.log('✅ Gist synced:', unique.length, 'users');
+  } catch(e) {
+    console.error('❌ Gist sync failed:', e);
+  }
 }
 </script>
 </body>
