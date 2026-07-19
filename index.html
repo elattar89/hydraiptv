@@ -1245,39 +1245,9 @@
 <script>
 const STORAGE_KEY = 'hydra_iptv_accounts_v2';
 
-const DEFAULT_DATA = [
-  { id:1, name:'Me (Mido)', phone:'', username:'Mido', password:'MiDo1005', host:'http://hydra.st:80', startDate:'', expDate:'2026-08-27', paid:'paid', notes:'تجديد', duration:'15' },
-  { id:2, name:'Magic', phone:'', username:'Magic', password:'MrMaGic2022', host:'http://hydra.st:80', startDate:'', expDate:'2026-07-29', paid:'paid', notes:'تجديد', duration:'15' },
-  { id:3, name:'Ayman Wafaa', phone:'', username:'Aymankhateeb', password:'AyM17052023', host:'http://hydra.st:80', startDate:'2024-08-17', expDate:'2025-11-17', paid:'paid', notes:'تجديد', duration:'15' },
-  { id:4, name:'Mrharby', phone:'', username:'MrMharby', password:'MiDo22052023', host:'http://hydra.st:80', startDate:'2023-05-22', expDate:'2024-08-22', paid:'paid', notes:'منتهي', duration:'15' },
-  { id:5, name:'Assem (صاحب Ayman)', phone:'55550125', username:'Assem', password:'As31082024', host:'http://hydratv.cc:80', startDate:'2024-08-31', expDate:'2025-11-30', paid:'paid', notes:'', duration:'15' },
-  { id:6, name:'Amani (20 clinic)', phone:'', username:'Amani', password:'KuAmA05082023', host:'http://hydra.st:80', startDate:'2023-08-05', expDate:'2024-11-05', paid:'paid', notes:'', duration:'15' },
-  { id:7, name:'Shouk', phone:'', username:'Shouk', password:'ShKu26092023', host:'http://hydra.st:80', startDate:'', expDate:'2024-12-26', paid:'paid', notes:'منتهي', duration:'15' },
-  { id:8, name:'Khazal', phone:'', username:'Khazal', password:'KuQa21122023', host:'http://hydra.st:80', startDate:'2023-12-21', expDate:'2025-03-21', paid:'paid', notes:'', duration:'15' },
-  { id:9, name:'Iman Adry', phone:'', username:'Iman', password:'Qadry12032024', host:'http://hydratv.cc:80', startDate:'2024-03-12', expDate:'2025-06-12', paid:'paid', notes:'', duration:'15' },
-  { id:10, name:'Tharwat William', phone:'New', username:'Tharwat', password:'KuAh17082024', host:'http://hydratv.cc:80', startDate:'2024-08-18', expDate:'2025-11-18', paid:'paid', notes:'', duration:'15' },
-  { id:11, name:'Eslam Adry 1', phone:'', username:'Essra', password:'Ku29082024', host:'http://hydratv.cc:80', startDate:'2024-08-29', expDate:'2025-11-29', paid:'paid', notes:'', duration:'15' },
-  { id:12, name:'Eslam Adry 2', phone:'', username:'Adry', password:'Ku29082024', host:'http://hydratv.cc:80', startDate:'2024-08-29', expDate:'2025-11-29', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:13, name:'Eslam Adry 3', phone:'', username:'Amohammed', password:'Am01092024', host:'http://hydratv.cc:80', startDate:'2024-09-01', expDate:'2025-12-01', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:14, name:'Eslam Adry 4', phone:'', username:'MrEhab', password:'Ku07092024', host:'http://hydratv.cc:80', startDate:'2024-09-07', expDate:'2025-12-07', paid:'paid', notes:'', duration:'15' },
-  { id:15, name:'Fawaz Alzayad', phone:'', username:'YAlzayed', password:'Ku11092024', host:'http://hydratv.cc:80', startDate:'2024-09-11', expDate:'2025-12-11', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:16, name:'Hazem Maha', phone:'', username:'Zoom', password:'MrZ13062023', host:'http://hydra.st:80', startDate:'2024-09-24', expDate:'2025-12-24', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:17, name:'Aboleef', phone:'', username:'Aboleef', password:'AbO07072023', host:'http://hydra.st:80', startDate:'2024-09-29', expDate:'2025-12-29', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:18, name:'Amani Clinic (Dark)', phone:'', username:'Dark', password:'Ku01122024', host:'http://hydra.st:80', startDate:'2024-12-01', expDate:'2026-03-01', paid:'paid', notes:'', duration:'15' },
-  { id:19, name:'Nashaat', phone:'', username:'MrNashat', password:'Kna23112025', host:'http://familyplus.me:8080', startDate:'2024-11-20', expDate:'2026-02-20', paid:'paid', notes:'تجديد', duration:'15' },
-  { id:20, name:'Haitham Nova', phone:'', username:'MRhaitham', password:'Ku27122024', host:'http://hydra.st:80', startDate:'2024-12-25', expDate:'2026-03-25', paid:'paid', notes:'', duration:'15' },
-  { id:21, name:'Mr Fawaz', phone:'', username:'MrFawaz', password:'Fz10022025', host:'http://tvhydra.com', startDate:'2025-02-10', expDate:'2026-05-10', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:22, name:'Hawari', phone:'', username:'Hawari', password:'Hw02032025', host:'http://tvhydra.com', startDate:'2025-03-02', expDate:'2026-06-02', paid:'paid', notes:'', duration:'15' },
-  { id:23, name:'OmarQ8', phone:'', username:'OmarQ8', password:'Omar172025', host:'http://tvhydra.com', startDate:'', expDate:'2026-09-17', paid:'paid', notes:'', duration:'15' },
-  { id:24, name:'Dr M7md', phone:'', username:'Drm7md', password:'DR08092025', host:'http://tvhydra.com', startDate:'2025-09-08', expDate:'2026-12-08', paid:'paid', notes:'', duration:'15' },
-  { id:25, name:'AmjadQ8', phone:'', username:'Amjadq8', password:'Amj15102025', host:'http://tvhydra.com', startDate:'2025-10-15', expDate:'2027-01-15', paid:'paid', notes:'', duration:'15' },
-  { id:26, name:'Asmaa', phone:'', username:'Asmaa01', password:'Md26122025', host:'http://hydratv.cc:80', startDate:'2025-12-26', expDate:'2027-03-26', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:27, name:'Abdrahman Q8', phone:'', username:'Abdrahmanq8', password:'Abd12012026', host:'http://hydra.st:80', startDate:'2026-01-12', expDate:'2027-04-12', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:28, name:'Ayman Q8', phone:'', username:'Aymanq8', password:'Aym12012026', host:'http://hydra.st:80', startDate:'2026-01-12', expDate:'2027-04-12', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:29, name:'Osama Alzayed', phone:'', username:'osamaalzayed', password:'Kuw29012026', host:'', startDate:'2026-01-29', expDate:'2027-04-29', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:30, name:'Acil', phone:'', username:'Acil', password:'Kuw03022026', host:'', startDate:'2026-02-03', expDate:'2027-05-03', paid:'debt', notes:'غير مدفوع', duration:'15' },
-  { id:31, name:'MostafaQ8', phone:'', username:'MostafaQ8', password:'Kuw18032026', host:'', startDate:'2026-03-18', expDate:'2027-06-18', paid:'debt', notes:'غير مدفوع', duration:'15' }
-];
+// تم حذف الداتا القديمة الهاردكودد (DEFAULT_DATA) لأنها كانت السبب في ظهور أرقام قديمة/غلط
+// لثانية عند الـ refresh قبل ما يوصل رد Firebase. دلوقتي Firebase هو المصدر الوحيد للداتا.
+const DEFAULT_DATA = [];
 
 let accounts = [];
 let editingId = null;
