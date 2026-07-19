@@ -750,40 +750,9 @@
       if (snapshot.exists()) {
         const raw = snapshot.data().list;
         const remote = JSON.parse(raw);
-        // إضافة duration لأي حساب مش عنده
-        let needsSave = false;
-        remote.forEach(a => {
-          if (!a.duration) { a.duration = '15'; needsSave = true; }
-          if (a.paid === 'unpaid') { a.paid = 'debt'; needsSave = true; }
-          // تصحيح تواريخ الاشتراك من 2026 لـ 2025 (مرة واحدة فقط)
-          if (a.startDate && a.startDate.startsWith('2026-') && !a._datFixed) {
-            a.startDate = a.startDate.replace('2026-', '2025-');
-            a._datFixed = true;
-            needsSave = true;
-          }
-          // تصحيح تاريخ الانتهاء من تاريخ الاشتراك (مرة واحدة فقط)
-          if (a.startDate && !a._expFixed) {
-            const s = new Date(a.startDate);
-            const months = parseInt(a.duration) || 15;
-            const exp = new Date(s);
-            exp.setMonth(exp.getMonth() + months);
-            const yyyy = exp.getFullYear();
-            const mm = String(exp.getMonth() + 1).padStart(2, '0');
-            const lastDay = new Date(yyyy, exp.getMonth() + 1, 0).getDate();
-            const dd = String(Math.min(s.getDate(), lastDay)).padStart(2, '0');
-            const correctExp = `${yyyy}-${mm}-${dd}`;
-            if (a.expDate !== correctExp) { a.expDate = correctExp; a._expFixed = true; needsSave = true; }
-          }
-        });
         // تحديث الداتا المحلية
         accounts = remote;
         renderAll();
-        // حفظ التصحيحات على Firebase مرة واحدة فقط
-        if (needsSave) {
-          setTimeout(() => {
-            window.saveToFirebase && window.saveToFirebase(remote);
-          }, 500);
-        }
       } else {
         // أول مرة — ارفع الداتا الحالية على Firebase
         window.saveToFirebase(accounts);
