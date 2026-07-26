@@ -2994,7 +2994,9 @@ function showMsg(id, type) {
   if (!a) return;
   let text = '';
   if (type === 'confirm') {
-    text = `Welcome to hydra server Enjoy our world ( Live Tv channels , Movies , Series)
+    text = `${a.name},
+
+Welcome to hydra server Enjoy our world ( Live Tv channels , Movies , Series)
 Username : ${a.username}
 Password: ${a.password}
 ${a.startDate ? 'تاريخ الاشتراك: ' + formatDate(a.startDate) : ''}
@@ -4292,19 +4294,33 @@ function sendFormRegToMerchant(firestoreId) {
 
   let msg = '';
   if (reg.clientType === 'renew') {
-    msg = `السلام عليكم ,
-الرجاء سرعة تجديد اشتراك المستخدم التالي:
-اليوزرنيم: ${reg.username || '-'}
-المدة: ${reg.duration ? reg.duration + ' شهر' : '-'}
+    const _renewAcc = (window._accounts || []).find(x => x.username && reg.username && x.username.trim().toLowerCase() === reg.username.trim().toLowerCase());
+    const _renewPass = _renewAcc ? (_renewAcc.password || '-') : '-';
+    const _renewExp  = _renewAcc ? formatDate(_renewAcc.expDate) : '-';
+    const _renewD    = _renewAcc ? daysLeft(_renewAcc.expDate) : null;
+    const _renewDText = _renewD !== null ? (_renewD < 0 ? '(منتهي منذ ' + Math.abs(_renewD) + ' يوم)' : '(متبقي ' + _renewD + ' يوم)') : '';
+    msg = `تجديد اشتراك - ${reg.name || reg.username || '-'}
 
-شكرا...`;
+السلام عليكم،
+يرجى تجديد اشتراك العميل
+
+الاسم: ${reg.name || '-'}
+Username: ${reg.username || '-'}
+Password: ${_renewPass}
+تاريخ الانتهاء: ${_renewExp} ${_renewDText}
+
+شكرا`;
   } else {
-    msg = `السلام عليكم ,
-يرجي عمل اشتراك جديد للمستخدم التالي:
-اليوزرنيم: ${reg.username || '-'}
+    msg = `اشتراك جديد - ${reg.name || reg.username || '-'}
+
+السلام عليكم،
+يرجى عمل اشتراك جديد للمستخدم التالي:
+
+الاسم: ${reg.name || '-'}
+Username: ${reg.username || '-'}
 المدة: ${reg.duration ? reg.duration + ' شهر' : '-'}
 
-شكرا...`;
+شكرا`;
   }
 
   const waUrl = 'https://wa.me/' + MERCHANT_WHATSAPP + '?text=' + encodeURIComponent(msg);
