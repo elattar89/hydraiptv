@@ -4257,7 +4257,7 @@ function openFormRegDetails(firestoreId) {
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:var(--text2);">
           <div>👤 ${reg.name || '—'}</div>
-          <div>📱 ${_phoneDisplay}</div>
+          <div style="direction:ltr;text-align:right;">📱 ${_phoneDisplay}</div>
           <div>${_sex ? (_sex === 'ذكر' ? '👨 ذكر' : '👩 أنثى') : '—'}</div>
           <div>🌍 ${_nationality}</div>
           <div>📍 ${_country}</div>
