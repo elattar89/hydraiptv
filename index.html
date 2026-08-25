@@ -236,22 +236,6 @@
   .btn-user-3:hover { background: #a78bfa; color: #fff; box-shadow: 0 0 0 1.5px #a78bfa, 0 4px 12px rgba(167,139,250,0.4); }
   .btn-user-3:active { background: #7c3aed; color: #fff; transform: scale(0.96); }
 
-  .btn-user-4 {
-    border: none;
-    border-radius: 50px;
-    padding: 4px 12px;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: 'Cairo', sans-serif;
-    transition: all 0.18s;
-    background: #d1fae5;
-    box-shadow: 0 0 0 1.5px #34d399;
-    color: #065f46;
-  }
-  .btn-user-4:hover { background: #34d399; color: #fff; box-shadow: 0 0 0 1.5px #34d399, 0 4px 12px rgba(52,211,153,0.4); }
-  .btn-user-4:active { background: #059669; color: #fff; transform: scale(0.96); }
-
   .btn-merchant {
     border: none;
     border-radius: 50px;
@@ -1121,8 +1105,9 @@
           <div style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:Cairo,sans-serif;font-size:14px;min-height:38px;display:flex;align-items:center;">
             <span id="fDateText" style="color:var(--text2);">اختر تاريخ</span>
           </div>
-          <button type="button" onclick="document.getElementById('fDate').showPicker ? document.getElementById('fDate').showPicker() : document.getElementById('fDate').click()" style="background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:18px;min-height:38px;display:flex;align-items:center;">📅</button>
-          <input type="date" id="fDate" onchange="autoFillExpDate();_updateFDateDisplay()" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;color-scheme:dark;">
+          <button type="button" style="position:relative;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:18px;min-height:38px;display:flex;align-items:center;overflow:hidden;">📅
+            <input type="date" id="fDate" onchange="autoFillExpDate();_updateFDateDisplay()" style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer;color-scheme:dark;">
+          </button>
         </div>
       </div>
       <div class="form-group">
@@ -2058,7 +2043,6 @@ function buildTable(rows) {
           <button class="btn-user" onclick="showMsg(${a.id},'confirm')">📨 إرسال كود الاشتراك</button>
           <button class="btn-user-2" onclick="showMsg(${a.id},'changePass')">🔑 إرسال كلمة السر للمستخدم</button>
           <button class="btn-user-3" onclick="showMsg(${a.id},'remind')">🔔 تذكير المستخدم بالتجديد</button>
-          <button class="btn-user-4" onclick="showMsg(${a.id},'renewConfirm')">✅ تم تجديد الاشتراك</button>
           <span style="width:1.5px;height:22px;background:rgba(255,255,255,0.15);display:inline-block;margin:0 4px;border-radius:2px;vertical-align:middle;"></span>
           <span style="font-size:10px;color:#f59e0b;font-weight:700;opacity:0.9;">للتاجر</span>
           <button class="btn-merchant" onclick="showMsg(${a.id},'remindMerchant')">💰 طلب تجديد اشتراك</button>
@@ -2102,7 +2086,6 @@ function buildTable(rows) {
             <button class="btn-user" onclick="showMsg(${a.id},'confirm')">📨 إرسال كود الاشتراك</button>
             <button class="btn-user-2" onclick="showMsg(${a.id},'changePass')">🔑 إرسال كلمة السر للمستخدم</button>
             <button class="btn-user-3" onclick="showMsg(${a.id},'remind')">🔔 تذكير المستخدم بالتجديد</button>
-            <button class="btn-user-4" onclick="showMsg(${a.id},'renewConfirm')">✅ تم تجديد الاشتراك</button>
             <span style="width:1.5px;height:22px;background:rgba(255,255,255,0.15);display:inline-block;margin:0 4px;border-radius:2px;align-self:center;"></span>
             <span style="font-size:10px;color:#f59e0b;font-weight:700;opacity:0.9;align-self:center;">للتاجر</span>
             <button class="btn-merchant" onclick="showMsg(${a.id},'remindMerchant')">💰 طلب تجديد اشتراك</button>
@@ -3092,15 +3075,6 @@ Password : ${a.password}
 
 يسعدنا خدمتكم دائما`;
     document.getElementById('msgModalTitle').textContent = 'ارسال كلمة السر - ' + a.name;
-  } else if (type === 'renewConfirm') {
-    text = `عزيزي ${a.name}،
-تم تجديد اشتراكك مع Hydra TV
-
-Username : ${a.username}
-Password : ${a.password}
-
-نتمنى لك مشاهدة ممتعة`;
-    document.getElementById('msgModalTitle').textContent = 'تم تجديد الاشتراك - ' + a.name;
   }
   document.getElementById('msgText').value = text;
 
@@ -4190,8 +4164,9 @@ if (_auth === 'admin') {
           <div style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);font-family:Cairo,sans-serif;font-size:12px;min-height:36px;display:flex;align-items:center;">
             <span id="mrqDateText" style="color:var(--text2);">اختر تاريخ</span>
           </div>
-          <button type="button" onclick="document.getElementById('mrqDate').showPicker ? document.getElementById('mrqDate').showPicker() : document.getElementById('mrqDate').click()" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:5px 8px;cursor:pointer;font-size:16px;min-height:36px;display:flex;align-items:center;">📅</button>
-          <input id="mrqDate" type="date" onchange="_updateMrqDateDisplay()" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;color-scheme:dark;">
+          <button type="button" style="position:relative;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:5px 8px;cursor:pointer;font-size:16px;min-height:36px;display:flex;align-items:center;overflow:hidden;">📅
+            <input id="mrqDate" type="date" onchange="_updateMrqDateDisplay()" style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer;color-scheme:dark;">
+          </button>
         </div>
       </div>
       <div>
@@ -4583,8 +4558,9 @@ function openRenewApprovalModal(reg) {
           <div style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-family:Cairo,sans-serif;font-size:14px;min-height:38px;display:flex;align-items:center;">
             <span id="renewStartDateText" style="color:var(--text2);">اختر تاريخ</span>
           </div>
-          <button type="button" onclick="document.getElementById('renewStartDate').showPicker ? document.getElementById('renewStartDate').showPicker() : document.getElementById('renewStartDate').click()" style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;font-size:18px;min-height:38px;display:flex;align-items:center;">📅</button>
-          <input type="date" id="renewStartDate" onchange="_updateRenewDateDisplay()" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;color-scheme:dark;" />
+          <button type="button" style="position:relative;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;font-size:18px;min-height:38px;display:flex;align-items:center;overflow:hidden;">📅
+            <input type="date" id="renewStartDate" onchange="_updateRenewDateDisplay()" style="position:absolute;opacity:0;width:100%;height:100%;top:0;left:0;cursor:pointer;color-scheme:dark;" />
+          </button>
         </div>
       </div>
 
