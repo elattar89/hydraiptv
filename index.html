@@ -1424,7 +1424,7 @@ function renderStats() {
       <div style="font-size:22px;font-weight:700;color:#f87171">${unpaid}</div>
       <span style="font-size:10px;color:rgba(255,255,255,0.4)">بانتظار الدفع</span>
     </div>
-    <div onclick="setFilter('debt')" style="${base} ${curP==='merchant_unpaid'?'rgba(168,85,247,0.8);background:rgba(168,85,247,0.25)':'rgba(168,85,247,0.3);background:rgba(168,85,247,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+    <div onclick="openMerchantSummaryModal()" style="${base} ${curP==='merchant_unpaid'?'rgba(168,85,247,0.8);background:rgba(168,85,247,0.25)':'rgba(168,85,247,0.3);background:rgba(168,85,247,0.12)'}" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
       <span style="font-size:11px;color:rgba(255,255,255,0.6)">حسابات التاجر</span>
       <div style="font-size:14px;font-weight:700;color:#c084fc;line-height:1.4">
         ${debtTotal > 0 ? 'مستحق: ' + debtTotal.toFixed(0) + '$' : '✓ كل شيء مسدد'}
@@ -1509,47 +1509,80 @@ function showPendingListModal() {
 }
 
 function showDebtListModal() {
-  const debts = accounts.filter(a => isMerchantUnpaid(a))
-    .sort((a,b) => new Date(b.startDate||0) - new Date(a.startDate||0));
-  const total = debts.reduce((s, a) => s + merchantCost(a), 0);
-  document.getElementById('debtModalCount').textContent = 'إجمالي: ' + debts.length + ' حساب | ' + total.toFixed(0) + '$';
+  // مزامنة المتغيرين
+  if (window._merchantPayments && window._merchantPayments.length > 0) {
+    _merchantPayments = window._merchantPayments;
+  } else if (_merchantPayments && _merchantPayments.length > 0) {
+    window._merchantPayments = _merchantPayments;
+  }
+
+  const payments  = _merchantPayments || [];
+  const due       = getMerchantDue();
+  const credit    = window._merchantCredit || 0;
+  const totalPaid = payments.reduce((s, p) => s + parseFloat(p.paid || 0), 0);
+
+  // هيدر الكشف
   document.getElementById('debtModalDate').textContent = 'تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-EG');
-  document.getElementById('debtModalTotal').textContent = total.toFixed(0) + '$';
-  const rows = debts.map((a, i) => {
-    const status = statusOf(a);
-    const statusText = status === 'active' ? 'نشط' : status === 'expiring' ? 'ينتهي قريباً' : 'منتهي';
-    const statusColor = status === 'active' ? '#16a34a' : status === 'expiring' ? '#d97706' : '#dc2626';
-    const dur = a.duration === '6' ? '6 أشهر' : a.duration === '12' ? 'سنة' : '15 شهر';
-    const rowBg = i % 2 === 0 ? '#faf5ff' : '#fff';
-    return `<tr style="background:${rowBg}">
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#666">${i+1}</td>
-      <td style="padding:8px 6px;font-weight:700;border:1px solid #ddd;white-space:nowrap">${a.name}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;direction:ltr">${window.isGuest ? '—' : (a.phone||'—')}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#5b21b6">${a.username}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-family:monospace;color:#555">${window.isGuest ? '••••••' : a.password}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-size:10px;color:#777">${(a.host||'—').replace('http://','')}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${formatDate(a.startDate)}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;color:#5b21b6;font-weight:600">${formatDate(a.expDate)}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:600;color:${statusColor}">${statusText}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd">${dur}</td>
-      <td style="padding:8px 6px;text-align:center;border:1px solid #ddd;font-weight:700;color:#dc2626">${a.amount ? a.amount+' KD' : '10$'}</td>
-    </tr>`;
-  }).join('');
+  document.getElementById('debtModalCount').textContent = payments.length + ' معاملة مسجلة';
+
+  // بطاقات الملخص
+  const dueEl    = document.getElementById('debtSummaryDue');
+  const paidEl   = document.getElementById('debtSummaryPaid');
+  const creditEl = document.getElementById('debtSummaryCredit');
+  if (dueEl)    { dueEl.textContent = due.toFixed(0) + '$'; dueEl.style.color = due > 0 ? '#dc2626' : '#16a34a'; }
+  if (paidEl)   paidEl.textContent  = totalPaid.toFixed(0) + '$';
+  if (creditEl) { creditEl.textContent = credit.toFixed(0) + '$'; creditEl.style.color = credit > 0 ? '#7c3aed' : '#aaa'; }
+
+  // صفوف جدول المعاملات
+  const rows = payments.length
+    ? payments.map((p, i) => {
+        const remaining = parseFloat(p.remaining || 0);
+        const pCredit   = parseFloat(p.credit   || 0);
+        // نحسب المطلوب = المدفوع + المتبقي - الرصيد الناتج
+        const requested = parseFloat(p.paid || 0) + remaining - pCredit;
+        const rowBg = i % 2 === 0 ? '#faf5ff' : '#fff';
+        return `<tr style="background:${rowBg};">
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;color:#888;font-size:12px;">${payments.length - i}</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">${p.date}</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:700;color:#dc2626;">${requested > 0 ? requested.toFixed(0) + '$' : '—'}</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;font-size:15px;">+${p.paid}$</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;color:#5b21b6;">${p.count} أكونت</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:600;color:${remaining > 0 ? '#d97706' : '#16a34a'};">${remaining > 0 ? remaining.toFixed(0) + '$' : '✓ صفر'}</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:600;color:${pCredit > 0 ? '#7c3aed' : '#aaa'};">${pCredit > 0 ? '+' + pCredit.toFixed(0) + '$' : '—'}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="7" style="padding:40px;text-align:center;color:#999;font-size:14px;">🧾 لا توجد معاملات مسجلة بعد</td></tr>`;
+
   document.getElementById('debtModalBody').innerHTML = rows;
   (document.getElementById('debtModal')||{style:{}}).style.display = 'block';
 }
 
 async function shareDebtList() {
-  const debts = accounts.filter(a => a.paid === 'debt')
-    .sort((a,b) => new Date(b.startDate||0) - new Date(a.startDate||0));
-  const date = new Date().toLocaleDateString('ar-EG');
-  const total = debts.length * 10;
-  let text = `🟡 كشف الديون للتاجر\nHydra IPTV - Ahmed EL-Attar\n📅 ${date}\n👥 الإجمالي: ${debts.length} حساب | 💰 ${total}$\n${'─'.repeat(25)}\n\n`;
-  debts.forEach((a, i) => {
-    text += `${i+1}. ${a.name}\n📞 ${a.phone||'—'}\n👤 ${a.username} | 🔑 ${a.password}\n📅 ينتهي: ${formatDate(a.expDate)||'—'}\n💰 دين للتاجر${a.amount?' | '+a.amount+' KD':' | 10$'}\n${'─'.repeat(20)}\n`;
+  if (window._merchantPayments && window._merchantPayments.length > 0) _merchantPayments = window._merchantPayments;
+  const payments  = _merchantPayments || [];
+  const due       = getMerchantDue();
+  const credit    = window._merchantCredit || 0;
+  const totalPaid = payments.reduce((s, p) => s + parseFloat(p.paid || 0), 0);
+  const date      = new Date().toLocaleDateString('ar-EG');
+
+  let text = `🧾 كشف حساب التاجر\nHydra IPTV — Ahmed EL-Attar\n📅 ${date}\n${'─'.repeat(30)}\n\n`;
+  text += `💰 مستحق حالياً: ${due.toFixed(0)}$\n`;
+  text += `✅ إجمالي مدفوع: ${totalPaid.toFixed(0)}$\n`;
+  text += `🟣 رصيد لديك: ${credit.toFixed(0)}$\n\n`;
+  text += `${'─'.repeat(30)}\nسجل المعاملات:\n\n`;
+
+  payments.forEach((p, i) => {
+    const remaining = parseFloat(p.remaining || 0);
+    const pCredit   = parseFloat(p.credit   || 0);
+    text += `${payments.length - i}. 📅 ${p.date}\n`;
+    text += `   💳 مدفوع: ${p.paid}$ | 👥 ${p.count} أكونت\n`;
+    text += `   📌 متبقي: ${remaining > 0 ? remaining.toFixed(0) + '$' : '✓ صفر'}`;
+    if (pCredit > 0) text += ` | 🟣 رصيد: +${pCredit.toFixed(0)}$`;
+    text += `\n${'─'.repeat(20)}\n`;
   });
+
   if (navigator.share) {
-    try { await navigator.share({ title: 'كشف الديون - Hydra IPTV', text }); return; } catch(e) {}
+    try { await navigator.share({ title: 'كشف حساب التاجر - Hydra IPTV', text }); return; } catch(e) {}
   }
   navigator.clipboard.writeText(text).then(() => showToast('✅ تم النسخ'));
 }
@@ -3815,41 +3848,58 @@ if (_auth === 'admin') {
 
 <!-- كشف الديون - Full Page Print Style -->
 <div id="debtModal" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;overflow-y:auto;font-family:Cairo,sans-serif;color:#111;direction:rtl">
+  <!-- شريط التحكم -->
   <div id="debtModalControls" style="position:fixed;top:0;right:0;left:0;background:#5b21b6;padding:10px 20px;display:flex;align-items:center;gap:10px;z-index:10000;box-shadow:0 2px 10px rgba(0,0,0,0.3)">
     <button onclick="window.print()" style="background:#fff;color:#5b21b6;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">🖨️ طباعة / PDF</button>
     <button onclick="shareDebtList()" style="background:#25d366;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">📤 مشاركة</button>
     <button onclick="(document.getElementById('debtModal')||{style:{}}).style.display='none'" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;font-family:Cairo,sans-serif">✕ إغلاق</button>
     <div id="debtModalCount" style="color:rgba(255,255,255,0.8);font-size:13px;margin-right:auto"></div>
   </div>
-  <div style="padding:70px 20px 30px">
-    <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #5b21b6">
-      <div style="font-size:22px;font-weight:700;color:#5b21b6">🟡 كشف الديون للتاجر</div>
-      <div style="font-size:13px;color:#666;margin-top:4px">Hydra IPTV - Ahmed EL-Attar</div>
-      <div id="debtModalDate" style="font-size:12px;color:#999;margin-top:2px"></div>
+
+  <div style="padding:80px 24px 40px;max-width:860px;margin:0 auto;">
+    <!-- هيدر الكشف -->
+    <div style="text-align:center;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #5b21b6;">
+      <div style="font-size:26px;font-weight:700;color:#5b21b6;">🧾 كشف حساب التاجر</div>
+      <div style="font-size:14px;color:#666;margin-top:6px;">Hydra IPTV — Ahmed EL-Attar</div>
+      <div id="debtModalDate" style="font-size:12px;color:#999;margin-top:4px;"></div>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
+
+    <!-- بطاقات الملخص -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:28px;">
+      <div style="background:#faf5ff;border:2px solid #ddd8fe;border-radius:14px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:#888;margin-bottom:6px;">إجمالي مستحق حالياً</div>
+        <div id="debtSummaryDue" style="font-size:28px;font-weight:700;color:#dc2626;">0$</div>
+      </div>
+      <div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:14px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:#888;margin-bottom:6px;">إجمالي المدفوع</div>
+        <div id="debtSummaryPaid" style="font-size:28px;font-weight:700;color:#16a34a;">0$</div>
+      </div>
+      <div style="background:#fdf4ff;border:2px solid #e9d5ff;border-radius:14px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:#888;margin-bottom:6px;">رصيدك لدى التاجر</div>
+        <div id="debtSummaryCredit" style="font-size:28px;font-weight:700;color:#7c3aed;">0$</div>
+      </div>
+    </div>
+
+    <!-- جدول سجل المعاملات -->
+    <div style="font-size:15px;font-weight:700;color:#5b21b6;margin-bottom:12px;">📋 سجل المعاملات</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
-        <tr style="background:#5b21b6;color:#fff">
-          <th style="padding:10px 8px;text-align:center;border:1px solid #6d28d9">#</th>
-          <th style="padding:10px 8px;text-align:right;border:1px solid #6d28d9">الاسم</th>
-          <th style="padding:10px 8px;text-align:center;border:1px solid #6d28d9">رقم الهاتف</th>
-          <th style="padding:10px 8px;text-align:center;border:1px solid #6d28d9">اليوزرنيم</th>
-          <th style="padding:10px 8px;text-align:center;border:1px solid #6d28d9">الباسورد</th>
-          <th style="padding:10px 8px;text-align:center;border:1px solid #6d28d9">الهوست</th>
-          <th style="padding:10px 8px;text-align:center;border:1px solid #6d28d9">تاريخ الاشتراك</th>
-          <th style="padding:10px 8px;text-align:center;border:1px solid #6d28d9">تاريخ الانتهاء</th>
-          <th style="padding:10px 8px;text-align:center;border:1px solid #6d28d9">الحالة</th>
-          <th style="padding:10px 8px;text-align:center;border:1px solid #6d28d9">المدة</th>
-          <th style="padding:10px 8px;text-align:center;border:1px solid #6d28d9">القيمة</th>
+        <tr style="background:#5b21b6;color:#fff;">
+          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">#</th>
+          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">التاريخ</th>
+          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">المطلوب للسداد</th>
+          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">المبلغ المدفوع</th>
+          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">أكونتات سُددت</th>
+          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">المتبقي بعدها</th>
+          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">رصيد ناتج</th>
         </tr>
       </thead>
       <tbody id="debtModalBody"></tbody>
     </table>
-    <div style="margin-top:16px;padding:12px 16px;background:#faf5ff;border:1px solid #ddd8fe;border-radius:10px;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-weight:700;color:#5b21b6">إجمالي المستحق للتاجر:</span>
-      <span id="debtModalTotal" style="font-size:20px;font-weight:700;color:#5b21b6"></span>
+
+    <div style="text-align:center;margin-top:24px;font-size:11px;color:#999;border-top:1px solid #ddd;padding-top:12px;">
+      Hydra IPTV Manager — Ahmed EL-Attar
     </div>
-    <div style="text-align:center;margin-top:16px;font-size:11px;color:#999;border-top:1px solid #ddd;padding-top:10px">Hydra IPTV Manager — Ahmed EL-Attar</div>
   </div>
 </div>
 
@@ -4839,6 +4889,124 @@ else if (window._merchantPayments) _merchantPayments = window._merchantPayments;
 
 
 
+
+function openMerchantSummaryModal() {
+  const old = document.getElementById('merchantSummaryModal');
+  if (old) old.remove();
+
+  // مزامنة المتغيرين دايماً قبل القراءة
+  if (window._merchantPayments && window._merchantPayments.length > 0) {
+    _merchantPayments = window._merchantPayments;
+  } else if (_merchantPayments && _merchantPayments.length > 0) {
+    window._merchantPayments = _merchantPayments;
+  }
+
+  const due      = getMerchantDue();
+  const credit   = window._merchantCredit || 0;
+  const payments = _merchantPayments || [];
+
+  // إجمالي كل المدفوعات التاريخية
+  const totalPaidToMerchant = payments.reduce((s, p) => s + parseFloat(p.paid || 0), 0);
+
+  // سجل الفواتير HTML
+  const paymentsHtml = payments.length
+    ? payments.map((p, i) => {
+        const remaining = parseFloat(p.remaining || 0);
+        const pCredit   = parseFloat(p.credit   || 0);
+        return `
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 16px;">
+          <!-- رأس الفاتورة -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:3px 9px;font-size:11px;color:#c084fc;font-weight:700;">فاتورة #${payments.length - i}</div>
+              <div style="font-size:12px;color:var(--text2);">${p.date}</div>
+            </div>
+            <div style="font-size:18px;font-weight:700;color:#4ade80;">+${p.paid}$</div>
+          </div>
+          <!-- تفاصيل -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">
+            <div style="text-align:center;">
+              <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">أكونتات سُددت</div>
+              <div style="font-size:14px;font-weight:700;color:var(--text);">${p.count}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">متبقي بعدها</div>
+              <div style="font-size:14px;font-weight:700;color:${remaining > 0 ? '#fbbf24' : '#4ade80'};">${remaining > 0 ? remaining + '$' : '✓ صفر'}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">رصيد ناتج</div>
+              <div style="font-size:14px;font-weight:700;color:${pCredit > 0 ? '#c084fc' : 'rgba(255,255,255,0.3)'};">${pCredit > 0 ? '+' + pCredit + '$' : '—'}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')
+    : `<div style="text-align:center;padding:2rem;color:var(--text2);font-size:13px;">
+        <div style="font-size:2rem;margin-bottom:8px;">🧾</div>
+        لا توجد دفعات مسجلة بعد
+      </div>`;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'merchantSummaryModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+
+  overlay.innerHTML = `
+    <div style="background:var(--card);border-radius:20px;padding:1.5rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:1.2rem;">
+
+      <!-- هيدر -->
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:16px;font-weight:700;color:var(--text);">💜 كشف حساب التاجر</div>
+        <button onclick="document.getElementById('merchantSummaryModal').remove()" style="background:none;border:none;color:var(--text2);font-size:1.4rem;cursor:pointer;">✕</button>
+      </div>
+
+      <!-- ملخص مالي 3 بطاقات -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:14px;padding:14px;text-align:center;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:6px;">إجمالي مستحق</div>
+          <div style="font-size:26px;font-weight:700;color:${due > 0 ? '#f87171' : '#4ade80'};">${due.toFixed(0)}$</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px;">${due > 0 ? accounts.filter(a=>isMerchantUnpaid(a)).length + ' أكونت' : '✓ مسدد'}</div>
+        </div>
+        <div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:14px;padding:14px;text-align:center;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:6px;">إجمالي مدفوع</div>
+          <div style="font-size:26px;font-weight:700;color:#4ade80;">${totalPaidToMerchant.toFixed(0)}$</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px;">${payments.length} دفعة</div>
+        </div>
+        <div style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);border-radius:14px;padding:14px;text-align:center;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:6px;">رصيدك لديه</div>
+          <div style="font-size:26px;font-weight:700;color:${credit > 0 ? '#c084fc' : 'rgba(255,255,255,0.25)'};">${credit.toFixed(0)}$</div>
+          <div style="font-size:10px;color:${credit > 0 ? '#a78bfa' : 'rgba(255,255,255,0.3)'};margin-top:4px;">${credit > 0 ? 'يغطي ' + Math.floor(credit/10) + ' أكونت' : 'لا يوجد رصيد'}</div>
+        </div>
+      </div>
+
+      <!-- أزرار الإجراءات -->
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${due > 0 ? `
+        <button onclick="document.getElementById('merchantSummaryModal').remove(); openMerchantPayModal();" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:white;border:none;border-radius:12px;font-family:Cairo,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">
+          💳 سداد للتاجر — ${due.toFixed(0)}$
+        </button>` : `
+        <div style="text-align:center;padding:10px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:12px;color:#4ade80;font-size:13px;font-weight:700;">
+          ✅ كل شيء مسدد للتاجر
+        </div>`}
+        <button onclick="document.getElementById('merchantSummaryModal').remove(); showDebtListModal();" style="width:100%;padding:11px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:12px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">
+          📋 كشف الديون للتاجر
+        </button>
+      </div>
+
+      <!-- سجل الفواتير -->
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+          🧾 <span>سجل الفواتير</span>
+          <span style="font-size:11px;font-weight:400;color:var(--text2);">(${payments.length} دفعة)</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">${paymentsHtml}</div>
+      </div>
+
+    </div>
+  `;
+
+  // إغلاق بالضغط خارج المودال
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
 
 function openMerchantPayModal() {
   const old = document.getElementById('merchantPayModal');
