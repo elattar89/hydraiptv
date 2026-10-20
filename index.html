@@ -4961,6 +4961,9 @@ function confirmMerchantPay() {
     .filter(a => isMerchantUnpaid(a))
     .sort((a, b) => new Date(a.startDate||'9999') - new Date(b.startDate||'9999'));
 
+  // *** احسب المستحق قبل تعديل الأكونتات ***
+  const dueBeforeSettle = getMerchantDue();
+
   let budget = amount;
   let settled = 0;
   for (const acc of unpaid) {
@@ -4977,19 +4980,18 @@ function confirmMerchantPay() {
 
   const today = new Date();
   const dateStr = today.getDate() + '/' + (today.getMonth()+1) + '/' + today.getFullYear();
-  const due = getMerchantDue();
 
-  // احسب الرصيد المتبقي
+  // احسب الرصيد المتبقي بشكل صحيح
   const prevCredit = window._merchantCredit || 0;
   const totalPaid = amount + prevCredit;
-  const newCredit = Math.max(0, totalPaid - (due - budget));
+  const newCredit = Math.max(0, totalPaid - dueBeforeSettle);
   window._merchantCredit = newCredit;
 
   _merchantPayments.unshift({
     date: dateStr,
     paid: amount.toFixed(0),
     count: settled,
-    remaining: (due - (amount + prevCredit)).toFixed(0) < 0 ? '0' : (due - (amount + prevCredit)).toFixed(0),
+    remaining: Math.max(0, dueBeforeSettle - totalPaid).toFixed(0),
     credit: newCredit.toFixed(0)
   });
   _merchantPayments = _merchantPayments.slice(0, 30);
