@@ -3041,14 +3041,14 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
     ]);
   } catch(e) { console.warn('initFirebaseExtras error:', e); }
   // مزامنة المتغيرات المحلية مع window بعد تحميل Firebase
-  // (الـ var declarations ممكن تكون شتغلت قبل الـ await)
-  if (window._sentMessages)     _sentMessages    = window._sentMessages;
-  if (window._sentRegRequests)  _sentRegRequests = window._sentRegRequests;
+  if (window._sentMessages)     _sentMessages     = window._sentMessages;
+  if (window._sentRegRequests)  _sentRegRequests  = window._sentRegRequests;
   if (window._merchantPayments) _merchantPayments = window._merchantPayments;
+  if (window._merchantCredit !== undefined) _merchantCredit = window._merchantCredit;
   updateSentMsgCount();
+  // نشغل load() بعد ما كل Firebase يتحمل عشان البيانات تكون جاهزة
+  load();
 })();
-
-load();
 // مسح السيرش عند التحميل
 window.addEventListener('load', function() {
   var s = document.getElementById('searchInput');
@@ -5163,8 +5163,8 @@ function previewMerchantPay() {
   remaining.style.color = newCredit > 0 ? '#4ade80' : budget > 0 ? '#fbbf24' : '#4ade80';
 }
 
-// رصيد التاجر
-var _merchantCredit = parseFloat(localStorage.getItem('hydra_merchant_credit') || '0');
+// رصيد التاجر — المصدر الوحيد هو Firebase (يتحمل في initFirebaseExtras)
+var _merchantCredit = window._merchantCredit || 0;
 
 function confirmMerchantPay() {
   const amount = parseFloat(document.getElementById('merchantPayAmount').value) || 0;
