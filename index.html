@@ -5062,7 +5062,10 @@ function openMerchantSummaryModal() {
               <div style="background:${isPrepay ? 'rgba(34,197,94,0.2)' : 'rgba(168,85,247,0.2)'};border:1px solid ${isPrepay ? 'rgba(34,197,94,0.4)' : 'rgba(168,85,247,0.4)'};border-radius:8px;padding:3px 9px;font-size:11px;color:${isPrepay ? '#4ade80' : '#c084fc'};font-weight:700;">${isPrepay ? '💰 ' + (p.note || 'رصيد مسبق') : 'فاتورة #' + (payments.length - i)}</div>
               <div style="font-size:12px;color:var(--text2);">${p.date}</div>
             </div>
-            <div style="font-size:18px;font-weight:700;color:#4ade80;">+${p.paid}$</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="font-size:18px;font-weight:700;color:#4ade80;">+${p.paid}$</div>
+              <button onclick="deleteMerchantPayment(${i})" title="مسح الفاتورة" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);color:#f87171;border-radius:8px;padding:4px 8px;font-size:13px;cursor:pointer;line-height:1;">🗑</button>
+            </div>
           </div>
           <!-- تفاصيل -->
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">
@@ -5150,6 +5153,31 @@ function openMerchantSummaryModal() {
   // إغلاق بالضغط خارج المودال
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+}
+
+function deleteMerchantPayment(index) {
+  const payments = Array.isArray(window._merchantPayments) ? window._merchantPayments : (Array.isArray(_merchantPayments) ? _merchantPayments : []);
+  const p = payments[index];
+  if (!p) return;
+  if (!confirm('مسح الفاتورة بتاريخ ' + p.date + ' (+' + p.paid + '$)؟\nهتتشال من الكشف وتتخصم من إجمالي المدفوع.')) return;
+
+  // حافظ على مكان السكرول في الكشف
+  const old = document.getElementById('merchantSummaryModal');
+  const scrollBox = old && old.firstElementChild;
+  const scrollTop = scrollBox ? scrollBox.scrollTop : 0;
+
+  const updated = payments.filter((_, i) => i !== index);
+  window._merchantPayments = updated;
+  _merchantPayments = updated;
+
+  if (window.saveMerchantToFirebase) {
+    window.saveMerchantToFirebase().catch(() => showToast('⚠️ اتمسحت محلياً لكن في مشكلة في الحفظ', true));
+  }
+
+  openMerchantSummaryModal();
+  const nb = document.getElementById('merchantSummaryModal');
+  if (nb && nb.firstElementChild) nb.firstElementChild.scrollTop = scrollTop;
+  showToast('🗑 تم مسح الفاتورة');
 }
 
 function openMerchantPrepayModal() {
