@@ -5267,6 +5267,17 @@ function openMerchantPayModal() {
         </div>
       </div>
 
+      ${credit > 0 ? `
+      <div style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.35);border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <div>
+          <div style="font-size:12px;color:#c084fc;font-weight:700;margin-bottom:3px;">💰 عندك رصيد لدى التاجر</div>
+          <div style="font-size:11px;color:var(--text2);">يمكنك استخدام <b style="color:#c084fc">${credit.toFixed(0)}$</b> من رصيدك بدل ما تدفع كاش</div>
+        </div>
+        <button onclick="document.getElementById('merchantPayAmount').value='${credit.toFixed(0)}'; previewMerchantPay();" style="white-space:nowrap;padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:white;border:none;border-radius:10px;font-family:Cairo,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+          استخدم الرصيد
+        </button>
+      </div>` : ''}
+
       <div>
         <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">المبلغ المدفوع للتاجر</label>
         <input type="number" id="merchantPayAmount" placeholder="مثال: 150" oninput="previewMerchantPay()" style="width:100%;font-size:16px;padding:10px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:Cairo,sans-serif;" />
