@@ -5270,6 +5270,7 @@ function openMerchantPayModal() {
       </div>
       <div style="text-align:left;">
         <div style="color:#4ade80;font-weight:700;">+${p.paid}$</div>
+        ${parseFloat(p.fromCredit||0) > 0 ? '<div style="color:#c084fc;font-size:11px;">من الرصيد: ' + p.fromCredit + '$</div>' : ''}
         <div style="color:#fbbf24;font-size:11px;">متبقي: ${p.remaining}$</div>
       </div>
     </div>`).join('') : '<div style="color:var(--text2);font-size:12px;text-align:center;padding:1rem;">لا توجد دفعات سابقة</div>';
@@ -5299,13 +5300,13 @@ function openMerchantPayModal() {
           <div style="font-size:12px;color:#c084fc;font-weight:700;margin-bottom:3px;">💰 عندك رصيد لدى التاجر</div>
           <div style="font-size:11px;color:var(--text2);">يمكنك استخدام <b style="color:#c084fc">${credit.toFixed(0)}$</b> من رصيدك بدل ما تدفع كاش</div>
         </div>
-        <button onclick="document.getElementById('merchantPayAmount').value='${credit.toFixed(0)}'; previewMerchantPay();" style="white-space:nowrap;padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:white;border:none;border-radius:10px;font-family:Cairo,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+        <button onclick="document.getElementById('merchantPayAmount').value='${Math.max(0, due - credit).toFixed(0)}'; previewMerchantPay();" style="white-space:nowrap;padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:white;border:none;border-radius:10px;font-family:Cairo,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
           استخدم الرصيد
         </button>
       </div>` : ''}
 
       <div>
-        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">المبلغ المدفوع للتاجر</label>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">المبلغ المدفوع للتاجر (كاش)</label>
         <input type="number" id="merchantPayAmount" placeholder="مثال: 150" oninput="previewMerchantPay()" style="width:100%;font-size:16px;padding:10px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:Cairo,sans-serif;" />
       </div>
 
@@ -5329,88 +5330,85 @@ function openMerchantPayModal() {
   document.body.appendChild(overlay);
 }
 
+// حساب موحد للمعاينة والتأكيد (مصدر واحد للأرقام)
+function calcMerchantPay(cash) {
+  const prevCredit = parseFloat(window._merchantCredit) || 0;
+  const unpaid = accounts
+    .filter(a => isMerchantUnpaid(a))
+    .sort((a, b) => new Date(a.startDate||'9999') - new Date(b.startDate||'9999'));
+  const dueBefore = unpaid.reduce((s, a) => s + merchantCost(a), 0);
+
+  // الميزانية = الكاش + الرصيد الموجود (الرصيد بيتخصم تلقائي زي ما save() بتعمل)
+  let budget = cash + prevCredit;
+  const toSettle = [];
+  for (const acc of unpaid) {
+    const cost = merchantCost(acc);
+    if (budget >= cost) { toSettle.push(acc); budget -= cost; } else break;
+  }
+  const spent       = toSettle.reduce((s, a) => s + merchantCost(a), 0);
+  const creditUsed  = Math.min(prevCredit, spent);          // اللي اتسحب من الرصيد
+  const newCredit   = budget;                               // الباقي يرجع رصيد (مش بيتحسب مرتين)
+  const remainingDue = Math.max(0, dueBefore - spent);      // لسه عليك
+  return { prevCredit, cash, toSettle, spent, creditUsed, newCredit, remainingDue, dueBefore };
+}
+
 function previewMerchantPay() {
-  const amount = parseFloat(document.getElementById('merchantPayAmount').value) || 0;
+  const cash = parseFloat(document.getElementById('merchantPayAmount').value) || 0;
   const preview = document.getElementById('merchantPayPreview');
   const list = document.getElementById('merchantPayList');
   const remaining = document.getElementById('merchantPayRemaining');
 
-  if (amount <= 0) { preview.style.display = 'none'; return; }
+  const r = calcMerchantPay(cash);
+  if (cash <= 0 && r.prevCredit <= 0) { preview.style.display = 'none'; return; }
   preview.style.display = 'block';
 
-  const unpaid = accounts
-    .filter(a => isMerchantUnpaid(a))
-    .sort((a, b) => new Date(a.startDate||'9999') - new Date(b.startDate||'9999'));
-
-  let budget = amount;
-  let toSettle = [];
-  for (const acc of unpaid) {
-    const cost = merchantCost(acc);
-    if (budget >= cost) {
-      toSettle.push(acc);
-      budget -= cost;
-    } else break;
-  }
-
-  list.innerHTML = toSettle.map(a => `
+  list.innerHTML = r.toSettle.map(a => `
     <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid var(--border);">
       <span style="color:var(--text);">${a.name} — ${a.username}</span>
       <span style="color:#4ade80;">10$</span>
     </div>`).join('') || '<div style="color:var(--text2);">لا يوجد أكونتات كافية</div>';
 
-  const prevCredit = window._merchantCredit || 0;
-  const totalBudget = parseFloat(document.getElementById('merchantPayAmount').value||0) + prevCredit;
-  const allUnpaid = accounts.filter(a => isMerchantUnpaid(a))
-    .reduce((s,a) => s + merchantCost(a), 0);
-  const newCredit = Math.max(0, totalBudget - allUnpaid + budget);
-  remaining.textContent = budget.toFixed(0) + '$ متبقي' + (newCredit > 0 ? ' — رصيد: ' + newCredit.toFixed(0) + '$' : '');
-  remaining.style.color = newCredit > 0 ? '#4ade80' : budget > 0 ? '#fbbf24' : '#4ade80';
+  remaining.textContent = 'متبقي عليك: ' + r.remainingDue.toFixed(0) + '$' +
+    (r.newCredit > 0 ? ' — رصيدك بعد الدفع: ' + r.newCredit.toFixed(0) + '$' : '');
+  remaining.style.color = r.remainingDue > 0 ? '#fbbf24' : '#4ade80';
 }
 
 // رصيد التاجر — المصدر الوحيد هو Firebase (يتحمل في initFirebaseExtras)
 var _merchantCredit = window._merchantCredit || 0;
 
 function confirmMerchantPay() {
-  const amount = parseFloat(document.getElementById('merchantPayAmount').value) || 0;
-  if (amount <= 0) { showToast('❌ ادخل المبلغ', true); return; }
-  if (!confirm('تأكيد دفع ' + amount + '$ للتاجر؟')) return;
+  const cash = parseFloat(document.getElementById('merchantPayAmount').value) || 0;
+  const r = calcMerchantPay(cash);
 
-  const unpaid = accounts
-    .filter(a => isMerchantUnpaid(a))
-    .sort((a, b) => new Date(a.startDate||'9999') - new Date(b.startDate||'9999'));
+  if (cash <= 0 && r.spent <= 0) { showToast('❌ ادخل المبلغ', true); return; }
 
-  // *** احسب المستحق قبل تعديل الأكونتات ***
-  const dueBeforeSettle = getMerchantDue();
+  // رسالة التأكيد بالأرقام الفعلية
+  let msg = 'تأكيد تسديد ' + r.toSettle.length + ' أكونت (' + r.spent.toFixed(0) + '$)؟';
+  msg += '\nكاش: ' + cash.toFixed(0) + '$';
+  if (r.creditUsed > 0) msg += '\nمن الرصيد: ' + r.creditUsed.toFixed(0) + '$';
+  msg += '\nرصيدك بعد الدفع: ' + r.newCredit.toFixed(0) + '$';
+  if (r.remainingDue > 0) msg += '\nمتبقي عليك: ' + r.remainingDue.toFixed(0) + '$';
+  if (!confirm(msg)) return;
 
-  let budget = amount;
-  let settled = 0;
-  for (const acc of unpaid) {
-    const cost = merchantCost(acc);
-    if (budget >= cost) {
-      acc.merchantPaid = 'paid';
-      // تحديث paid بشكل صحيح بناءً على حالة العميل
-      const clientStatus = acc.clientPaid || (acc.paid === 'unpaid' ? 'unpaid' : 'paid');
-      acc.paid = clientStatus === 'paid' ? 'paid' : 'debt';
-      budget -= cost;
-      settled++;
-    } else break;
+  for (const acc of r.toSettle) {
+    acc.merchantPaid = 'paid';
+    const clientStatus = acc.clientPaid || (acc.paid === 'unpaid' ? 'unpaid' : 'paid');
+    acc.paid = clientStatus === 'paid' ? 'paid' : 'debt';
   }
 
   const today = new Date();
   const dateStr = today.getDate() + '/' + (today.getMonth()+1) + '/' + today.getFullYear();
 
-  // احسب الرصيد المتبقي بشكل صحيح
-  const prevCredit = window._merchantCredit || 0;
-  const totalPaid = amount + prevCredit;
-  const newCredit = Math.max(0, totalPaid - dueBeforeSettle);
-  window._merchantCredit = newCredit;
+  window._merchantCredit = r.newCredit;
+  _merchantCredit = r.newCredit;
 
   _merchantPayments.unshift({
     date: dateStr,
-    paid: amount.toFixed(0),
-    count: settled,
-    remaining: Math.max(0, dueBeforeSettle - totalPaid).toFixed(0),
-    credit: newCredit.toFixed(0)
+    paid: cash.toFixed(0),
+    fromCredit: r.creditUsed.toFixed(0),
+    count: r.toSettle.length,
+    remaining: r.remainingDue.toFixed(0),
+    credit: r.newCredit.toFixed(0)
   });
   _merchantPayments = _merchantPayments.slice(0, 30);
   window._merchantPayments = _merchantPayments;
@@ -5418,8 +5416,7 @@ function confirmMerchantPay() {
 
   save(); renderAll();
   document.getElementById('merchantPayModal').remove();
-  const msg = settled + ' أكونت تم تسديدها' + (newCredit > 0 ? ' — رصيد: ' + newCredit.toFixed(0) + '$' : '');
-  showToast('✅ ' + msg);
+  showToast('✅ ' + r.toSettle.length + ' أكونت تم تسديدها' + (r.newCredit > 0 ? ' — رصيد: ' + r.newCredit.toFixed(0) + '$' : ''));
 }
 
 // ===== إرسال طلب التسجيل =====
