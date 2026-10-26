@@ -1273,22 +1273,6 @@ function load() {
 }
 
 function save() {
-  // تطبيق رصيد التاجر على الأكونتات الجديدة تلقائياً
-  let credit = window._merchantCredit || 0;
-  if (credit > 0) {
-    const toSettle = accounts.filter(a => isMerchantUnpaid(a));
-    for (const acc of toSettle) {
-      const cost = merchantCost(acc);
-      if (credit >= cost) {
-        acc.merchantPaid = 'paid';
-        const clientStatus = acc.clientPaid || (acc.paid === 'unpaid' ? 'unpaid' : 'paid');
-        acc.paid = clientStatus === 'paid' ? 'paid' : 'debt';
-        credit -= cost;
-      } else break;
-    }
-    window._merchantCredit = credit;
-    window.saveMerchantToFirebase && window.saveMerchantToFirebase();
-  }
   if (window.saveToFirebase) window.saveToFirebase(accounts);
   // نسخة احتياطية يومية
   const today = new Date().toISOString().slice(0,10);
@@ -1553,13 +1537,14 @@ function showDebtListModal() {
         const remaining = parseFloat(p.remaining || 0);
         const pCredit   = parseFloat(p.credit   || 0);
         // نحسب المطلوب = المدفوع + المتبقي - الرصيد الناتج
-        const requested = parseFloat(p.paid || 0) + remaining - pCredit;
+        const requested = (p.due !== undefined && p.due !== '') ? parseFloat(p.due) : parseFloat(p.paid || 0) + remaining - pCredit;
+        const fromCr = parseFloat(p.fromCredit || 0);
         const rowBg = i % 2 === 0 ? '#faf5ff' : '#fff';
         return `<tr style="background:${rowBg};">
           <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;color:#888;font-size:12px;">${payments.length - i}</td>
           <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">${p.date}</td>
           <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:700;color:#dc2626;">${requested > 0 ? requested.toFixed(0) + '$' : '—'}</td>
-          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;font-size:15px;">+${p.paid}$</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;font-size:15px;">${p.type === 'deduct' ? '—' : '+' + p.paid + '$'}${fromCr > 0 ? '<div style="font-size:10px;font-weight:600;color:#7c3aed;">من الرصيد: ' + fromCr.toFixed(0) + '$</div>' : ''}</td>
           <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;color:#5b21b6;">${p.count} أكونت</td>
           <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:600;color:${remaining > 0 ? '#d97706' : '#16a34a'};">${remaining > 0 ? remaining.toFixed(0) + '$' : '✓ صفر'}</td>
           <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:600;color:${pCredit > 0 ? '#7c3aed' : '#aaa'};">${pCredit > 0 ? '+' + pCredit.toFixed(0) + '$' : '—'}</td>
@@ -1589,7 +1574,7 @@ async function shareDebtList() {
     const remaining = parseFloat(p.remaining || 0);
     const pCredit   = parseFloat(p.credit   || 0);
     text += `${payments.length - i}. 📅 ${p.date}\n`;
-    text += `   💳 مدفوع: ${p.paid}$ | 👥 ${p.count} أكونت\n`;
+    text += `   💳 مدفوع: ${p.paid}$` + (parseFloat(p.fromCredit||0) > 0 ? ` (+ ${p.fromCredit}$ من الرصيد)` : '') + ` | 👥 ${p.count} أكونت\n`;
     text += `   📌 متبقي: ${remaining > 0 ? remaining.toFixed(0) + '$' : '✓ صفر'}`;
     if (pCredit > 0) text += ` | 🟣 رصيد: +${pCredit.toFixed(0)}$`;
     text += `\n${'─'.repeat(20)}\n`;
@@ -2892,7 +2877,7 @@ function _doAdd(a) {
   }
 
   // لو أكونت جديد وفيه رصيد مسبق → اسأل هل يخصم؟
-  if (!wasEditing && (window._merchantCredit || 0) > 0 && a.merchantPaid !== 'paid') {
+  if (!wasEditing && (window._merchantCredit || 0) >= merchantCost(a) && a.merchantPaid !== 'paid') {
     const credit = window._merchantCredit || 0;
     const cost   = merchantCost(a);
     save(); closeModal(); renderAll(); renderPendingSection();
@@ -2946,6 +2931,7 @@ function deductPrepayForAccount(accId) {
   if (!acc) return;
   const cost   = merchantCost(acc);
   const credit = window._merchantCredit || 0;
+  if (credit < cost) { showToast('❌ الرصيد مش كافي', true); return; }
 
   // علّم الأكونت كمسدد للتاجر
   acc.merchantPaid = 'paid';
@@ -2962,14 +2948,16 @@ function deductPrepayForAccount(accId) {
   if (!Array.isArray(_merchantPayments)) _merchantPayments = [];
   _merchantPayments.unshift({
     date:      dateStr,
-    paid:      cost.toFixed(0),
+    paid:      '0',
+    fromCredit: cost.toFixed(0),
+    due:       cost.toFixed(0),
     count:     1,
     remaining: '0',
     credit:    newCredit.toFixed(0),
-    note:      'خصم تلقائي — ' + (acc.name || acc.username),
-    type:      'prepay'
+    note:      'خصم من الرصيد — ' + (acc.name || acc.username),
+    type:      'deduct'
   });
-  _merchantPayments = _merchantPayments.slice(0, 30);
+  _merchantPayments = _merchantPayments.slice(0, 500);
   window._merchantPayments = _merchantPayments;
 
   window.saveMerchantToFirebase && window.saveMerchantToFirebase();
@@ -5054,24 +5042,25 @@ function openMerchantSummaryModal() {
         const remaining = parseFloat(p.remaining || 0);
         const pCredit   = parseFloat(p.credit   || 0);
         const isPrepay  = p.type === 'prepay';
+        const isDeduct  = p.type === 'deduct';
         return `
         <div style="background:${isPrepay ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.04)'};border:1px solid ${isPrepay ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.08)'};border-radius:14px;padding:14px 16px;">
           <!-- رأس الفاتورة -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <div style="display:flex;align-items:center;gap:8px;">
-              <div style="background:${isPrepay ? 'rgba(34,197,94,0.2)' : 'rgba(168,85,247,0.2)'};border:1px solid ${isPrepay ? 'rgba(34,197,94,0.4)' : 'rgba(168,85,247,0.4)'};border-radius:8px;padding:3px 9px;font-size:11px;color:${isPrepay ? '#4ade80' : '#c084fc'};font-weight:700;">${isPrepay ? '💰 ' + (p.note || 'رصيد مسبق') : 'فاتورة #' + (payments.length - i)}</div>
+              <div style="background:${isPrepay ? 'rgba(34,197,94,0.2)' : 'rgba(168,85,247,0.2)'};border:1px solid ${isPrepay ? 'rgba(34,197,94,0.4)' : 'rgba(168,85,247,0.4)'};border-radius:8px;padding:3px 9px;font-size:11px;color:${isPrepay ? '#4ade80' : '#c084fc'};font-weight:700;">${isPrepay ? '💰 ' + (p.note || 'رصيد مسبق') : isDeduct ? '🟣 ' + (p.note || 'خصم من الرصيد') : 'فاتورة #' + (payments.length - i)}</div>
               <div style="font-size:12px;color:var(--text2);">${p.date}</div>
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
-              <div style="font-size:18px;font-weight:700;color:#4ade80;">+${p.paid}$</div>
+              <div style="font-size:18px;font-weight:700;color:${isDeduct ? '#c084fc' : '#4ade80'};">${isDeduct ? '−' + p.fromCredit + '$' : '+' + p.paid + '$'}</div>
               <button onclick="deleteMerchantPayment(${i})" title="مسح الفاتورة" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);color:#f87171;border-radius:8px;padding:4px 8px;font-size:13px;cursor:pointer;line-height:1;">🗑</button>
             </div>
           </div>
           <!-- تفاصيل -->
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">
             <div style="text-align:center;">
-              <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">${isPrepay ? 'النوع' : 'أكونتات سُددت'}</div>
-              <div style="font-size:13px;font-weight:700;color:var(--text);">${isPrepay ? '🟢 مقدم' : p.count}</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">${(isPrepay || isDeduct) ? 'النوع' : 'أكونتات سُددت'}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);">${isPrepay ? '🟢 مقدم' : isDeduct ? '🟣 من الرصيد' : p.count + (parseFloat(p.fromCredit||0) > 0 ? ' <span style="font-size:10px;color:#c084fc;">(منها ' + p.fromCredit + '$ من الرصيد)</span>' : '')}</div>
             </div>
             <div style="text-align:center;">
               <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">متبقي بعدها</div>
@@ -5252,7 +5241,7 @@ function confirmMerchantPrepay() {
     type:      'prepay'
   };
 
-  const updatedPayments = [newEntry, ...currentPayments].slice(0, 30);
+  const updatedPayments = [newEntry, ...currentPayments].slice(0, 500);
 
   // تحديث المتغيرين معاً
   window._merchantCredit   = newCredit;
@@ -5421,7 +5410,7 @@ function confirmMerchantPay() {
   for (const acc of r.toSettle) {
     acc.merchantPaid = 'paid';
     const clientStatus = acc.clientPaid || (acc.paid === 'unpaid' ? 'unpaid' : 'paid');
-    acc.paid = clientStatus === 'paid' ? 'paid' : 'debt';
+    acc.paid = clientStatus === 'paid' ? 'paid' : 'unpaid';
   }
 
   const today = new Date();
@@ -5434,11 +5423,12 @@ function confirmMerchantPay() {
     date: dateStr,
     paid: cash.toFixed(0),
     fromCredit: r.creditUsed.toFixed(0),
+    due: r.dueBefore.toFixed(0),
     count: r.toSettle.length,
     remaining: r.remainingDue.toFixed(0),
     credit: r.newCredit.toFixed(0)
   });
-  _merchantPayments = _merchantPayments.slice(0, 30);
+  _merchantPayments = _merchantPayments.slice(0, 500);
   window._merchantPayments = _merchantPayments;
   window.saveMerchantToFirebase && window.saveMerchantToFirebase();
 
