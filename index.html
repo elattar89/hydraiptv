@@ -1534,20 +1534,36 @@ function showDebtListModal() {
   // صفوف جدول المعاملات
   const rows = payments.length
     ? payments.map((p, i) => {
-        const remaining = parseFloat(p.remaining || 0);
-        const pCredit   = parseFloat(p.credit   || 0);
-        // نحسب المطلوب = المدفوع + المتبقي - الرصيد الناتج
-        const requested = (p.due !== undefined && p.due !== '') ? parseFloat(p.due) : parseFloat(p.paid || 0) + remaining - pCredit;
-        const fromCr = parseFloat(p.fromCredit || 0);
+        const isPrepay = p.type === 'prepay';
+        const hasTotal = p.totalPaid !== undefined && p.totalPaid !== '';
+        const cnt      = parseFloat(p.count || 0);
+        let required, paidTotal, remaining, pCredit;
+        if (isPrepay) {
+          // رصيد مسبق: مفيش مطلوب ولا متبقي، والرصيد = الرصيد بعد الإضافة
+          required = null; remaining = null;
+          paidTotal = parseFloat(p.paid || 0);
+          pCredit   = parseFloat(p.credit || 0);
+        } else if (hasTotal) {
+          required  = parseFloat(p.due || 0);
+          paidTotal = parseFloat(p.totalPaid || 0);
+          remaining = Math.max(0, required - paidTotal);
+          pCredit   = parseFloat(p.credit || 0);
+        } else {
+          // سجلات قديمة: المطلوب = أكونتات × 10 + المتبقي، والرصيد = المدفوع − المطلوب
+          remaining = parseFloat(p.remaining || 0);
+          required  = (p.due !== undefined && p.due !== '') ? parseFloat(p.due) : cnt * 10 + remaining;
+          paidTotal = parseFloat(p.paid || 0);
+          pCredit   = Math.max(0, paidTotal - required);
+        }
         const rowBg = i % 2 === 0 ? '#faf5ff' : '#fff';
         return `<tr style="background:${rowBg};">
-          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;color:#888;font-size:12px;">${payments.length - i}</td>
-          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">${p.date}</td>
-          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:700;color:#dc2626;">${requested > 0 ? requested.toFixed(0) + '$' : '—'}</td>
-          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:700;color:#16a34a;font-size:15px;">${p.type === 'deduct' ? '—' : '+' + p.paid + '$'}${fromCr > 0 ? '<div style="font-size:10px;font-weight:600;color:#7c3aed;">من الرصيد: ' + fromCr.toFixed(0) + '$</div>' : ''}</td>
-          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;color:#5b21b6;">${p.count} أكونت</td>
-          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:600;color:${remaining > 0 ? '#d97706' : '#16a34a'};">${remaining > 0 ? remaining.toFixed(0) + '$' : '✓ صفر'}</td>
-          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb;font-weight:600;color:${pCredit > 0 ? '#7c3aed' : '#aaa'};">${pCredit > 0 ? '+' + pCredit.toFixed(0) + '$' : '—'}</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb; color:#888;font-size:12px;">${payments.length - i}</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb; font-weight:600;color:#374151;white-space:nowrap;">${p.date}</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb; font-weight:700;color:#dc2626;">${required !== null && required > 0 ? required.toFixed(0) + '$' : '—'}</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb; font-weight:700;color:#16a34a;font-size:15px;">+${paidTotal.toFixed(0)}$</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb; color:#5b21b6;">${isPrepay ? '💰 رصيد مسبق' : cnt + ' أكونت'}</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb; font-weight:600;color:${remaining > 0 ? '#d97706' : '#16a34a'};">${remaining === null ? '—' : remaining > 0 ? remaining.toFixed(0) + '$' : '✓ صفر'}</td>
+          <td style="padding:10px 8px;text-align:center;border:1px solid #e5e7eb; font-weight:600;color:${pCredit > 0 ? '#7c3aed' : '#aaa'};">${pCredit > 0 ? pCredit.toFixed(0) + '$' : '—'}</td>
         </tr>`;
       }).join('')
     : `<tr><td colspan="7" style="padding:40px;text-align:center;color:#999;font-size:14px;">🧾 لا توجد معاملات مسجلة بعد</td></tr>`;
@@ -2951,6 +2967,7 @@ function deductPrepayForAccount(accId) {
     paid:      '0',
     fromCredit: cost.toFixed(0),
     due:       cost.toFixed(0),
+    totalPaid: credit.toFixed(0),
     count:     1,
     remaining: '0',
     credit:    newCredit.toFixed(0),
@@ -4011,9 +4028,9 @@ if (_auth === 'admin') {
           <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">التاريخ</th>
           <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">المطلوب للسداد</th>
           <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">المبلغ المدفوع</th>
-          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">أكونتات سُددت</th>
-          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">المتبقي بعدها</th>
-          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">رصيد ناتج</th>
+          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">أكونتات تم سدادها</th>
+          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">المتبقي للتاجر</th>
+          <th style="padding:12px 10px;text-align:center;border:1px solid #6d28d9;white-space:nowrap;">الرصيد المتبقي</th>
         </tr>
       </thead>
       <tbody id="debtModalBody"></tbody>
@@ -5424,6 +5441,7 @@ function confirmMerchantPay() {
     paid: cash.toFixed(0),
     fromCredit: r.creditUsed.toFixed(0),
     due: r.dueBefore.toFixed(0),
+    totalPaid: (cash + r.prevCredit).toFixed(0),
     count: r.toSettle.length,
     remaining: r.remainingDue.toFixed(0),
     credit: r.newCredit.toFixed(0)
