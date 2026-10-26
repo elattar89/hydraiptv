@@ -561,28 +561,42 @@
     const META_DOC     = doc(db, "iptv", "meta");
     const BACKUP_COL   = "hydra_backups";
 
-    // ===== merchant: credit + payments =====
-    window.loadMerchantFromFirebase = async function() {
-      try {
-        const snap = await getDoc(MERCHANT_DOC);
-        if (snap.exists()) {
-          const d = snap.data();
-          window._merchantCredit   = parseFloat(d.credit   || '0');
-          window._merchantPayments = JSON.parse(d.payments || '[]');
-        } else {
-          window._merchantCredit   = 0;
-          window._merchantPayments = [];
-        }
-      } catch(e) { console.warn('loadMerchant error:', e); window._merchantCredit = 0; window._merchantPayments = []; }
-    };
+    // ===== merchant: credit + payments — real-time onSnapshot =====
+    window._savingMerchant = false;
+
     window.saveMerchantToFirebase = async function() {
+      window._savingMerchant = true;
       try {
+        const latestCredit   = parseFloat(window._merchantCredit) || 0;
+        const latestPayments = Array.isArray(window._merchantPayments) && window._merchantPayments.length > 0
+          ? window._merchantPayments
+          : (typeof _merchantPayments !== 'undefined' && Array.isArray(_merchantPayments) ? _merchantPayments : []);
         await setDoc(MERCHANT_DOC, {
-          credit:   (window._merchantCredit || 0).toFixed(2),
-          payments: JSON.stringify(window._merchantPayments || [])
+          credit:   latestCredit.toFixed(2),
+          payments: JSON.stringify(latestPayments)
         });
       } catch(e) { console.warn('saveMerchant error:', e); }
+      setTimeout(() => { window._savingMerchant = false; }, 2000);
     };
+
+    // مراقبة لحظية — بيتحمل فوراً وبيتحدث تلقائياً
+    onSnapshot(MERCHANT_DOC, (snap) => {
+      if (window._savingMerchant) return; // تجاهل snapshot أثناء الحفظ
+      if (snap.exists()) {
+        const d = snap.data();
+        window._merchantCredit   = parseFloat(d.credit   || '0');
+        window._merchantPayments = JSON.parse(d.payments || '[]');
+      } else {
+        window._merchantCredit   = 0;
+        window._merchantPayments = [];
+      }
+      _merchantCredit   = window._merchantCredit;
+      _merchantPayments = window._merchantPayments;
+      if (typeof renderAll === 'function') renderAll();
+    });
+
+    // loadMerchantFromFirebase أصبح غير ضروري لكن نبقيه فاضي للتوافق
+    window.loadMerchantFromFirebase = async function() {};
 
     // ===== logs: sent messages + reg requests =====
     window.loadLogsFromFirebase = async function() {
@@ -5192,17 +5206,15 @@ function confirmMerchantPrepay() {
   const today = new Date();
   const dateStr = today.getDate() + '/' + (today.getMonth()+1) + '/' + today.getFullYear();
 
-  // أضف للرصيد
-  const prevCredit = window._merchantCredit || 0;
+  // مزامنة المصدر الواحد قبل أي تعديل
+  const currentPayments = Array.isArray(window._merchantPayments) && window._merchantPayments.length > 0
+    ? window._merchantPayments
+    : (Array.isArray(_merchantPayments) ? _merchantPayments : []);
+
+  const prevCredit = parseFloat(window._merchantCredit) || 0;
   const newCredit  = prevCredit + amount;
-  window._merchantCredit = newCredit;
-  _merchantCredit = newCredit;
 
-  // سجّل في الفواتير
-  if (!window._merchantPayments) window._merchantPayments = [];
-  if (!Array.isArray(_merchantPayments)) _merchantPayments = [];
-
-  _merchantPayments.unshift({
+  const newEntry = {
     date:      dateStr,
     paid:      amount.toFixed(0),
     count:     0,
@@ -5210,14 +5222,28 @@ function confirmMerchantPrepay() {
     credit:    newCredit.toFixed(0),
     note:      note || 'رصيد مسبق',
     type:      'prepay'
-  });
-  _merchantPayments   = _merchantPayments.slice(0, 30);
-  window._merchantPayments = _merchantPayments;
+  };
 
-  window.saveMerchantToFirebase && window.saveMerchantToFirebase();
+  const updatedPayments = [newEntry, ...currentPayments].slice(0, 30);
+
+  // تحديث المتغيرين معاً
+  window._merchantCredit   = newCredit;
+  _merchantCredit          = newCredit;
+  window._merchantPayments = updatedPayments;
+  _merchantPayments        = updatedPayments;
+
+  // حفظ Firebase وانتظر التأكيد
+  if (window.saveMerchantToFirebase) {
+    window.saveMerchantToFirebase().then(() => {
+      showToast('✅ تمت إضافة ' + amount + '$ كرصيد مسبق — رصيدك: ' + newCredit.toFixed(0) + '$');
+    }).catch(() => {
+      showToast('⚠️ تمت الإضافة لكن في مشكلة في الحفظ', true);
+    });
+  } else {
+    showToast('✅ تمت إضافة ' + amount + '$');
+  }
 
   document.getElementById('merchantPrepayModal').remove();
-  showToast('✅ تمت إضافة ' + amount + '$ كرصيد مسبق لدى التاجر');
   renderAll();
 }
 
