@@ -2877,10 +2877,90 @@ function _doAdd(a) {
     if (window.approveFormReg) window.approveFormReg(regId);
   }
 
+  // لو أكونت جديد وفيه رصيد مسبق → اسأل هل يخصم؟
+  if (!wasEditing && (window._merchantCredit || 0) > 0 && a.merchantPaid !== 'paid') {
+    const credit = window._merchantCredit || 0;
+    const cost   = merchantCost(a);
+    save(); closeModal(); renderAll(); renderPendingSection();
+    showToast('✅ تمت الإضافة');
+    syncGist();
+
+    // رسالة الخصم بعد الإضافة
+    setTimeout(() => {
+      const old2 = document.getElementById('prepayDeductModal');
+      if (old2) old2.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'prepayDeductModal';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9200;display:flex;align-items:center;justify-content:center;padding:1rem;';
+
+      overlay.innerHTML = `
+        <div style="background:var(--card);border-radius:20px;padding:1.5rem;width:100%;max-width:400px;box-shadow:0 24px 70px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:1rem;text-align:center;">
+          <div style="font-size:2rem;">💰</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);">عندك رصيد لدى التاجر</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.6;">
+            رصيدك الحالي: <span style="color:#c084fc;font-weight:700;">${credit.toFixed(0)}$</span><br>
+            تكلفة الأكونت الجديد: <span style="color:#f87171;font-weight:700;">${cost}$</span><br><br>
+            هل تبي تخصم تكلفة الأكونت من رصيدك؟
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="deductPrepayForAccount(${accounts[accounts.length-1].id})" style="flex:1;padding:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:white;border:none;border-radius:12px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">
+              ✅ نعم، اخصم ${cost}$
+            </button>
+            <button onclick="document.getElementById('prepayDeductModal').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.08);color:var(--text2);border:1px solid rgba(255,255,255,0.15);border-radius:12px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">
+              لأ، لاحقاً
+            </button>
+          </div>
+        </div>
+      `;
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+      document.body.appendChild(overlay);
+    }, 400);
+    return;
+  }
+
   save(); closeModal();
   renderAll(); renderPendingSection();
   showToast(wasEditing ? '✅ تم التعديل' : '✅ تمت الإضافة');
   syncGist();
+}
+
+function deductPrepayForAccount(accId) {
+  document.getElementById('prepayDeductModal').remove();
+
+  const acc    = accounts.find(x => x.id === accId);
+  if (!acc) return;
+  const cost   = merchantCost(acc);
+  const credit = window._merchantCredit || 0;
+
+  // علّم الأكونت كمسدد للتاجر
+  acc.merchantPaid = 'paid';
+  acc.paid = (acc.clientPaid === 'paid') ? 'paid' : 'unpaid';
+
+  // اطرح من الرصيد
+  const newCredit = Math.max(0, credit - cost);
+  window._merchantCredit = newCredit;
+  _merchantCredit = newCredit;
+
+  // سجّل في الفواتير
+  const today  = new Date();
+  const dateStr = today.getDate() + '/' + (today.getMonth()+1) + '/' + today.getFullYear();
+  if (!Array.isArray(_merchantPayments)) _merchantPayments = [];
+  _merchantPayments.unshift({
+    date:      dateStr,
+    paid:      cost.toFixed(0),
+    count:     1,
+    remaining: '0',
+    credit:    newCredit.toFixed(0),
+    note:      'خصم تلقائي — ' + (acc.name || acc.username),
+    type:      'prepay'
+  });
+  _merchantPayments = _merchantPayments.slice(0, 30);
+  window._merchantPayments = _merchantPayments;
+
+  window.saveMerchantToFirebase && window.saveMerchantToFirebase();
+  save(); renderAll();
+  showToast('✅ تم خصم ' + cost + '$ من رصيدك — رصيد متبقي: ' + newCredit.toFixed(0) + '$');
 }
 
 function confirmDupSave() {
@@ -4959,12 +5039,13 @@ function openMerchantSummaryModal() {
     ? payments.map((p, i) => {
         const remaining = parseFloat(p.remaining || 0);
         const pCredit   = parseFloat(p.credit   || 0);
+        const isPrepay  = p.type === 'prepay';
         return `
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 16px;">
+        <div style="background:${isPrepay ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.04)'};border:1px solid ${isPrepay ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.08)'};border-radius:14px;padding:14px 16px;">
           <!-- رأس الفاتورة -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <div style="display:flex;align-items:center;gap:8px;">
-              <div style="background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:3px 9px;font-size:11px;color:#c084fc;font-weight:700;">فاتورة #${payments.length - i}</div>
+              <div style="background:${isPrepay ? 'rgba(34,197,94,0.2)' : 'rgba(168,85,247,0.2)'};border:1px solid ${isPrepay ? 'rgba(34,197,94,0.4)' : 'rgba(168,85,247,0.4)'};border-radius:8px;padding:3px 9px;font-size:11px;color:${isPrepay ? '#4ade80' : '#c084fc'};font-weight:700;">${isPrepay ? '💰 ' + (p.note || 'رصيد مسبق') : 'فاتورة #' + (payments.length - i)}</div>
               <div style="font-size:12px;color:var(--text2);">${p.date}</div>
             </div>
             <div style="font-size:18px;font-weight:700;color:#4ade80;">+${p.paid}$</div>
@@ -4972,8 +5053,8 @@ function openMerchantSummaryModal() {
           <!-- تفاصيل -->
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">
             <div style="text-align:center;">
-              <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">أكونتات سُددت</div>
-              <div style="font-size:14px;font-weight:700;color:var(--text);">${p.count}</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">${isPrepay ? 'النوع' : 'أكونتات سُددت'}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);">${isPrepay ? '🟢 مقدم' : p.count}</div>
             </div>
             <div style="text-align:center;">
               <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:3px;">متبقي بعدها</div>
@@ -5032,6 +5113,9 @@ function openMerchantSummaryModal() {
         <div style="text-align:center;padding:10px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:12px;color:#4ade80;font-size:13px;font-weight:700;">
           ✅ كل شيء مسدد للتاجر
         </div>`}
+        <button onclick="document.getElementById('merchantSummaryModal').remove(); openMerchantPrepayModal();" style="width:100%;padding:11px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.45);color:#f87171;border-radius:12px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">
+          💰 إضافة رصيد مسبق للتاجر
+        </button>
         <button onclick="document.getElementById('merchantSummaryModal').remove(); showDebtListModal();" style="width:100%;padding:11px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:12px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">
           📋 كشف الديون للتاجر
         </button>
@@ -5052,6 +5136,89 @@ function openMerchantSummaryModal() {
   // إغلاق بالضغط خارج المودال
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+}
+
+function openMerchantPrepayModal() {
+  const old = document.getElementById('merchantPrepayModal');
+  if (old) old.remove();
+
+  const credit = window._merchantCredit || 0;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'merchantPrepayModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9100;display:flex;align-items:center;justify-content:center;padding:1rem;';
+
+  overlay.innerHTML = `
+    <div style="background:var(--card);border-radius:20px;padding:1.5rem;width:100%;max-width:420px;box-shadow:0 24px 70px rgba(0,0,0,0.6);display:flex;flex-direction:column;gap:1rem;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:15px;font-weight:700;color:var(--text);">💰 إضافة رصيد مسبق</div>
+        <button onclick="document.getElementById('merchantPrepayModal').remove()" style="background:none;border:none;color:var(--text2);font-size:1.4rem;cursor:pointer;">✕</button>
+      </div>
+
+      <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:12px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">رصيدك الحالي لدى التاجر</div>
+        <div style="font-size:24px;font-weight:700;color:${credit > 0 ? '#4ade80' : 'rgba(255,255,255,0.3)'};">${credit.toFixed(0)}$</div>
+      </div>
+
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">المبلغ المدفوع مسبقاً للتاجر</label>
+        <input id="prepayAmount" type="number" min="1" placeholder="مثال: 100"
+          style="width:100%;padding:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:var(--text);font-family:Cairo,sans-serif;font-size:15px;text-align:center;outline:none;">
+      </div>
+
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">ملاحظة (اختياري)</label>
+        <input id="prepayNote" type="text" placeholder="مثال: دفعة مقدمة أكتوبر"
+          style="width:100%;padding:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:var(--text);font-family:Cairo,sans-serif;font-size:13px;outline:none;">
+      </div>
+
+      <button onclick="confirmMerchantPrepay()" style="width:100%;padding:13px;background:linear-gradient(135deg,#16a34a,#22c55e);color:white;border:none;border-radius:12px;font-family:Cairo,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">
+        ✅ إضافة للرصيد
+      </button>
+    </div>
+  `;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('prepayAmount').focus(), 100);
+}
+
+function confirmMerchantPrepay() {
+  const amount = parseFloat(document.getElementById('prepayAmount').value) || 0;
+  if (amount <= 0) { showToast('❌ ادخل المبلغ', true); return; }
+  const note = document.getElementById('prepayNote').value.trim();
+
+  const today = new Date();
+  const dateStr = today.getDate() + '/' + (today.getMonth()+1) + '/' + today.getFullYear();
+
+  // أضف للرصيد
+  const prevCredit = window._merchantCredit || 0;
+  const newCredit  = prevCredit + amount;
+  window._merchantCredit = newCredit;
+  _merchantCredit = newCredit;
+
+  // سجّل في الفواتير
+  if (!window._merchantPayments) window._merchantPayments = [];
+  if (!Array.isArray(_merchantPayments)) _merchantPayments = [];
+
+  _merchantPayments.unshift({
+    date:      dateStr,
+    paid:      amount.toFixed(0),
+    count:     0,
+    remaining: '0',
+    credit:    newCredit.toFixed(0),
+    note:      note || 'رصيد مسبق',
+    type:      'prepay'
+  });
+  _merchantPayments   = _merchantPayments.slice(0, 30);
+  window._merchantPayments = _merchantPayments;
+
+  window.saveMerchantToFirebase && window.saveMerchantToFirebase();
+
+  document.getElementById('merchantPrepayModal').remove();
+  showToast('✅ تمت إضافة ' + amount + '$ كرصيد مسبق لدى التاجر');
+  renderAll();
 }
 
 function openMerchantPayModal() {
